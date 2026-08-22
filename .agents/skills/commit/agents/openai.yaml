@@ -1,0 +1,4 @@
+interface:
+  display_name: "提交门禁"
+  short_description: "冻结快照并执行有界审核，仅在全部质量门禁通过后创建本地提交"
+  default_prompt: "使用 $commit 冻结待提交快照、一次性完成审核，并仅在全部质量门禁通过后创建本地提交。"

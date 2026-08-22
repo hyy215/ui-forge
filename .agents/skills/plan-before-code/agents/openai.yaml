@@ -1,0 +1,4 @@
+interface:
+  display_name: "代码修改前置计划"
+  short_description: "代码修改前先提交实施计划，并在用户明确确认后再执行"
+  default_prompt: "使用 $plan-before-code 为代码修改先制定计划，等待我确认后再实施。"

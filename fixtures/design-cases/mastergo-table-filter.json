@@ -1,0 +1,5988 @@
+{
+  "source": {
+    "kind": "fixture",
+    "reference": "fixture://mastergo-table-filter"
+  },
+  "sectionList": {
+    "totalSections": 23,
+    "sections": [
+      {
+        "id": "3:00415",
+        "name": "tab栏",
+        "type": "FRAME",
+        "nodeCount": 6,
+        "x": 0,
+        "y": 404,
+        "width": 980,
+        "height": 36,
+        "textPreview": "tab2",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:02142",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 72,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02360",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 96,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02407",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 9,
+        "x": 202,
+        "y": 120,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "containerId": "3:01977",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:02454",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 144,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02501",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 8,
+        "x": 202,
+        "y": 168,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "containerId": "3:01977",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:02548",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 192,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02595",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 216,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02642",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 240,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02689",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 264,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02736",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 288,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02783",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 202,
+        "y": 312,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02830",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 203,
+        "y": 336,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02877",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 203,
+        "y": 360,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:02136",
+        "name": "第一行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 212,
+        "y": 53,
+        "width": 674,
+        "height": 14,
+        "textPreview": "字段1",
+        "containerId": "3:01977",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:01995",
+        "name": "直线 5",
+        "type": "PATH",
+        "nodeCount": 1,
+        "x": 202,
+        "y": 48,
+        "width": 349.0129089355469,
+        "containerId": "3:01977",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:01998",
+        "name": "直线 6",
+        "type": "PATH",
+        "nodeCount": 1,
+        "x": 322.01,
+        "y": 222.49,
+        "width": 349.0129089355469,
+        "height": 0,
+        "structureHash": "{\"t\":\"PATH\",\"l\":{\"w\":349.0129089355469,\"h\":0}}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 3
+      },
+      {
+        "id": "3:01999",
+        "name": "直线 7",
+        "type": "PATH",
+        "nodeCount": 1,
+        "x": 520.01,
+        "y": 222.49,
+        "width": 349.0129089355469,
+        "height": 0,
+        "structureHash": "{\"t\":\"PATH\",\"l\":{\"w\":349.0129089355469,\"h\":0}}",
+        "containerId": "3:01977",
+        "structureSiblingCount": 3
+      },
+      {
+        "id": "3:02000",
+        "name": "直线 8",
+        "type": "PATH",
+        "nodeCount": 1,
+        "x": 671.01,
+        "y": 222.49,
+        "width": 349.0129089355469,
+        "height": 0,
+        "structureHash": "{\"t\":\"PATH\",\"l\":{\"w\":349.0129089355469,\"h\":0}}",
+        "structureSiblingCount": 3
+      },
+      {
+        "id": "3:02924",
+        "name": "第二行",
+        "type": "FRAME",
+        "nodeCount": 7,
+        "x": 203,
+        "y": 384,
+        "width": 768,
+        "height": 24,
+        "textPreview": "内容1",
+        "structureHash": "{\"t\":\"FRAME\",\"l\":{\"w\":768,\"h\":24},\"c\":[{\"t\":\"LAYER\",\"l\":{\"w\":768,\"h\":24}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}},{\"t\":\"TEXT\",\"l\":{\"w\":31,\"h\":14}}]}",
+        "structureSiblingCount": 12
+      },
+      {
+        "id": "3:04833",
+        "name": "报错",
+        "type": "FRAME",
+        "nodeCount": 3,
+        "x": 331,
+        "y": 118,
+        "width": 237,
+        "height": 63,
+        "textPreview": "输入参数内容2，不符合该字段校验规则2",
+        "containerId": "3:01977",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:00634",
+        "name": "右上",
+        "type": "FRAME",
+        "nodeCount": 17,
+        "x": 192,
+        "y": 0,
+        "width": 788,
+        "height": 48,
+        "textPreview": "输入过滤器文本",
+        "containerId": "3:00628",
+        "structureSiblingCount": 1
+      },
+      {
+        "id": "3:00629",
+        "name": "左侧",
+        "type": "FRAME",
+        "nodeCount": 39,
+        "x": 0,
+        "y": 0,
+        "width": 192,
+        "height": 404,
+        "textPreview": "子组3",
+        "structureSiblingCount": 1
+      }
+    ],
+    "totalNodes": 177,
+    "allTexts": [
+      "tab2",
+      "tab3",
+      "tab4",
+      "tabl1",
+      "内容1",
+      "内容2",
+      "内容3",
+      "内容5",
+      "内容4",
+      "字段1",
+      "字段2",
+      "字段3",
+      "字段4",
+      "字段5",
+      "输入参数内容2，不符合该字段校验规则2",
+      "输入过滤器文本",
+      "子组3",
+      "子组2",
+      "未分组",
+      "输入过滤文本"
+    ],
+    "rootMetadata": {
+      "width": 980,
+      "height": 440,
+      "name": "容器 13",
+      "type": "FRAME",
+      "fill": "paint_3:3",
+      "styles": {
+        "paint_3:3": {
+          "value": [
+            "#FFFFFF"
+          ]
+        },
+        "paint_3:6167": {
+          "value": [
+            "#DFDFDF"
+          ]
+        },
+        "paint_3:5137": {
+          "value": [
+            "#3D3D3D"
+          ]
+        },
+        "paint_17:489": {
+          "value": [
+            "#EDDA31"
+          ]
+        },
+        "paint_3:04913": {
+          "value": [
+            "#F0F3DB"
+          ]
+        },
+        "paint_3:9895": {
+          "value": [
+            "#D8D8D8"
+          ]
+        },
+        "paint_17:660": {
+          "value": [
+            "#FFF9D5"
+          ]
+        },
+        "paint_3:010": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:56": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:64": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:68": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:6013": {
+          "value": [
+            "#FFCA4D"
+          ]
+        },
+        "paint_3:9841": {
+          "value": [
+            "#F0F3DB"
+          ]
+        },
+        "paint_3:6171": {
+          "value": [
+            "#E8E8E8"
+          ]
+        },
+        "paint_3:32": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:36": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:20": {
+          "value": [
+            "#A6A6A6"
+          ]
+        },
+        "paint_3:48": {
+          "value": [
+            "#A6A6A6"
+          ]
+        }
+      },
+      "allTexts": [
+        "tab2",
+        "tab3",
+        "tab4",
+        "tabl1",
+        "内容1",
+        "内容2",
+        "内容3",
+        "内容5",
+        "内容4",
+        "字段1",
+        "字段2",
+        "字段3",
+        "字段4",
+        "字段5",
+        "输入参数内容2，不符合该字段校验规则2",
+        "输入过滤器文本",
+        "子组3",
+        "子组2",
+        "未分组",
+        "输入过滤文本"
+      ]
+    },
+    "rootContainer": {
+      "width": "980px",
+      "minHeight": "440px",
+      "background": "#FFFFFF",
+      "overflow": "hidden",
+      "position": "relative"
+    },
+    "splitContainers": [
+      {
+        "name": "表格",
+        "type": "FRAME",
+        "id": "3:01977",
+        "width": 769,
+        "height": 349,
+        "x": 202,
+        "y": 48
+      },
+      {
+        "name": "右侧",
+        "type": "FRAME",
+        "id": "3:00628",
+        "width": 788,
+        "height": 404,
+        "x": 192,
+        "y": 0
+      }
+    ],
+    "nextAction": "STOP. This section LIST is only a directory — it has NO DSL nodes,  NO rowTexts. You CANNOT generate HTML from this list alone. Your NEXT ACTION: call getDesignSections with sectionIndex=0, then sectionIndex=1, ... up to sectionIndex=22 (total 23 calls). Fetch ALL 23 sections in batches of 3-5 before writing ANY HTML. Sections with nodeCount=3 and empty name are NOT empty — they contain real menu items and content (resolved from INSTANCE overrides during DSL transfer). WARNING: 15 sections have structureSiblingCount up to 12 — they look identical in the list (same nodeCount, empty name) but each has DIFFERENT text content and variant state. You MUST fetch ALL of them individually (do NOT skip any after fetching a few). Skipping sibling sections causes missing active-state styling and wrong menu item rendering. Skipping section DSL fetch is the #1 cause of missing menus, broken icons, and wrong data.",
+    "rules": [
+      "CRITICAL — Page positioning: the section LIST response contains splitContainers with page-absolute coordinates for each page region. Use splitContainers to construct the page skeleton (position:absolute with exact coordinates). Do NOT guess or stack with flex. IMPORTANT: splitContainers x/y are the container's absolute position on the canvas — they are NOT CSS margins/padding for child elements. Do NOT apply a container's y coordinate as top/margin-top on the main content wrapper. The main content area should start at top:0 within its own positioning context; sub-sections inside it use their own bbox y coordinates relative to the container, not to the page root.",
+      "CRITICAL — Multi-column sidebar layout: render ALL sidebar levels as persistent visible columns positioned via splitContainers coordinates. Do NOT use position:absolute/fixed for submenu panels (they become floating overlays and break the main content width). Instead, lay out ALL columns (primary sidebar + submenu + main content) side-by-side using flex or absolute positioning that ACCOUNTS for every column's width. The main content area width = rootContainer.width minus ALL sidebar column widths. Do NOT use flex:1 for main content when there are multiple sidebar columns — it will expand into the submenu's space. Each sidebar column's width comes from its splitContainer entry.",
+      "token filed must be generated as a variable (colors, shadows, fonts, etc.) and the token field must be displayed in the comment",
+      "componentDocumentLinks is a list of frontend component documentation links. When it exists and is not empty, use getComponentLink to get the documentation.",
+      "",
+      "CRITICAL — SVG FROM PATH NODES (MUST FOLLOW): Every PATH node has a `svgShortKey` field (a short sequential ID like `S0#0`, `S0#1`). The SVG markup is NOT in the DSL. You MUST place a placeholder `@@SVG:{svgShortKey}@@` where each icon goes, then call `applyDesign` at the end to inject the real high-precision SVG. NEVER hand-write `<path d=\"...\">` — the DSL does NOT contain path data. NEVER leave a PATH node unrendered — every icon MUST have a `@@SVG:{svgShortKey}@@` placeholder.",
+      "CRITICAL — RENDER EVERY ICON IN PATH NODES: Every PATH node has a `svgShortKey`. Place `@@SVG:{svgShortKey}@@` for each — sidebar menu icons, table header sort/filter/search icons, pagination prev/next/refresh icons, and action buttons. A header cell or menu item showing only plain text is a fidelity defect. After ALL placeholders are placed, call `applyDesign` to replace them with real SVG.",
+      "",
+      "CRITICAL — _placeholder TEXT handling: TEXT nodes with `_placeholder: true` (name==text) are listed in `dsl.placeholderTexts`. These are component-library boilerplate — NOT real column headers, labels, or data. Do NOT render them as table headers, column names, or visible UI labels. They appear alongside real text in the same section (e.g. a header cell has both realTitle='用户名称' and placeholder='Hillstone Design') — render ONLY the real title, omit the placeholder. EXCEPTION: if a placeholder text is the SOLE text in its section AND it reads as a legitimate brand name or page title (e.g. '智源智能安全运营平台'), it may be real content — render it in its proper context (logo area, page title), never as a table header.",
+      "CRITICAL — CLOSED-SET TEXT: the section LIST response carries `rootMetadata.allTexts` — the complete whitelist of text strings in this design (including placeholder strings). Any visible string NOT in allTexts is a hallucination and MUST be removed. Use `dsl.placeholderTexts` in each section to identify which strings are component-library boilerplate.",
+      "",
+      "CRITICAL — INSTANCE fill color: when an INSTANCE has both `fill` and `_color`, use `_color` directly as the CSS value. Do NOT guess colors from _variantProps semantics.",
+      "CRITICAL — INSTANCE _variantProps: compare across siblings for selected/hovered/disabled. Active class MUST match DSL variant state, NOT a default index.",
+      "CRITICAL — Render count = structureSiblingCount: if ssc=1, that single instance IS complete — do NOT fabricate extra rows/items.",
+      "CRITICAL — BACKGROUND FROM splitContainers: splitContainers[].background IS the exact CSS background-color. Copy verbatim, no changes.",
+      "CRITICAL — FRAME/GROUP opacity: translate to rgba() on background only, NOT CSS opacity (would make children translucent).",
+      "CRITICAL — rowTexts: each entry has parentType/parentName for context and `_placeholder: true` if boilerplate. Use parentName to place text correctly; skip _placeholder entries. IMPORTANT: if a short numeric text (like '8') has parentName matching a button INSTANCE (e.g. '分类[a3]=文本按钮,类型[aI]=危险'), it is likely a badge/count indicator overlaid on that button — NOT part of the button label. Do NOT render it inside the button text; render it as a separate badge element positioned on the button corner, OR omit it if the design does not show a visible badge on that specific button instance.",
+      "Render ALL nodes recursively. Section root layoutStyle.width = section width. Do not call getDsl after completing section workflow.",
+      "CRITICAL — ICON-TO-NODE BINDING: match PATH nodes to their UI position by the node's ancestor name. A PATH node under a menu item belongs in that menu's icon slot; one under a button/refresh belongs in that button. NEVER substitute a memorized icon — use the exact `@@SVG:{svgShortKey}@@` from the PATH node in its section. NEVER reuse a svgShortKey from a different section.",
+      "CRITICAL — TEXT PROVENANCE SELF-CHECK: before finalizing output, verify every visible text string exists in allTexts. If you emit MORE distinct strings than allTexts.length, you are hallucinating. Typical hallucinations: fabricated table headers, invented data, brand tokens, generic labels not in the design.",
+      "CRITICAL — DO NOT SKIP SECTION DSL FETCH: the section LIST response is ONLY a directory (id/name/nodeCount/textPreview). It does NOT contain DSL nodes, rowTexts, or any rendering data. You CANNOT generate correct HTML from the list alone. You MUST call getDesignSections with sectionIndex=0, then 1, ... up to totalSections-1 to get each section's DSL. Generating HTML without fetching ALL section DSLs will produce missing content (menus, table data, icons) and incorrect SVGs — this is the #1 cause of broken output."
+    ]
+  },
+  "sections": [
+    {
+      "sectionIndex": 0,
+      "section": {
+        "id": "3:00415",
+        "name": "tab栏",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:3": {
+            "value": [
+              "#FFFFFF"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          },
+          "paint_3:6167": {
+            "value": [
+              "#DFDFDF"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:00415",
+            "name": "tab栏",
+            "layoutStyle": {
+              "width": 980,
+              "height": 36,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "fill": "paint_3:6167",
+            "_color": "#DFDFDF",
+            "strokeColor": "paint_3:010",
+            "strokeType": "solid",
+            "strokeAlign": "inside",
+            "strokeWidth": "1px",
+            "children": [
+              {
+                "type": "TEXT",
+                "id": "3:00524",
+                "name": "输入文本",
+                "layoutStyle": {
+                  "width": 26,
+                  "height": 14,
+                  "relativeX": 88,
+                  "relativeY": 11
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "tab2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 4,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "center",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:00561",
+                "name": "tab2",
+                "layoutStyle": {
+                  "width": 26,
+                  "height": 14,
+                  "relativeX": 148,
+                  "relativeY": 11
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "tab3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 4,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "center",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:00581",
+                "name": "tab3",
+                "layoutStyle": {
+                  "width": 26,
+                  "height": 14,
+                  "relativeX": 207,
+                  "relativeY": 11
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "tab4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 4,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "center",
+                "textMode": "single-line"
+              },
+              {
+                "type": "LAYER",
+                "id": "3:00427",
+                "name": "矩形 5",
+                "layoutStyle": {
+                  "width": 55,
+                  "height": 32,
+                  "relativeX": 6,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:3",
+                "_color": "#FFFFFF",
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 1px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:00465",
+                "name": "输入文本",
+                "layoutStyle": {
+                  "width": 29,
+                  "height": 14,
+                  "relativeX": 19.5,
+                  "relativeY": 10
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "tabl1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 5,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "center",
+                "textMode": "single-line"
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "tab2",
+            "parentType": "FRAME",
+            "parentName": "tab栏"
+          },
+          {
+            "text": "tab3",
+            "parentType": "FRAME",
+            "parentName": "tab栏"
+          },
+          {
+            "text": "tab4",
+            "parentType": "FRAME",
+            "parentName": "tab栏"
+          },
+          {
+            "text": "tabl1",
+            "parentType": "FRAME",
+            "parentName": "tab栏"
+          }
+        ]
+      },
+      "nodeCount": 6,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 1/23. MISSING 22 sections: [1,2,3,4,5,6,7,8,9,10... +12 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 1,
+      "section": {
+        "id": "3:02142",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02142",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:01988",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02154",
+                "name": "输入文本",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02191",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02218",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02237",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02284",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 2/23. MISSING 21 sections: [2,3,4,5,6,7,8,9,10,11... +11 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 2,
+      "section": {
+        "id": "3:02360",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02360",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02381",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02361",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02377",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 162,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02369",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02365",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02373",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 3/23. MISSING 20 sections: [3,4,5,6,7,8,9,10,11,12... +10 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 3,
+      "section": {
+        "id": "3:02407",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_17:489": {
+            "value": [
+              "#EDDA31"
+            ]
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02407",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02428",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02424",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02416",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02412",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02420",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02408",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "FRAME",
+                "id": "3:71",
+                "name": "error-warning-fill",
+                "layoutStyle": {
+                  "width": 12,
+                  "height": 12,
+                  "relativeX": 146,
+                  "relativeY": -18
+                },
+                "children": [
+                  {
+                    "type": "PATH",
+                    "id": "3:74",
+                    "name": "路径",
+                    "layoutStyle": {
+                      "width": 10,
+                      "height": 10,
+                      "relativeX": 1,
+                      "relativeY": 1
+                    },
+                    "svgKey": "S3:error-warning-fill|3:74",
+                    "svgShortKey": "S3#0",
+                    "svgName": "error-warning-fill"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 9,
+      "svgNodeCount": 1,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 4/23. MISSING 19 sections: [4,5,6,7,8,9,10,11,12,13... +9 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 4,
+      "section": {
+        "id": "3:02454",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02454",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02475",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02471",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02467",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02463",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02459",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02455",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 5/23. MISSING 18 sections: [5,6,7,8,9,10,11,12,13,14... +8 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 5,
+      "section": {
+        "id": "3:02501",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:04913": {
+            "value": [
+              "#F0F3DB"
+            ]
+          },
+          "paint_3:3": {
+            "value": [
+              "#FFFFFF"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02501",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "fill": "paint_3:04913",
+            "_color": "#F0F3DB",
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:04901",
+                "name": "矩形 12",
+                "layoutStyle": {
+                  "width": 113,
+                  "height": 20,
+                  "relativeX": 14,
+                  "relativeY": 2
+                },
+                "fill": "paint_3:3",
+                "_color": "#FFFFFF"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02519",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02511",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02515",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02502",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02506",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "LAYER",
+                "id": "3:02510",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 8,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 6/23. MISSING 17 sections: [6,7,8,9,10,11,12,13,14,15... +7 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 6,
+      "section": {
+        "id": "3:02548",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02548",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02569",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02561",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02553",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02565",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02557",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02549",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 7/23. MISSING 16 sections: [7,8,9,10,11,12,13,14,15,16... +6 more]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 7,
+      "section": {
+        "id": "3:02595",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02595",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02616",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02604",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02608",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02612",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02600",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02596",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 8/23. MISSING 15 sections: [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 8,
+      "section": {
+        "id": "3:02642",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02642",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02663",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02659",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02655",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02647",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02651",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02643",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 9/23. MISSING 14 sections: [9,10,11,12,13,14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 9,
+      "section": {
+        "id": "3:02689",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02689",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02710",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02702",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02698",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02694",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02690",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02706",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 10/23. MISSING 13 sections: [10,11,12,13,14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 10,
+      "section": {
+        "id": "3:02736",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02736",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02757",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02749",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02741",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02745",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02753",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02737",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 11/23. MISSING 12 sections: [11,12,13,14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 11,
+      "section": {
+        "id": "3:02783",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02783",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02804",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02800",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02796",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02792",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02788",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02784",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 12/23. MISSING 11 sections: [12,13,14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 12,
+      "section": {
+        "id": "3:02830",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02830",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02835",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02840",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02848",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02844",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02836",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02831",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 13/23. MISSING 10 sections: [13,14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 13,
+      "section": {
+        "id": "3:02877",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02877",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02898",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02894",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02886",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02890",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02878",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02882",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 14/23. MISSING 9 sections: [14,15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 14,
+      "section": {
+        "id": "3:02136",
+        "name": "第一行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          },
+          "paint_3:9895": {
+            "value": [
+              "#D8D8D8"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02136",
+            "name": "第一行",
+            "layoutStyle": {
+              "width": 674,
+              "height": 14,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:01983",
+                "name": "矩形 7",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": -10,
+                  "relativeY": -5
+                },
+                "fill": "paint_3:9895",
+                "_color": "#D8D8D8",
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02001",
+                "name": "输入文本",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "字段1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02052",
+                "name": "字段1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 129,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "字段2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02077",
+                "name": "字段2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 294,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "字段3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02102",
+                "name": "字段3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 492,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "字段4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02120",
+                "name": "字段4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 643,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "字段5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line"
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "字段1",
+            "parentType": "FRAME",
+            "parentName": "第一行"
+          },
+          {
+            "text": "字段2",
+            "parentType": "FRAME",
+            "parentName": "第一行"
+          },
+          {
+            "text": "字段3",
+            "parentType": "FRAME",
+            "parentName": "第一行"
+          },
+          {
+            "text": "字段4",
+            "parentType": "FRAME",
+            "parentName": "第一行"
+          },
+          {
+            "text": "字段5",
+            "parentType": "FRAME",
+            "parentName": "第一行"
+          }
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 15/23. MISSING 8 sections: [15,16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 15,
+      "section": {
+        "id": "3:01995",
+        "name": "直线 5",
+        "type": "PATH"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "PATH",
+            "id": "3:01995",
+            "name": "直线 5",
+            "layoutStyle": {
+              "width": 349.0129089355469,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "svgKey": "S15:3:01995|3:01995",
+            "svgShortKey": "S15#0",
+            "svgName": ""
+          }
+        ],
+        "components": []
+      },
+      "nodeCount": 1,
+      "svgNodeCount": 1,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 16/23. MISSING 7 sections: [16,17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 16,
+      "section": {
+        "id": "3:01998",
+        "name": "直线 6",
+        "type": "PATH"
+      },
+      "structureSiblingCount": 3,
+      "dsl": {
+        "styles": {
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "PATH",
+            "id": "3:01998",
+            "name": "直线 6",
+            "layoutStyle": {
+              "width": 349.0129089355469,
+              "height": 0,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "svgKey": "S16:3:01998|3:01998",
+            "svgShortKey": "S16#0",
+            "svgName": ""
+          }
+        ],
+        "components": []
+      },
+      "nodeCount": 1,
+      "svgNodeCount": 1,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 17/23. MISSING 6 sections: [17,18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 17,
+      "section": {
+        "id": "3:01999",
+        "name": "直线 7",
+        "type": "PATH"
+      },
+      "structureSiblingCount": 3,
+      "dsl": {
+        "styles": {
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "PATH",
+            "id": "3:01999",
+            "name": "直线 7",
+            "layoutStyle": {
+              "width": 349.0129089355469,
+              "height": 0,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "svgKey": "S17:3:01999|3:01999",
+            "svgShortKey": "S17#0",
+            "svgName": ""
+          }
+        ],
+        "components": []
+      },
+      "nodeCount": 1,
+      "svgNodeCount": 1,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 18/23. MISSING 5 sections: [18,19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 18,
+      "section": {
+        "id": "3:02000",
+        "name": "直线 8",
+        "type": "PATH"
+      },
+      "structureSiblingCount": 3,
+      "dsl": {
+        "styles": {
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "PATH",
+            "id": "3:02000",
+            "name": "直线 8",
+            "layoutStyle": {
+              "width": 349.0129089355469,
+              "height": 0,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "svgKey": "S18:3:02000|3:02000",
+            "svgShortKey": "S18#0",
+            "svgName": ""
+          }
+        ],
+        "components": []
+      },
+      "nodeCount": 1,
+      "svgNodeCount": 1,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 19/23. MISSING 4 sections: [19,20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 19,
+      "section": {
+        "id": "3:02924",
+        "name": "第二行",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 12,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:02924",
+            "name": "第二行",
+            "layoutStyle": {
+              "width": 768,
+              "height": 24,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:02933",
+                "name": "矩形 8",
+                "layoutStyle": {
+                  "width": 768,
+                  "height": 24,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02942",
+                "name": "内容1",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 14,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容1",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02938",
+                "name": "内容2",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 147,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02934",
+                "name": "内容3",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 311,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容3",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02929",
+                "name": "内容5",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 661,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容5",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              },
+              {
+                "type": "TEXT",
+                "id": "3:02925",
+                "name": "内容4",
+                "layoutStyle": {
+                  "width": 31,
+                  "height": 14,
+                  "relativeX": 511,
+                  "relativeY": 5
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "内容4",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 3,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "single-line",
+                "_placeholder": true
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "内容1",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容2",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容3",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容5",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          },
+          {
+            "text": "内容4",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "第二行"
+          }
+        ],
+        "placeholderTexts": [
+          "内容1",
+          "内容2",
+          "内容3",
+          "内容5",
+          "内容4"
+        ]
+      },
+      "nodeCount": 7,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 20/23. MISSING 3 sections: [20,21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 20,
+      "section": {
+        "id": "3:04833",
+        "name": "报错",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_17:0652": {
+            "value": [
+              "#DBB44A"
+            ]
+          },
+          "paint_17:660": {
+            "value": [
+              "#FFF9D5"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:04833",
+            "name": "报错",
+            "layoutStyle": {
+              "width": 237,
+              "height": 63,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "children": [
+              {
+                "type": "LAYER",
+                "id": "3:04131",
+                "name": "矩形 10",
+                "layoutStyle": {
+                  "width": 193,
+                  "height": 46,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "fill": "paint_17:660",
+                "_color": "#FFF9D5",
+                "strokeColor": "paint_17:0652",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "1px"
+              },
+              {
+                "type": "TEXT",
+                "id": "3:04806",
+                "name": "输入文本",
+                "layoutStyle": {
+                  "width": 184,
+                  "height": 28,
+                  "relativeX": 9,
+                  "relativeY": 8
+                },
+                "fill": "paint_3:5137",
+                "_color": "#3D3D3D",
+                "text": [
+                  {
+                    "text": "输入参数内容2，不符合该字段校验规则2",
+                    "font": "font_3:6233"
+                  }
+                ],
+                "textColor": [
+                  {
+                    "start": 0,
+                    "end": 19,
+                    "color": "paint_3:5137"
+                  }
+                ],
+                "textAlign": "left",
+                "textMode": "auto-height"
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "输入参数内容2，不符合该字段校验规则2",
+            "parentType": "FRAME",
+            "parentName": "报错"
+          }
+        ]
+      },
+      "nodeCount": 3,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 21/23. MISSING 2 sections: [21,22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 21,
+      "section": {
+        "id": "3:00634",
+        "name": "右上",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:3": {
+            "value": [
+              "#FFFFFF"
+            ]
+          },
+          "paint_3:56": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:64": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:68": {
+            "value": [
+              "#A6A6A6"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:00634",
+            "name": "右上",
+            "layoutStyle": {
+              "width": 788,
+              "height": 48,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "fill": "paint_3:3",
+            "_color": "#FFFFFF",
+            "children": [
+              {
+                "type": "INSTANCE",
+                "id": "3:00671",
+                "name": "搜索",
+                "layoutStyle": {
+                  "width": 155,
+                  "height": 32,
+                  "relativeX": 116,
+                  "relativeY": 9
+                },
+                "componentInfo": {},
+                "children": [
+                  {
+                    "type": "LAYER",
+                    "id": "3:00671/3:00294",
+                    "name": "矩形 3",
+                    "layoutStyle": {
+                      "width": 155,
+                      "height": 32,
+                      "relativeX": 0,
+                      "relativeY": 0
+                    },
+                    "fill": "paint_3:3",
+                    "_color": "#FFFFFF",
+                    "strokeColor": "paint_3:010",
+                    "strokeType": "solid",
+                    "strokeAlign": "inside",
+                    "strokeWidth": "1px"
+                  },
+                  {
+                    "type": "TEXT",
+                    "id": "3:00671/3:00305",
+                    "name": "输入文本",
+                    "layoutStyle": {
+                      "width": 84,
+                      "height": 14,
+                      "relativeX": 6,
+                      "relativeY": 9.290322303771973
+                    },
+                    "fill": "paint_3:010",
+                    "_color": "#A6A6A6",
+                    "text": [
+                      {
+                        "text": "输入过滤器文本",
+                        "font": "font_3:6233"
+                      }
+                    ],
+                    "textColor": [
+                      {
+                        "start": 0,
+                        "end": 7,
+                        "color": "paint_3:010"
+                      }
+                    ],
+                    "textAlign": "center",
+                    "textMode": "single-line"
+                  },
+                  {
+                    "type": "FRAME",
+                    "id": "3:00671/3:51",
+                    "name": "search-2-fill",
+                    "layoutStyle": {
+                      "width": 14,
+                      "height": 14,
+                      "relativeX": 132,
+                      "relativeY": 9
+                    },
+                    "children": [
+                      {
+                        "type": "PATH",
+                        "id": "3:00671/3:54",
+                        "name": "路径",
+                        "layoutStyle": {
+                          "width": 11.849658012390137,
+                          "height": 11.849658012390137,
+                          "relativeX": 1.166656494140625,
+                          "relativeY": 1.1666641235351562
+                        },
+                        "svgKey": "S21:search-2-fill|3:00671/3:54",
+                        "svgShortKey": "S21#0",
+                        "svgName": "search-2-fill"
+                      }
+                    ]
+                  }
+                ],
+                "componentId": "3:00669"
+              },
+              {
+                "type": "FRAME",
+                "id": "3:00825",
+                "name": "选择框",
+                "layoutStyle": {
+                  "width": 101,
+                  "height": 31,
+                  "relativeX": 7,
+                  "relativeY": 9
+                },
+                "children": [
+                  {
+                    "type": "LAYER",
+                    "id": "3:00727",
+                    "name": "矩形 6",
+                    "layoutStyle": {
+                      "width": 101,
+                      "height": 32,
+                      "relativeX": 0,
+                      "relativeY": 0
+                    },
+                    "fill": "paint_3:3",
+                    "_color": "#FFFFFF",
+                    "strokeColor": "paint_3:010",
+                    "strokeType": "solid",
+                    "strokeAlign": "inside",
+                    "strokeWidth": "1px"
+                  },
+                  {
+                    "type": "FRAME",
+                    "id": "3:55",
+                    "name": "arrow-down-s-fill",
+                    "layoutStyle": {
+                      "width": 14,
+                      "height": 14,
+                      "relativeX": 80,
+                      "relativeY": 9
+                    },
+                    "children": [
+                      {
+                        "type": "PATH",
+                        "id": "3:58",
+                        "name": "路径",
+                        "layoutStyle": {
+                          "width": 7,
+                          "height": 3.5,
+                          "relativeX": 3.5,
+                          "relativeY": 5.833335876464844
+                        },
+                        "svgKey": "S21:arrow-down-s-fill|3:58",
+                        "svgShortKey": "S21#1",
+                        "svgName": "arrow-down-s-fill"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "TEXT",
+                    "id": "3:00734",
+                    "name": "选择项",
+                    "layoutStyle": {
+                      "width": 36,
+                      "height": 14,
+                      "relativeX": 8,
+                      "relativeY": 9
+                    },
+                    "fill": "paint_3:010",
+                    "_color": "#A6A6A6",
+                    "text": [
+                      {
+                        "text": "选择项",
+                        "font": "font_3:6233"
+                      }
+                    ],
+                    "textColor": [
+                      {
+                        "start": 0,
+                        "end": 3,
+                        "color": "paint_3:010"
+                      }
+                    ],
+                    "textAlign": "center",
+                    "textMode": "single-line",
+                    "_placeholder": true
+                  }
+                ]
+              },
+              {
+                "type": "FRAME",
+                "id": "3:59",
+                "name": "upload-2-fill",
+                "layoutStyle": {
+                  "width": 14,
+                  "height": 14,
+                  "relativeX": 704,
+                  "relativeY": 17
+                },
+                "children": [
+                  {
+                    "type": "PATH",
+                    "id": "3:62",
+                    "name": "路径",
+                    "layoutStyle": {
+                      "width": 11.666666030883789,
+                      "height": 11.083333015441895,
+                      "relativeX": 1.1666259765625,
+                      "relativeY": 1.1666641235351562
+                    },
+                    "svgKey": "S21:upload-2-fill|3:62",
+                    "svgShortKey": "S21#2",
+                    "svgName": "upload-2-fill"
+                  }
+                ]
+              },
+              {
+                "type": "FRAME",
+                "id": "3:63",
+                "name": "download-2-fill",
+                "layoutStyle": {
+                  "width": 14,
+                  "height": 14,
+                  "relativeX": 734,
+                  "relativeY": 17
+                },
+                "children": [
+                  {
+                    "type": "PATH",
+                    "id": "3:66",
+                    "name": "路径",
+                    "layoutStyle": {
+                      "width": 11.666666030883789,
+                      "height": 10.5,
+                      "relativeX": 1.1666259765625,
+                      "relativeY": 1.75
+                    },
+                    "svgKey": "S21:download-2-fill|3:66",
+                    "svgShortKey": "S21#3",
+                    "svgName": "download-2-fill"
+                  }
+                ]
+              },
+              {
+                "type": "FRAME",
+                "id": "3:67",
+                "name": "add-fill",
+                "layoutStyle": {
+                  "width": 14,
+                  "height": 14,
+                  "relativeX": 764,
+                  "relativeY": 17
+                },
+                "children": [
+                  {
+                    "type": "PATH",
+                    "id": "3:70",
+                    "name": "路径",
+                    "layoutStyle": {
+                      "width": 8.166666030883789,
+                      "height": 8.166666030883789,
+                      "relativeX": 2.9166259765625,
+                      "relativeY": 2.916667938232422
+                    },
+                    "svgKey": "S21:add-fill|3:70",
+                    "svgShortKey": "S21#4",
+                    "svgName": "add-fill"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "输入过滤器文本",
+            "parentType": "INSTANCE",
+            "parentName": "搜索"
+          },
+          {
+            "text": "选择项",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "选择框"
+          }
+        ],
+        "placeholderTexts": [
+          "选择项"
+        ]
+      },
+      "nodeCount": 17,
+      "svgNodeCount": 5,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "Fetched 22/23. MISSING 1 sections: [22]. You MUST fetch ALL remaining sections before generating HTML. Do NOT stop early."
+    },
+    {
+      "sectionIndex": 22,
+      "section": {
+        "id": "3:00629",
+        "name": "左侧",
+        "type": "FRAME"
+      },
+      "structureSiblingCount": 1,
+      "dsl": {
+        "styles": {
+          "font_3:6233": {
+            "value": {
+              "family": "Source Han Sans",
+              "size": 12,
+              "style": "{\"fontStyle\":\"Regular\",\"opsz\":\"auto\"}",
+              "decoration": "none",
+              "case": "none",
+              "lineHeight": "14",
+              "letterSpacing": "auto",
+              "weight": "400"
+            }
+          },
+          "paint_3:010": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:20": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:3": {
+            "value": [
+              "#FFFFFF"
+            ]
+          },
+          "paint_3:32": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:36": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:48": {
+            "value": [
+              "#A6A6A6"
+            ]
+          },
+          "paint_3:5137": {
+            "value": [
+              "#3D3D3D"
+            ]
+          },
+          "paint_3:6013": {
+            "value": [
+              "#FFCA4D"
+            ]
+          },
+          "paint_3:6171": {
+            "value": [
+              "#E8E8E8"
+            ]
+          },
+          "paint_3:9841": {
+            "value": [
+              "#F0F3DB"
+            ]
+          }
+        },
+        "nodes": [
+          {
+            "type": "FRAME",
+            "id": "3:00629",
+            "name": "左侧",
+            "layoutStyle": {
+              "width": 192,
+              "height": 404,
+              "relativeX": 0,
+              "relativeY": 0
+            },
+            "fill": "paint_3:3",
+            "_color": "#FFFFFF",
+            "strokeColor": "paint_3:010",
+            "strokeType": "solid",
+            "strokeAlign": "inside",
+            "strokeWidth": "0px 1px 0px 0px",
+            "children": [
+              {
+                "type": "COMPONENT",
+                "id": "3:0",
+                "name": "导航栏",
+                "layoutStyle": {
+                  "width": 191,
+                  "height": 136,
+                  "relativeX": 1,
+                  "relativeY": 48
+                },
+                "fill": "paint_3:3",
+                "_color": "#FFFFFF",
+                "componentInfo": {},
+                "children": [
+                  {
+                    "type": "FRAME",
+                    "id": "3:00054",
+                    "name": "子组3",
+                    "layoutStyle": {
+                      "width": 191,
+                      "height": 26,
+                      "relativeX": 0,
+                      "relativeY": 106
+                    },
+                    "fill": "paint_3:3",
+                    "_color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "TEXT",
+                        "id": "3:00055",
+                        "name": "子组",
+                        "layoutStyle": {
+                          "width": 37,
+                          "height": 14,
+                          "relativeX": 51,
+                          "relativeY": 6
+                        },
+                        "fill": "paint_3:5137",
+                        "_color": "#3D3D3D",
+                        "text": [
+                          {
+                            "text": "子组3",
+                            "font": "font_3:6233"
+                          }
+                        ],
+                        "textColor": [
+                          {
+                            "start": 0,
+                            "end": 3,
+                            "color": "paint_3:5137"
+                          }
+                        ],
+                        "textAlign": "center",
+                        "textMode": "single-line"
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:00120",
+                        "name": "folder-3-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 37,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:00121",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.666666030883789,
+                              "height": 10.5,
+                              "relativeX": 1.1666717529296875,
+                              "relativeY": 1.75
+                            },
+                            "path": [
+                              {
+                                "fill": "#FFCA4D",
+                                "data": ""
+                              }
+                            ],
+                            "svgKey": "S22:folder-3-fill|3:00121",
+                            "svgShortKey": "S22#0",
+                            "svgName": "folder-3-fill"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "FRAME",
+                    "id": "3:6290",
+                    "name": "子组2",
+                    "layoutStyle": {
+                      "width": 191,
+                      "height": 26,
+                      "relativeX": 0,
+                      "relativeY": 80
+                    },
+                    "fill": "paint_3:9841",
+                    "_color": "#F0F3DB",
+                    "children": [
+                      {
+                        "type": "FRAME",
+                        "id": "3:6296",
+                        "name": "folder-3-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 36,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:6297",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.666666030883789,
+                              "height": 10.5,
+                              "relativeX": 1.1666717529296875,
+                              "relativeY": 1.75
+                            },
+                            "path": [
+                              {
+                                "fill": "#FFCA4D",
+                                "data": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:9937",
+                        "name": "容器 11",
+                        "layoutStyle": {
+                          "width": 137,
+                          "height": 22,
+                          "relativeX": 50,
+                          "relativeY": 2
+                        },
+                        "fill": "paint_3:3",
+                        "_color": "#FFFFFF",
+                        "children": [
+                          {
+                            "type": "TEXT",
+                            "id": "3:00018",
+                            "name": "输入文本",
+                            "layoutStyle": {
+                              "width": 31,
+                              "height": 14,
+                              "relativeX": 3,
+                              "relativeY": 4
+                            },
+                            "fill": "paint_3:5137",
+                            "_color": "#3D3D3D",
+                            "text": [
+                              {
+                                "text": "子组2",
+                                "font": "font_3:6233"
+                              }
+                            ],
+                            "textColor": [
+                              {
+                                "start": 0,
+                                "end": 3,
+                                "color": "paint_3:5137"
+                              }
+                            ],
+                            "textAlign": "center",
+                            "textMode": "single-line"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "FRAME",
+                    "id": "3:6276",
+                    "name": "未分组2",
+                    "layoutStyle": {
+                      "width": 191,
+                      "height": 26,
+                      "relativeX": 0,
+                      "relativeY": 53
+                    },
+                    "fill": "paint_3:3",
+                    "_color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "FRAME",
+                        "id": "3:6279",
+                        "name": "arrow-down-s-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 5,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:6280",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 7,
+                              "height": 3.5,
+                              "relativeX": 3.5,
+                              "relativeY": 5.833335876464844
+                            },
+                            "path": [
+                              {
+                                "fill": "#A6A6A6",
+                                "data": ""
+                              }
+                            ],
+                            "svgKey": "S22:arrow-down-s-fill|3:6280",
+                            "svgShortKey": "S22#1",
+                            "svgName": "arrow-down-s-fill"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "TEXT",
+                        "id": "3:6281",
+                        "name": "未分组",
+                        "layoutStyle": {
+                          "width": 36,
+                          "height": 14,
+                          "relativeX": 36,
+                          "relativeY": 6
+                        },
+                        "fill": "paint_3:5137",
+                        "_color": "#3D3D3D",
+                        "text": [
+                          {
+                            "text": "未分组",
+                            "font": "font_3:6233"
+                          }
+                        ],
+                        "textColor": [
+                          {
+                            "start": 0,
+                            "end": 3,
+                            "color": "paint_3:5137"
+                          }
+                        ],
+                        "textAlign": "center",
+                        "textMode": "auto-height",
+                        "_placeholder": true
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:6277",
+                        "name": "folder-3-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 19,
+                          "relativeY": 7
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:6278",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.666666030883789,
+                              "height": 10.5,
+                              "relativeX": 1.1666717529296875,
+                              "relativeY": 1.75
+                            },
+                            "path": [
+                              {
+                                "fill": "#FFCA4D",
+                                "data": ""
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "FRAME",
+                    "id": "3:6162",
+                    "name": "子组",
+                    "layoutStyle": {
+                      "width": 191,
+                      "height": 26,
+                      "relativeX": 0,
+                      "relativeY": 27
+                    },
+                    "fill": "paint_3:6171",
+                    "_color": "#E8E8E8",
+                    "children": [
+                      {
+                        "type": "TEXT",
+                        "id": "3:6244",
+                        "name": "子组",
+                        "layoutStyle": {
+                          "width": 24,
+                          "height": 14,
+                          "relativeX": 53,
+                          "relativeY": 6
+                        },
+                        "fill": "paint_3:5137",
+                        "_color": "#3D3D3D",
+                        "text": [
+                          {
+                            "text": "子组",
+                            "font": "font_3:6233"
+                          }
+                        ],
+                        "textColor": [
+                          {
+                            "start": 0,
+                            "end": 2,
+                            "color": "paint_3:5137"
+                          }
+                        ],
+                        "textAlign": "center",
+                        "textMode": "auto-height",
+                        "_placeholder": true
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:27",
+                        "name": "folder-3-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 36,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:30",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.666666030883789,
+                              "height": 10.5,
+                              "relativeX": 1.1666717529296875,
+                              "relativeY": 1.75
+                            },
+                            "path": [
+                              {
+                                "fill": "#FFCA4D",
+                                "data": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:31",
+                        "name": "delete-bin-6-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 151,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:34",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.666666030883789,
+                              "height": 11.666666030883789,
+                              "relativeX": 1.166656494140625,
+                              "relativeY": 1.1666717529296875
+                            },
+                            "path": [
+                              {
+                                "fill": "#A6A6A6",
+                                "data": ""
+                              }
+                            ],
+                            "svgKey": "S22:delete-bin-6-fill|3:34",
+                            "svgShortKey": "S22#2",
+                            "svgName": "delete-bin-6-fill"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:35",
+                        "name": "add-box-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 169,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:38",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 10.5,
+                              "height": 10.5,
+                              "relativeX": 1.75,
+                              "relativeY": 1.75
+                            },
+                            "path": [
+                              {
+                                "fill": "#A6A6A6",
+                                "data": ""
+                              }
+                            ],
+                            "svgKey": "S22:add-box-fill|3:38",
+                            "svgShortKey": "S22#3",
+                            "svgName": "add-box-fill"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "FRAME",
+                    "id": "3:5965",
+                    "name": "未分组1",
+                    "layoutStyle": {
+                      "width": 191,
+                      "height": 26,
+                      "relativeX": 0,
+                      "relativeY": 0
+                    },
+                    "fill": "paint_3:3",
+                    "_color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "FRAME",
+                        "id": "3:19",
+                        "name": "arrow-down-s-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 5,
+                          "relativeY": 6
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:22",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 7,
+                              "height": 3.5,
+                              "relativeX": 3.5,
+                              "relativeY": 5.833335876464844
+                            },
+                            "path": [
+                              {
+                                "fill": "#A6A6A6",
+                                "data": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "TEXT",
+                        "id": "3:6015",
+                        "name": "输入文本",
+                        "layoutStyle": {
+                          "width": 36,
+                          "height": 14,
+                          "relativeX": 36,
+                          "relativeY": 6
+                        },
+                        "fill": "paint_3:5137",
+                        "_color": "#3D3D3D",
+                        "text": [
+                          {
+                            "text": "未分组",
+                            "font": "font_3:6233"
+                          }
+                        ],
+                        "textColor": [
+                          {
+                            "start": 0,
+                            "end": 3,
+                            "color": "paint_3:5137"
+                          }
+                        ],
+                        "textAlign": "center",
+                        "textMode": "auto-height"
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:6181",
+                        "name": "folder-3-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 19,
+                          "relativeY": 7
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:6182",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.666666030883789,
+                              "height": 10.5,
+                              "relativeX": 1.1666717529296875,
+                              "relativeY": 1.75
+                            },
+                            "path": [
+                              {
+                                "fill": "#FFCA4D",
+                                "data": ""
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "FRAME",
+                "id": "3:00393",
+                "name": "左上",
+                "layoutStyle": {
+                  "width": 191,
+                  "height": 48,
+                  "relativeX": 0,
+                  "relativeY": 0
+                },
+                "fill": "paint_3:3",
+                "_color": "#FFFFFF",
+                "strokeColor": "paint_3:010",
+                "strokeType": "solid",
+                "strokeAlign": "inside",
+                "strokeWidth": "0px 0px 1px",
+                "children": [
+                  {
+                    "type": "FRAME",
+                    "id": "3:47",
+                    "name": "folder-add-fill",
+                    "layoutStyle": {
+                      "width": 14,
+                      "height": 14,
+                      "relativeX": 173,
+                      "relativeY": 16
+                    },
+                    "children": [
+                      {
+                        "type": "PATH",
+                        "id": "3:50",
+                        "name": "路径",
+                        "layoutStyle": {
+                          "width": 11.666666030883789,
+                          "height": 10.5,
+                          "relativeX": 1.166656494140625,
+                          "relativeY": 1.75
+                        },
+                        "path": [
+                          {
+                            "fill": "#A6A6A6",
+                            "data": ""
+                          }
+                        ],
+                        "svgKey": "S22:folder-add-fill|3:50",
+                        "svgShortKey": "S22#4",
+                        "svgName": "folder-add-fill"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "COMPONENT",
+                    "id": "3:00669",
+                    "name": "搜索",
+                    "layoutStyle": {
+                      "width": 155,
+                      "height": 31,
+                      "relativeX": 7,
+                      "relativeY": 8
+                    },
+                    "componentInfo": {},
+                    "children": [
+                      {
+                        "type": "LAYER",
+                        "id": "3:00294",
+                        "name": "矩形 3",
+                        "layoutStyle": {
+                          "width": 155,
+                          "height": 32,
+                          "relativeX": 0,
+                          "relativeY": 0
+                        },
+                        "fill": "paint_3:3",
+                        "_color": "#FFFFFF",
+                        "strokeColor": "paint_3:010",
+                        "strokeType": "solid",
+                        "strokeAlign": "inside",
+                        "strokeWidth": "1px"
+                      },
+                      {
+                        "type": "TEXT",
+                        "id": "3:00305",
+                        "name": "输入文本",
+                        "layoutStyle": {
+                          "width": 72,
+                          "height": 12,
+                          "relativeX": 6,
+                          "relativeY": 9
+                        },
+                        "fill": "paint_3:5137",
+                        "_color": "#3D3D3D",
+                        "text": [
+                          {
+                            "text": "输入过滤文本",
+                            "font": "font_3:6233"
+                          }
+                        ],
+                        "textColor": [
+                          {
+                            "start": 0,
+                            "end": 6,
+                            "color": "paint_3:010"
+                          }
+                        ],
+                        "textAlign": "center",
+                        "textMode": "single-line"
+                      },
+                      {
+                        "type": "FRAME",
+                        "id": "3:51",
+                        "name": "search-2-fill",
+                        "layoutStyle": {
+                          "width": 14,
+                          "height": 14,
+                          "relativeX": 132,
+                          "relativeY": 9
+                        },
+                        "children": [
+                          {
+                            "type": "PATH",
+                            "id": "3:54",
+                            "name": "路径",
+                            "layoutStyle": {
+                              "width": 11.849658012390137,
+                              "height": 11.849658012390137,
+                              "relativeX": 1.166656494140625,
+                              "relativeY": 1.1666641235351562
+                            },
+                            "path": [
+                              {
+                                "fill": "#A6A6A6",
+                                "data": ""
+                              }
+                            ],
+                            "svgKey": "S22:search-2-fill|3:54",
+                            "svgShortKey": "S22#5",
+                            "svgName": "search-2-fill"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "components": [],
+        "rowTexts": [
+          {
+            "text": "子组3",
+            "parentType": "FRAME",
+            "parentName": "子组3"
+          },
+          {
+            "text": "子组2",
+            "parentType": "FRAME",
+            "parentName": "容器 11"
+          },
+          {
+            "text": "未分组",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "未分组2"
+          },
+          {
+            "text": "子组",
+            "_placeholder": true,
+            "parentType": "FRAME",
+            "parentName": "子组"
+          },
+          {
+            "text": "未分组",
+            "parentType": "FRAME",
+            "parentName": "未分组1"
+          },
+          {
+            "text": "输入过滤文本",
+            "parentType": "COMPONENT",
+            "parentName": "搜索"
+          }
+        ],
+        "placeholderTexts": [
+          "未分组",
+          "子组"
+        ]
+      },
+      "nodeCount": 39,
+      "svgNodeCount": 11,
+      "hasStrippedSvgs": true,
+      "componentDocumentLinks": [],
+      "fetchProgress": "ALL 23 sections fetched. You can now generate the complete HTML."
+    }
+  ]
+}

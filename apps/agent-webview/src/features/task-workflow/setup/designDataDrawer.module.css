@@ -1,0 +1,45 @@
+/** 定义设计数据 Drawer 内部加载、工具栏与原始 JSON 浏览器的局部样式。 */
+
+.loading {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
+.rawPanel {
+  display: flex;
+  min-height: 520px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rawToolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.2fr);
+  gap: 12px;
+}
+
+.sectionSelect {
+  width: 100%;
+}
+
+.jsonViewer {
+  min-height: 460px;
+  max-height: calc(100vh - 260px);
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  background: #111827;
+  color: #dbeafe;
+  font: 12px/1.65 var(--vscode-editor-font-family, ui-monospace, SFMono-Regular, Menlo, monospace);
+  tab-size: 2;
+  white-space: pre;
+}
+
+@media (max-width: 680px) {
+  .rawToolbar {
+    grid-template-columns: 1fr;
+  }
+}

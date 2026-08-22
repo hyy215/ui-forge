@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "declarationMap": false
+  },
+  "references": [
+    { "path": "../../packages/shared-protocol" }
+  ],
+  "include": ["src", "fixtures", "development", "vite.config.ts"]
+}

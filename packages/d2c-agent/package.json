@@ -1,0 +1,22 @@
+{
+  "name": "@ui-forge/d2c-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/d2cAgent.js",
+  "types": "dist/d2cAgent.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/d2cAgent.d.ts",
+      "import": "./dist/d2cAgent.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ui-forge/agent-core": "0.1.0",
+    "zod": "4.4.3"
+  }
+}

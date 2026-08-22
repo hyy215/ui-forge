@@ -1,0 +1,87 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:packages",
+      "type": "shell",
+      "command": "npm run build:packages",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "build:webview",
+      "type": "shell",
+      "command": "npm run build -w @ui-forge/agent-webview",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build:extension",
+      "type": "shell",
+      "command": "npm run build -w @ui-forge/vscode-extension",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "build:vscode-debug",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "build:packages",
+        "build:webview",
+        "build:extension"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "dev:webview:fixture",
+      "type": "shell",
+      "command": "npm run dev -w @ui-forge/agent-webview -- --host 127.0.0.1 --port 5173 --strictPort",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "build:packages",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "vite.*building|VITE.*ready|Local:",
+          "endsPattern": "Local:.*http://127\\.0\\.0\\.1:5173"
+        }
+      }
+    },
+    {
+      "label": "dev:webview:server",
+      "type": "shell",
+      "command": "npm run dev:server -w @ui-forge/agent-webview -- --host 127.0.0.1 --port 5173 --strictPort",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "build:packages",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "vite.*building|VITE.*ready|Local:",
+          "endsPattern": "Local:.*http://127\\.0\\.0\\.1:5173"
+        }
+      }
+    }
+  ]
+}

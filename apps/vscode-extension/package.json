@@ -1,0 +1,63 @@
+{
+  "name": "@ui-forge/vscode-extension",
+  "displayName": "ui-forge",
+  "description": "D2C agent integrated with VS Code.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "dependencies": {
+    "@ui-forge/shared-protocol": "0.1.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "ui-forge.open",
+        "title": "ui-forge: Open Agent"
+      },
+      {
+        "command": "ui-forge.createTask",
+        "title": "创建任务",
+        "icon": "$(add)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ui-forge",
+          "title": "ui-forge",
+          "icon": "media/ui-forge.svg"
+        }
+      ]
+    },
+    "views": {
+      "ui-forge": [
+        {
+          "id": "ui-forge.sidebar",
+          "name": "ui-forge"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "ui-forge.createTask",
+          "when": "view == ui-forge.sidebar",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.125.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared-protocol" },
+    { "path": "./packages/agent-core" },
+    { "path": "./packages/d2c-agent" },
+    { "path": "./packages/d2c-storage" },
+    { "path": "./packages/mastergo-adapter" },
+    { "path": "./packages/design-system-adapter" },
+    { "path": "./packages/component-indexer" },
+    { "path": "./packages/tools" },
+    { "path": "./packages/visual-evaluator" },
+    { "path": "./packages/eval-runner" },
+    { "path": "./apps/agent-server" },
+    { "path": "./apps/agent-webview" },
+    { "path": "./apps/vscode-extension" }
+  ]
+}

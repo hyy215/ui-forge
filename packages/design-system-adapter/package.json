@@ -1,0 +1,16 @@
+{
+  "name": "@ui-forge/design-system-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ant-design/cli": "6.6.1",
+    "@modelcontextprotocol/sdk": "1.30.0"
+  }
+}

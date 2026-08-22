@@ -1,0 +1,27 @@
+{
+  "name": "@ui-forge/agent-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/agentCore.js",
+  "types": "dist/agentCore.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/agentCore.d.ts",
+      "import": "./dist/agentCore.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@langchain/core": "1.2.8",
+    "@langchain/langgraph": "1.4.10",
+    "@langchain/openai": "1.5.8",
+    "deepagents": "1.12.4",
+    "js-tiktoken": "1.0.21",
+    "langchain": "1.5.9",
+    "zod": "4.4.3"
+  }
+}

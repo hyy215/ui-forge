@@ -1,0 +1,19 @@
+# Temporary reference materials
+/references/
+/docs/
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local environment and runtime data
+.env
+.env.local
+.ui-forge/
+*.log
+
+# Editors and operating systems
+.DS_Store
+.vscode-test/

@@ -1,0 +1,30 @@
+{
+  "name": "ui-forge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A VS Code integrated D2C agent for React projects.",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build:packages && npm run build:apps",
+    "build:packages": "npm run build -w @ui-forge/shared-protocol && npm run build -w @ui-forge/agent-core && npm run build -w @ui-forge/d2c-agent && npm run build -w @ui-forge/d2c-storage && npm run build -w @ui-forge/mastergo-adapter && npm run build -w @ui-forge/design-system-adapter && npm run build -w @ui-forge/component-indexer && npm run build -w @ui-forge/tools && npm run build -w @ui-forge/visual-evaluator && npm run build -w @ui-forge/eval-runner",
+    "build:apps": "npm run build -w @ui-forge/agent-server && npm run build -w @ui-forge/agent-webview && npm run build -w @ui-forge/vscode-extension",
+    "check": "npm run build:packages && npm run typecheck --workspaces --if-present && npm run test",
+    "dev:server": "npm run dev -w @ui-forge/agent-server",
+    "dev:webview": "npm run dev -w @ui-forge/agent-webview",
+    "dev:webview:server": "npm run dev:server -w @ui-forge/agent-webview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

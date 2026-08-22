@@ -1,0 +1,22 @@
+{
+  "name": "@ui-forge/d2c-storage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/d2cStorage.js",
+  "types": "dist/d2cStorage.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/d2cStorage.d.ts",
+      "import": "./dist/d2cStorage.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ui-forge/d2c-agent": "0.1.0",
+    "zod": "4.4.3"
+  }
+}

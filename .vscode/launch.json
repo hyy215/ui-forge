@@ -1,0 +1,87 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server: Agent Server",
+      "type": "node",
+      "request": "launch",
+      "runtimeArgs": [
+        "--import",
+        "tsx"
+      ],
+      "program": "${workspaceFolder}/apps/agent-server/src/main.ts",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "DATABASE_URL": ""
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "preLaunchTask": "build:packages"
+    },
+    {
+      "name": "Web: Fixture",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5173",
+      "webRoot": "${workspaceFolder}/apps/agent-webview",
+      "sourceMaps": true,
+      "preLaunchTask": "dev:webview:fixture"
+    },
+    {
+      "name": "Web: Agent Server",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5173",
+      "webRoot": "${workspaceFolder}/apps/agent-webview",
+      "sourceMaps": true,
+      "preLaunchTask": "dev:webview:server"
+    },
+    {
+      "name": "VS Code: Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/apps/vscode-extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/apps/vscode-extension/dist/**/*.js"
+      ],
+      "env": {
+        "UI_FORGE_SERVER_URL": "http://127.0.0.1:4310"
+      },
+      "sourceMaps": true,
+      "preLaunchTask": "build:vscode-debug"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "ui-forge: Server + Web",
+      "configurations": [
+        "Server: Agent Server",
+        "Web: Agent Server"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "ui-forge: Server + VS Code",
+      "configurations": [
+        "Server: Agent Server",
+        "VS Code: Extension"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "ui-forge: Full Stack",
+      "configurations": [
+        "Server: Agent Server",
+        "Web: Agent Server",
+        "VS Code: Extension"
+      ],
+      "stopAll": true
+    }
+  ]
+}

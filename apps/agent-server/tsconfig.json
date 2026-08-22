@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "references": [
+    { "path": "../../packages/shared-protocol" },
+    { "path": "../../packages/component-indexer" },
+    { "path": "../../packages/d2c-agent" },
+    { "path": "../../packages/d2c-storage" },
+    { "path": "../../packages/design-system-adapter" },
+    { "path": "../../packages/mastergo-adapter" }
+  ],
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}
