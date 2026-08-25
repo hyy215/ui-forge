@@ -20,7 +20,10 @@ import {
   createRecognizeDesignComponentsNode,
   recognizeDesignComponentsNodeId,
 } from "./nodes/recognize-design-components/recognizeDesignComponentsNode.js";
-import type { D2CGraphState } from "./d2cGraphState.js";
+import {
+  createPersistedD2CGraphState,
+  type D2CGraphState,
+} from "./d2cGraphState.js";
 import {
   createResolveDesignSystemCatalogNode,
   resolveDesignSystemCatalogNodeId,
@@ -47,7 +50,7 @@ export interface D2CGraphDependencies {
 export interface D2CGraph {
   /** 读取任务线程中的最新权威任务。 */
   getTask(taskId: string): Promise<D2CTask | undefined>;
-  /** 保存完整权威任务。 */
+  /** 保存完整权威任务并丢弃节点临时输出。 */
   saveTask(task: D2CTask): Promise<D2CTask>;
   /** 从固定路径起点执行设计检查。 */
   inspectDesign(taskId: string, source: DesignSource): Promise<DesignInspection>;
@@ -107,7 +110,7 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
     routes: [{
       from: inspectProjectNodeId,
       targets: [resolveDesignSystemCatalogNodeId, AgentCore.graphEnd],
-      decide: (state) => state.projectInspection?.kind === "unsupported"
+      decide: (state) => state.execution?.projectInspection?.kind === "unsupported"
         ? AgentCore.graphEnd
         : resolveDesignSystemCatalogNodeId,
     }],
@@ -116,39 +119,13 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
   });
 
   return {
-    /** 从 Graph Checkpoint 投影任务字段。 */
+    /** 从 Graph Checkpoint 读取唯一持久业务状态。 */
     async getTask(taskId) {
       return (await graph.getState(taskId))?.task;
     },
-    /** 替换线程中的权威任务。 */
+    /** 替换权威任务，并在每个命令提交点清空全部临时执行上下文。 */
     async saveTask(task) {
-      const current = await graph.getState(task.taskId) ?? {};
-      const next: D2CGraphState = { ...current, task: structuredClone(task) };
-      if (!task.inspectedDesign) {
-        delete next.designSource;
-        delete next.inspection;
-        delete next.projectInspection;
-        delete next.componentCatalog;
-        delete next.designSystemWarnings;
-        delete next.componentRecognition;
-        delete next.projectContextAnalysis;
-        delete next.plan;
-      }
-      if (!task.projectInspection) {
-        delete next.projectInspection;
-        delete next.componentCatalog;
-        delete next.designSystemWarnings;
-        delete next.componentRecognition;
-        delete next.projectContextAnalysis;
-        delete next.plan;
-      }
-      if (!task.componentRecognition) {
-        delete next.componentRecognition;
-        delete next.projectContextAnalysis;
-        delete next.plan;
-      }
-      if (!task.plan) delete next.plan;
-      await graph.setState(task.taskId, next);
+      await graph.setState(task.taskId, createPersistedD2CGraphState(task));
       return structuredClone(task);
     },
     /** 从 START 执行唯一的设计检查节点。 */
@@ -156,34 +133,29 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
       const current = await graph.getState(taskId) ?? {};
       const input: D2CGraphState = {
         ...(current.task ? { task: structuredClone(current.task) } : {}),
-        designSource: structuredClone(source),
+        execution: { designSource: structuredClone(source) },
       };
-      delete input.projectInspection;
-      delete input.componentCatalog;
-      delete input.designSystemWarnings;
-      delete input.componentRecognition;
-      delete input.projectContextAnalysis;
-      delete input.plan;
-      const result = await graph.invoke(
-        input,
-        { threadId: taskId },
-      );
-      if (!result.inspection) throw new Error("D2C Graph 设计检查节点未返回结果。");
-      return result.inspection;
+      const result = await graph.invoke(input, { threadId: taskId });
+      const inspection = result.execution?.inspection;
+      if (!inspection) throw new Error("D2C Graph 设计检查节点未返回结果。");
+      return inspection;
     },
-    /** 从设计确认暂停点继续执行唯一的第二步 DeepAgent。 */
+    /** 从设计确认暂停点继续执行第二步，节点结果只在本次恢复期间流转。 */
     async analyzeSecondStep(taskId, reportProgress, signal) {
       if (reportProgress) progressReporters.set(taskId, reportProgress);
       if (signal) abortSignals.set(taskId, signal);
       try {
         const result = await graph.resume(taskId);
-        if (!result.projectInspection) throw new Error("D2C Graph 第二步节点未返回项目检查结果。");
+        const execution = result.execution;
+        if (!execution?.projectInspection) {
+          throw new Error("D2C Graph 第二步节点未返回项目检查结果。");
+        }
         return {
-          projectInspection: result.projectInspection,
-          ...(result.componentRecognition
-            ? { componentRecognition: result.componentRecognition }
+          projectInspection: execution.projectInspection,
+          ...(execution.componentRecognition
+            ? { componentRecognition: execution.componentRecognition }
             : {}),
-          ...(result.plan ? { plan: result.plan } : {}),
+          ...(execution.plan ? { plan: execution.plan } : {}),
         };
       } finally {
         progressReporters.delete(taskId);

@@ -1,4 +1,4 @@
-/** 定义当前 D2C Graph 节点间共享但不向包外暴露的内部状态。 */
+/** 区分 D2C Graph 的权威任务锚点与单次运行临时上下文。 */
 
 import type { DesignInspection } from "../design-context/designInspection.js";
 import type { DesignSource } from "../design-context/designSource.js";
@@ -9,15 +9,8 @@ import type { ProjectInspection } from "../project-context/projectInspection.js"
 import type { ProjectContextAnalysis } from "../project-context/projectContextAnalysis.js";
 import type { PlanningResult } from "../planning/planningResult.js";
 
-/**
- * 单一 D2C Graph 内各节点共享的状态。
- *
- * `task` 是跨命令持久化的权威业务状态；其余字段只是在一次 Graph 执行期间供节点传递的
- * 临时上下文或输出，不应被包外消费者直接读取，也不能成为第二份业务事实来源。Service 在
- * 命令完成后把需要持久化的结果一次提交回 `D2CTask`。
- */
-export interface D2CGraphState {
-  task?: D2CTask;
+/** 只在一次 Graph 调用或暂停恢复过程中流转的节点上下文。 */
+export interface D2CGraphExecutionState {
   designSource?: DesignSource;
   inspection?: DesignInspection;
   projectInspection?: ProjectInspection;
@@ -26,4 +19,15 @@ export interface D2CGraphState {
   projectContextAnalysis?: ProjectContextAnalysis;
   componentRecognition?: DesignComponentRecognition;
   plan?: PlanningResult;
+}
+
+/** Graph Checkpoint 中的权威任务与可丢弃执行上下文。 */
+export interface D2CGraphState {
+  task?: D2CTask;
+  execution?: D2CGraphExecutionState;
+}
+
+/** 创建命令边界允许持久化的最小 Graph 状态，并清除全部节点临时输出。 */
+export function createPersistedD2CGraphState(task: D2CTask): D2CGraphState {
+  return { task: structuredClone(task) };
 }

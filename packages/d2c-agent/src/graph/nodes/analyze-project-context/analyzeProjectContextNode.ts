@@ -17,8 +17,9 @@ export function createAnalyzeProjectContextNode(
   return {
     id: analyzeProjectContextNodeId,
     execute: async (state) => {
-      if (!state.task || !state.projectInspection || state.projectInspection.kind === "unsupported"
-        || !state.componentRecognition) {
+      const inspection = state.execution?.projectInspection;
+      const recognition = state.execution?.componentRecognition;
+      if (!state.task || !inspection || inspection.kind === "unsupported" || !recognition) {
         throw new Error("项目上下文节点缺少已通过门禁的项目或组件候选。");
       }
       const reporter = resolveReporter(state.task.taskId);
@@ -27,8 +28,8 @@ export function createAnalyzeProjectContextNode(
       await reporter?.({ type: "project-context-analysis-start" });
       const startedAt = performance.now();
       const analysis = await analyzer.analyze({
-        inspection: structuredClone(state.projectInspection),
-        recognition: structuredClone(state.componentRecognition),
+        inspection: structuredClone(inspection),
+        recognition: structuredClone(recognition),
         ...(signal ? { signal } : {}),
       });
       await reporter?.({
@@ -36,7 +37,12 @@ export function createAnalyzeProjectContextNode(
         analysis: structuredClone(analysis),
         durationMs: elapsedMilliseconds(startedAt),
       });
-      return { projectContextAnalysis: analysis };
+      return {
+        execution: {
+          ...state.execution,
+          projectContextAnalysis: analysis,
+        },
+      };
     },
   };
 }
