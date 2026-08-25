@@ -128,6 +128,7 @@ describe("agent server", () => {
       d2cWorkflowService: new D2CWorkflowService({
         designProvider: "mastergo",
         service,
+        confirmDesign: (input) => service.confirmDesign(input),
       }),
     });
     apps.push(app);
