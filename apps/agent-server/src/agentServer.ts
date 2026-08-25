@@ -8,6 +8,7 @@ import {
   buildApp,
   type BuildAppOptions,
 } from "./http/buildApp.js";
+import { normalizeLoopbackHost } from "./runtime/serverHostPolicy.js";
 
 /** 提供可嵌入、可测试且不暴露内部目录聚合入口的 Agent Server Facade。 */
 export class AgentServer {
@@ -25,7 +26,10 @@ export class AgentServer {
 
   /** 启动 HTTP 监听并返回 Fastify 解析后的服务地址。 */
   async listen(options: AgentServer.ListenOptions): Promise<string> {
-    return this.app.listen(options);
+    return this.app.listen({
+      ...options,
+      host: normalizeLoopbackHost(options.host),
+    });
   }
 
   /** 幂等关闭 Fastify 及其已注册资源。 */
