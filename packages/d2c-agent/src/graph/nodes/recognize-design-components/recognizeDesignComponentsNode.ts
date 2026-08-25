@@ -18,13 +18,15 @@ export function createRecognizeDesignComponentsNode(
   return {
     id: recognizeDesignComponentsNodeId,
     execute: async (state) => {
-      if (!state.task || !state.inspection || !state.componentCatalog) {
+      const inspection = state.execution?.inspection;
+      const catalog = state.execution?.componentCatalog;
+      if (!state.task || !inspection || !catalog) {
         throw new Error("组件识别节点缺少任务、设计检查结果或版本化组件目录。");
       }
       const reporter = resolveReporter(state.task.taskId);
       await reporter?.({ type: "component-recognition-start" });
       const startedAt = performance.now();
-      const artifactId = state.inspection.artifact?.artifactId;
+      const artifactId = inspection.artifact?.artifactId;
       let recognition;
       if (!artifactId || !artifactReader) {
         recognition = {
@@ -37,7 +39,7 @@ export function createRecognizeDesignComponentsNode(
         recognition = artifact.content.structure
           ? recognizer.recognize(
               structuredClone(artifact.content.structure),
-              structuredClone(state.componentCatalog),
+              structuredClone(catalog),
             )
           : {
               status: "unavailable" as const,
@@ -51,7 +53,12 @@ export function createRecognizeDesignComponentsNode(
         unknownCount: recognition.components.filter((component) => !component.typeHint).length,
         durationMs: elapsedMilliseconds(startedAt),
       });
-      return { componentRecognition: recognition };
+      return {
+        execution: {
+          ...state.execution,
+          componentRecognition: recognition,
+        },
+      };
     },
   };
 }

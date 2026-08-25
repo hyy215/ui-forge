@@ -17,8 +17,10 @@ export function createPlanDeepAgentNode(
   return {
     id: planDeepAgentNodeId,
     execute: async (state) => {
-      if (!state.task || !state.inspection || !state.projectInspection || !state.componentRecognition
-        || !state.projectContextAnalysis || !state.componentCatalog) {
+      const execution = state.execution;
+      if (!state.task || !execution?.inspection || !execution.projectInspection
+        || !execution.componentRecognition || !execution.projectContextAnalysis
+        || !execution.componentCatalog) {
         throw new Error("Plan DeepAgent 节点缺少前置项目或组件结果。");
       }
       const reportProgress = resolveReporter(state.task.taskId);
@@ -26,18 +28,21 @@ export function createPlanDeepAgentNode(
       const result = await agent.plan({
         taskId: state.task.taskId,
         taskGoal: state.task.taskGoal,
-        inspection: structuredClone(state.inspection),
-        projectInspection: structuredClone(state.projectInspection),
-        recognition: structuredClone(state.componentRecognition),
-        projectContext: structuredClone(state.projectContextAnalysis),
-        catalog: structuredClone(state.componentCatalog),
-        designSystemWarnings: [...(state.designSystemWarnings ?? [])],
+        inspection: structuredClone(execution.inspection),
+        projectInspection: structuredClone(execution.projectInspection),
+        recognition: structuredClone(execution.componentRecognition),
+        projectContext: structuredClone(execution.projectContextAnalysis),
+        catalog: structuredClone(execution.componentCatalog),
+        designSystemWarnings: [...(execution.designSystemWarnings ?? [])],
         ...(reportProgress ? { reportProgress } : {}),
         ...(signal ? { signal } : {}),
       });
       return {
-        componentRecognition: structuredClone(result.componentRecognition),
-        plan: structuredClone(result.plan),
+        execution: {
+          ...execution,
+          componentRecognition: structuredClone(result.componentRecognition),
+          plan: structuredClone(result.plan),
+        },
       };
     },
   };

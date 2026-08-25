@@ -1,10 +1,10 @@
-/** 验证 D2C Graph 在设计确认后依次执行确定性前置节点和 Plan DeepAgent。 */
+/** 验证 D2C Graph 在命令边界清理临时状态后仍能从权威任务恢复。 */
 
 import { describe, expect, it, vi } from "vitest";
 import { createD2CGraph } from "./d2cGraph.js";
 
 describe("createD2CGraph", () => {
-  it("runs deterministic front nodes before Plan DeepAgent after design confirmation", async () => {
+  it("runs deterministic front nodes after persisted design confirmation", async () => {
     const plan = vi.fn(async (input: import("../second-step/planDeepAgent.js").PlanDeepAgentInput) => ({
       componentRecognition: input.recognition,
       plan: reviewablePlan,
@@ -58,17 +58,25 @@ describe("createD2CGraph", () => {
       },
       planDeepAgent: { plan },
     });
-    await graph.saveTask({
+    const initialTask = {
       taskId: "task-1",
       workspaceId: "workspace-1",
       revision: 0,
-      status: "draft",
+      status: "draft" as const,
       projectPath: "/workspace",
       taskGoal: "实现客户列表",
-    });
+    };
+    await graph.saveTask(initialTask);
 
     await expect(graph.inspectDesign("task-1", source)).resolves.toEqual(inspection);
     expect(plan).not.toHaveBeenCalled();
+    await graph.saveTask({
+      ...initialTask,
+      revision: 2,
+      status: "design_confirmed",
+      designSource: source,
+      inspectedDesign: { ...inspection, durationMs: 1 },
+    });
     const progress: string[] = [];
     const controller = new AbortController();
     await expect(graph.analyzeSecondStep(
@@ -80,6 +88,9 @@ describe("createD2CGraph", () => {
       componentRecognition: { status: "recognized" },
     });
     expect(plan).toHaveBeenCalledOnce();
+    expect(plan).toHaveBeenCalledWith(expect.objectContaining({
+      inspection: expect.objectContaining(inspection),
+    }));
     expect(resolveCatalog).toHaveBeenCalledWith(expect.objectContaining({ signal: controller.signal }));
     expect(analyzeProjectContext).toHaveBeenCalledWith(expect.objectContaining({ signal: controller.signal }));
     expect(plan).toHaveBeenCalledWith(expect.objectContaining({ signal: controller.signal }));
@@ -95,7 +106,7 @@ describe("createD2CGraph", () => {
     ]);
   });
 
-  it("allows the second-step agent to stop unsupported projects without components", async () => {
+  it("allows unsupported projects to stop after transient state was cleared", async () => {
     const plan = vi.fn(async (input: import("../second-step/planDeepAgent.js").PlanDeepAgentInput) => ({
       componentRecognition: input.recognition,
       plan: reviewablePlan,
@@ -103,39 +114,46 @@ describe("createD2CGraph", () => {
     const analyzeProjectContext = vi.fn(async () => ({
       kind: "react_antd" as const, files: [], filesComplete: true, matches: [], warnings: [],
     }));
+    const source = { provider: "mastergo", reference: "design-1" };
+    const inspection = {
+      context: {
+        source,
+        name: "页面",
+        nodeCount: 0,
+        tokens: {},
+        regions: [],
+        warnings: [],
+      },
+      provenance: { provider: "MasterGo", transport: "MCP", operations: [] },
+    };
     const graph = createD2CGraph({
-      designContextResolver: { inspect: async (source) => ({
-        context: {
-          source,
-          name: "页面",
-          nodeCount: 0,
-          tokens: {},
-          regions: [],
-          warnings: [],
-        },
-        provenance: { provider: "MasterGo", transport: "MCP", operations: [] },
-      }) },
+      designContextResolver: { inspect: async () => inspection },
       projectInspector: { inspect: async () => ({
-          kind: "unsupported",
-          projectRoot: "/workspace",
-          reasons: ["缺少 Ant Design 依赖"],
+        kind: "unsupported",
+        projectRoot: "/workspace",
+        reasons: ["缺少 Ant Design 依赖"],
       }) },
       projectContextAnalyzer: { analyze: analyzeProjectContext },
       componentRecognizer: { recognize: () => ({ status: "recognized", components: [], warnings: [] }) },
       baseComponentCatalog: { components: [{ id: "table", name: "Table", aliases: ["表格"] }] },
       planDeepAgent: { plan },
     });
-    await graph.saveTask({
+    const initialTask = {
       taskId: "task-unsupported",
       workspaceId: "workspace-1",
       revision: 0,
-      status: "draft",
+      status: "draft" as const,
       projectPath: "/workspace",
       taskGoal: "实现页面",
-    });
-    await graph.inspectDesign("task-unsupported", {
-      provider: "mastergo",
-      reference: "design-1",
+    };
+    await graph.saveTask(initialTask);
+    await graph.inspectDesign("task-unsupported", source);
+    await graph.saveTask({
+      ...initialTask,
+      revision: 2,
+      status: "design_confirmed",
+      designSource: source,
+      inspectedDesign: { ...inspection, durationMs: 1 },
     });
 
     await expect(graph.analyzeSecondStep("task-unsupported")).resolves.toEqual({
