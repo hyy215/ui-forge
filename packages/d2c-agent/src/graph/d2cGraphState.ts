@@ -9,7 +9,13 @@ import type { ProjectInspection } from "../project-context/projectInspection.js"
 import type { ProjectContextAnalysis } from "../project-context/projectContextAnalysis.js";
 import type { PlanningResult } from "../planning/planningResult.js";
 
-/** 单一 D2C Graph 内各节点共享的状态。 */
+/**
+ * 单一 D2C Graph 内各节点共享的状态。
+ *
+ * `task` 是跨命令持久化的权威业务状态；其余字段只是在一次 Graph 执行期间供节点传递的
+ * 临时上下文/输出，不应被包外消费者直接读取，也不能成为第二份业务事实来源。Service 在
+ * 命令完成后把需要持久化的结果一次提交回 `D2CTask`。
+ */
 export interface D2CGraphState {
   task?: D2CTask;
   designSource?: DesignSource;
