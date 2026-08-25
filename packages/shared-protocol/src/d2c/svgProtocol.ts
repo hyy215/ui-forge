@@ -5,7 +5,7 @@ import { z } from "zod";
 /** 校验 SVG 预览确认阶段的公开状态。 */
 export const svgD2CWorkflowStateSchema = z.object({
   phase: z.literal("svg"),
-  status: z.literal("ready"),
+  status: z.literal("svg_ready"),
 });
 
 /** 校验设计检查节点在 SVG 页面展示的工具证据。 */

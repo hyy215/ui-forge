@@ -1,4 +1,4 @@
-/** 管理单视图 D2C 快照、设计确认边界与方案分析流。 */
+/** 管理单视图 D2C 快照、持久设计确认边界与方案分析流。 */
 
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
@@ -22,12 +22,11 @@ export function useTaskWorkflow(
   const [commandError, setCommandError] = useState<string>();
   const [isInspectingDesign, setIsInspectingDesign] = useState(false);
   const [isStoppingConversation, setIsStoppingConversation] = useState(false);
-  const [designConfirmed, setDesignConfirmed] = useState(
-    () => hasStartedConversation(initialSnapshot),
-  );
   const [conversationRetrySequence, setConversationRetrySequence] = useState(0);
   const startedConversationStreams = useRef(new Set<string>());
   const activeConversationRun = useRef<Promise<void> | null>(null);
+  const designConfirmed = hasStartedConversation(snapshot);
+
   useEffect(() => {
     if (!designConfirmed) return;
     if (!snapshot.viewModel.setup.designSummary) return;
@@ -92,7 +91,6 @@ export function useTaskWorkflow(
     inspectDesign: async (designUrl: string) => {
       setCommandError(undefined);
       setIsInspectingDesign(true);
-      setDesignConfirmed(false);
       try {
         setSnapshot(await dataSource.inspectDesign({ ...commandInput(), designUrl }));
       } catch (error: unknown) {
@@ -101,7 +99,17 @@ export function useTaskWorkflow(
         setIsInspectingDesign(false);
       }
     },
-    confirmDesign: () => setDesignConfirmed(true),
+    confirmDesign: async () => {
+      setCommandError(undefined);
+      try {
+        setSnapshot(await dataSource.confirmDesign({
+          ...commandInput(),
+          confirmation: "确认设计",
+        }));
+      } catch (error: unknown) {
+        setCommandError(normalizeCommandError(error));
+      }
+    },
     reset: async () => {
       setCommandError(undefined);
       try {
@@ -112,7 +120,6 @@ export function useTaskWorkflow(
         );
         setSnapshot(resetSnapshot);
         dispatchConversation({ type: "reset", viewModel: resetSnapshot.viewModel.conversation });
-        setDesignConfirmed(false);
       } catch (error: unknown) {
         setCommandError(normalizeCommandError(error));
       }
@@ -135,10 +142,8 @@ export function useTaskWorkflow(
 
 /** 根据已持久化的第二步结果恢复设计确认状态。 */
 export function hasStartedConversation(snapshot: D2CWorkflowSnapshot): boolean {
-  const conversation = snapshot.viewModel.conversation;
-  return conversation.planStatus !== "idle"
-    || conversation.projectValidation !== null
-    || conversation.designComponentRecognition !== null;
+  return snapshot.workflowPhase === "design_confirmed"
+    || snapshot.workflowPhase === "analysis_ready";
 }
 
 /** 终止并等待当前分析，随后基于服务端最新 revision 重置任务。 */

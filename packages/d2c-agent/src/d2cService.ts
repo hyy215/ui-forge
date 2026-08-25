@@ -1,4 +1,4 @@
-/** 实现设计读取与第二步 DeepAgent 分析的公共 D2C Service。 */
+/** 实现设计读取、人工确认与第二步 DeepAgent 分析的公共 D2C Service。 */
 
 import { randomUUID } from "node:crypto";
 import type { AgentCore } from "@ui-forge/agent-core";
@@ -6,12 +6,12 @@ import type { DesignArtifactLifecycle } from "./design-context/designArtifact.js
 import type { DesignArtifactReader } from "./design-context/designArtifact.js";
 import { createDesignContextResolver } from "./design-context/designContextResolver.js";
 import type { DesignInspection } from "./design-context/designInspection.js";
-import type { DesignSource } from "./design-context/designSource.js";
 import type { DesignSourceAdapter } from "./design-context/designSourceAdapter.js";
 import { createDeterministicDesignComponentRecognizer } from "./design-components/deterministicDesignComponentRecognizer.js";
 import type { DesignComponentRecognizer } from "./design-components/designComponentRecognition.js";
 import { parseComponentCatalog, type ComponentCatalog } from "./design-components/componentCatalog.js";
 import type {
+  ConfirmDesignCommand,
   D2CTaskCommand,
   InspectDesignCommand,
 } from "./d2cCommand.js";
@@ -30,7 +30,7 @@ import type { DesignSystemKnowledgeProvider } from "./design-system/designSystem
 
 const defaultTaskGoal = "结合目标 React + Ant Design 项目与 MasterGo 设计稿生成整体修改方案";
 
-/** Agent Server 可调用的当前 D2C 领域服务。 */
+/** Agent Server 可调用的完整 D2C 领域服务；确认规则与状态持久化均由该边界拥有。 */
 export interface D2CService {
   /** 创建并保存初始设计输入任务。 */
   initialize(input: {
@@ -41,6 +41,8 @@ export interface D2CService {
   getTask(taskId: string): Promise<D2CTask>;
   /** 读取并保存用户指定设计来源的标准化上下文和 SVG 预览。 */
   inspectDesign(command: InspectDesignCommand): Promise<D2CTask>;
+  /** 将人工确认作为独立的持久化领域状态迁移。 */
+  confirmDesign(command: ConfirmDesignCommand): Promise<D2CTask>;
   /** 在用户进入第二步后运行主 DeepAgent，并保存项目与组件分析结果。 */
   analyzeSecondStep(
     command: D2CTaskCommand,
@@ -50,6 +52,7 @@ export interface D2CService {
   /** 清除当前设计与预览确认结果，回到设计输入状态。 */
   reset(command: D2CTaskCommand): Promise<D2CTask>;
 }
+
 
 /** 创建 D2C Service 所需的设计、存储和 Graph 持久化端口。 */
 export interface D2CServiceOptions {
@@ -67,7 +70,7 @@ export interface D2CServiceOptions {
   checkpointer?: AgentCore.Checkpointer;
 }
 
-/** 创建通过单一确定性 D2C Graph 执行设计检查的公共 Service。 */
+/** 创建通过单一确定性 D2C Graph 执行设计读取、持久确认与方案分析的公共 Service。 */
 export function createD2CService(options: D2CServiceOptions): D2CService {
   return new DefaultD2CService(options);
 }
@@ -164,6 +167,7 @@ class DefaultD2CService implements D2CService {
         const updated = await this.graph.saveTask({
           ...copyTask(current),
           revision: current.revision + 1,
+          status: "svg_ready",
           designSource: structuredClone(command.source),
           inspectedDesign: { ...inspection, durationMs: Date.now() - startedAt },
           taskGoal: createTaskGoal(inspection),
@@ -181,7 +185,23 @@ class DefaultD2CService implements D2CService {
     });
   }
 
-  /** 校验设计已读取，并一次提交第二步 DeepAgent 的全部权威分析结果。 */
+  async confirmDesign(command: ConfirmDesignCommand): Promise<D2CTask> {
+    return this.withTaskUpdateLock(command.taskId, async () => {
+      const current = await this.requireTask(command.taskId);
+      this.requireCommandRevision(command, current);
+      if (command.confirmation !== "确认设计") throw new Error("请输入精确口令“确认设计”。");
+      if (current.status !== "svg_ready" || !current.inspectedDesign) {
+        throw new Error("当前任务没有可确认的设计预览。");
+      }
+      return this.graph.saveTask({
+        ...copyTask(current),
+        revision: current.revision + 1,
+        status: "design_confirmed",
+      });
+    });
+  }
+
+  /** 只允许从 design_confirmed 启动分析，并一次提交全部权威分析结果。 */
   async analyzeSecondStep(
     command: D2CTaskCommand,
     reportProgress?: SecondStepProgressReporter,
@@ -189,9 +209,11 @@ class DefaultD2CService implements D2CService {
   ): Promise<D2CTask> {
     return this.withTaskUpdateLock(command.taskId, async () => {
       const current = await this.requireTask(command.taskId);
-      if (!current.inspectedDesign) throw new Error("请先读取并确认 MasterGo 设计。");
-      if (current.projectInspection) return copyTask(current);
+      if (current.status === "analysis_ready") return copyTask(current);
       this.requireCommandRevision(command, current);
+      if (current.status !== "design_confirmed" || !current.inspectedDesign) {
+        throw new Error("请先读取并确认 MasterGo 设计。");
+      }
       let analysis;
       try {
         analysis = await this.graph.analyzeSecondStep(command.taskId, reportProgress, signal);
@@ -201,6 +223,7 @@ class DefaultD2CService implements D2CService {
       return this.graph.saveTask({
         ...copyTask(current),
         revision: current.revision + 1,
+        status: "analysis_ready",
         projectInspection: structuredClone(analysis.projectInspection),
         ...(analysis.componentRecognition
           ? { componentRecognition: structuredClone(analysis.componentRecognition) }
@@ -246,7 +269,6 @@ class DefaultD2CService implements D2CService {
     }
   }
 
-  /** 串行处理同 taskId 的 Graph 执行与状态提交，防止同一线程互相覆盖。 */
   private async withTaskUpdateLock<T>(taskId: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.taskUpdateLocks.get(taskId) ?? Promise.resolve();
     let release = (): void => {};

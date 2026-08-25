@@ -46,7 +46,7 @@ export function createTaskWorkflowSnapshot(): D2CWorkflowSnapshot {
   return {
     taskId: "00000000-0000-4000-8000-000000000001",
     revision: 0,
-    workflowPhase: "created",
+    workflowPhase: "draft",
     state: { phase: "setup", status: "draft" },
     viewModel: {
       ...viewModel,

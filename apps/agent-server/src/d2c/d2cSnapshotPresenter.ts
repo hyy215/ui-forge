@@ -26,15 +26,21 @@ export function toD2CWorkflowSnapshot(task: D2CAgent.Task): D2CWorkflowSnapshot 
 /** 将领域状态映射为公开工作流阶段。 */
 function createWorkflowPhase(status: D2CAgent.TaskStatus): D2CWorkflowPhase {
   switch (status) {
-    case "draft": return "created";
+    case "draft": return "draft";
     case "svg_ready": return "svg_ready";
+    case "design_confirmed": return "design_confirmed";
+    case "analysis_ready": return "analysis_ready";
   }
 }
 
-/** 将领域状态映射为 setup/svg 判别联合。 */
+/** 将领域持久化状态一对一投影为客户端页面阶段判别联合。 */
 function createWorkflowState(task: D2CAgent.Task): D2CWorkflowState {
-  if (task.status === "draft") return { phase: "setup", status: "draft" };
-  return { phase: "svg", status: "ready" };
+  switch (task.status) {
+    case "draft": return { phase: "setup", status: "draft" };
+    case "svg_ready": return { phase: "svg", status: "svg_ready" };
+    case "design_confirmed": return { phase: "conversation", status: "design_confirmed" };
+    case "analysis_ready": return { phase: "conversation", status: "analysis_ready" };
+  }
 }
 
 /** 创建只包含设计输入与 SVG 预览的客户端模型。 */
@@ -82,9 +88,7 @@ export function toDesignComponentRecognition(
       instanceCount: component.instanceCount,
       evidence: [...component.evidence],
       evidenceStrength: component.evidenceStrength,
-      ...(component.typeHint
-        ? { typeHint: structuredClone(component.typeHint) }
-        : {}),
+      ...(component.typeHint ? { typeHint: structuredClone(component.typeHint) } : {}),
       ...(component.visualSuggestion
         ? { visualSuggestion: structuredClone(component.visualSuggestion) }
         : {}),
@@ -142,6 +146,8 @@ function createSvgStatusMessage(task: D2CAgent.Task): string {
   switch (task.status) {
     case "draft": return "请先读取并确认设计预览。";
     case "svg_ready": return "直接展示设计读取阶段返回的 SVG。";
+    case "design_confirmed": return "设计已确认，等待项目与组件分析。";
+    case "analysis_ready": return "设计已确认，方案分析已完成。";
   }
 }
 

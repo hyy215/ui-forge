@@ -205,7 +205,12 @@ export const planningResultSchema = z.object({
   stopConditions: z.array(z.string().min(1)).min(1),
 });
 
-/** 校验第二步方案区域的真实生命周期状态。 */
+/**
+ * 校验单次分析流的临时 UI 生命周期。
+ *
+ * 这些状态不写入 D2CTask，也不能用于判断设计是否已经持久确认；刷新后应从服务端
+ * 权威快照重新创建。
+ */
 export const conversationPlanStatusSchema = z.enum([
   "idle",
   "validating_project",
@@ -311,7 +316,7 @@ export type DesignComponentRecognition = z.infer<typeof designComponentRecogniti
 /** Planning Agent 最终返回的结构化方案。 */
 export type PlanningResult = z.infer<typeof planningResultSchema>;
 
-/** 第二步方案区域的真实生命周期状态。 */
+/** 单次分析流的临时 UI 生命周期状态。 */
 export type ConversationPlanStatus = z.infer<typeof conversationPlanStatusSchema>;
 /** 模型供应商实际返回的 Token 使用量。 */
 export type AgentTokenUsage = z.infer<typeof agentTokenUsageSchema>;

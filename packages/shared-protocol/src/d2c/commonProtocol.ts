@@ -3,8 +3,10 @@ import { z } from "zod";
 
 /** 客户端可观察的 D2C 工作流阶段集合。 */
 export const d2cWorkflowPhases = [
-  "created",
+  "draft",
   "svg_ready",
+  "design_confirmed",
+  "analysis_ready",
 ] as const;
 
 /** 校验 Server 通过快照向客户端公开的 D2C 工作流阶段。 */
@@ -23,9 +25,7 @@ export const getD2CWorkflowSnapshotInputSchema = z.object({
 
 /** Server 快照向客户端公开的 D2C 工作流阶段。 */
 export type D2CWorkflowPhase = z.infer<typeof d2cWorkflowPhaseSchema>;
-
 /** 作用于已有 D2C 任务的通用命令参数。 */
 export type D2CTaskCommandInput = z.infer<typeof d2cTaskCommandInputSchema>;
-
 /** 读取已有 D2C 工作流快照的请求参数。 */
 export type GetD2CWorkflowSnapshotInput = z.infer<typeof getD2CWorkflowSnapshotInputSchema>;

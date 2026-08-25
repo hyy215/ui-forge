@@ -61,6 +61,18 @@ export function createD2CWorkflowServiceFromEnvironment(
     { token, baseUrl },
     designArtifactStore,
   );
+  const service = D2CAgent.createService({
+    designSourceAdapters: [designAdapter],
+    projectInspector,
+    projectContextAnalyzer: new FileSystemProjectContextAnalyzer(),
+    componentCatalog: readComponentCatalogFromEnvironment(),
+    designSystemKnowledgeProvider,
+    modelOptions: readSecondStepModelOptions(options.modelDiagnosticReporter),
+    visualEvidenceProvider: new SharpDesignVisualEvidenceProvider(designArtifactStore),
+    designArtifactReader: designArtifactStore,
+    designArtifactLifecycle: designArtifactStore,
+    checkpointer: checkpointResource.checkpointer,
+  });
   return new D2CWorkflowService({
     designProvider,
     designArtifactReader: designArtifactStore,
@@ -77,18 +89,7 @@ export function createD2CWorkflowServiceFromEnvironment(
       await designSystemKnowledgeProvider.dispose();
       await checkpointResource.dispose();
     },
-    service: D2CAgent.createService({
-      designSourceAdapters: [designAdapter],
-      projectInspector,
-      projectContextAnalyzer: new FileSystemProjectContextAnalyzer(),
-      componentCatalog: readComponentCatalogFromEnvironment(),
-      designSystemKnowledgeProvider,
-      modelOptions: readSecondStepModelOptions(options.modelDiagnosticReporter),
-      visualEvidenceProvider: new SharpDesignVisualEvidenceProvider(designArtifactStore),
-      designArtifactReader: designArtifactStore,
-      designArtifactLifecycle: designArtifactStore,
-      checkpointer: checkpointResource.checkpointer,
-    }),
+    service,
   });
 }
 

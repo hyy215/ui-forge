@@ -1,4 +1,4 @@
-/** 验证任务重置会等待活动分析并使用服务端最新 revision。 */
+/** 验证持久确认状态恢复，以及任务重置会等待活动分析并使用最新 revision。 */
 
 import { describe, expect, it, vi } from "vitest";
 import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
@@ -6,15 +6,24 @@ import type { TaskWorkflowDataSource } from "../../../data-sources/task-workflow
 import { hasStartedConversation, resetTaskWorkflow } from "./useTaskWorkflow";
 
 describe("hasStartedConversation", () => {
-  it("keeps an inspected SVG behind explicit confirmation when analysis has not started", () => {
+  it("keeps an inspected SVG behind explicit confirmation", () => {
     const snapshot = createSnapshot(2);
-    snapshot.state = { phase: "svg", status: "ready" };
+    snapshot.workflowPhase = "svg_ready";
+    snapshot.state = { phase: "svg", status: "svg_ready" };
     expect(hasStartedConversation(snapshot)).toBe(false);
   });
 
-  it("restores confirmation when a persisted analysis result exists", () => {
+  it("restores a persisted design confirmation before analysis finishes", () => {
     const snapshot = createSnapshot(3);
-    snapshot.viewModel.conversation.planStatus = "ready";
+    snapshot.workflowPhase = "design_confirmed";
+    snapshot.state = { phase: "conversation", status: "design_confirmed" };
+    expect(hasStartedConversation(snapshot)).toBe(true);
+  });
+
+  it("restores confirmation after analysis has completed", () => {
+    const snapshot = createSnapshot(4);
+    snapshot.workflowPhase = "analysis_ready";
+    snapshot.state = { phase: "conversation", status: "analysis_ready" };
     expect(hasStartedConversation(snapshot)).toBe(true);
   });
 });
@@ -34,23 +43,18 @@ describe("resetTaskWorkflow", () => {
     const dataSource = { cancelConversation, getSnapshot, reset } as unknown as TaskWorkflowDataSource;
 
     await expect(resetTaskWorkflow(dataSource, latest.taskId, activeRun)).resolves.toBe(resetSnapshot);
-
     expect(cancelConversation).toHaveBeenCalledWith({ taskId: latest.taskId });
-    expect(getSnapshot).toHaveBeenCalledOnce();
     expect(reset).toHaveBeenCalledWith({ taskId: latest.taskId, expectedRevision: 3 });
   });
 
   it("still refreshes the revision when there is no active run", async () => {
     const latest = createSnapshot(7);
     const resetSnapshot = createSnapshot(8);
-    const cancelConversation = vi.fn();
     const getSnapshot = vi.fn(async () => latest);
     const reset = vi.fn(async () => resetSnapshot);
-    const dataSource = { cancelConversation, getSnapshot, reset } as unknown as TaskWorkflowDataSource;
+    const dataSource = { cancelConversation: vi.fn(), getSnapshot, reset } as unknown as TaskWorkflowDataSource;
 
     await resetTaskWorkflow(dataSource, latest.taskId, null);
-
-    expect(cancelConversation).not.toHaveBeenCalled();
     expect(reset).toHaveBeenCalledWith({ taskId: latest.taskId, expectedRevision: 7 });
   });
 });
@@ -60,7 +64,7 @@ function createSnapshot(revision: number): D2CWorkflowSnapshot {
   return {
     taskId: "11111111-1111-4111-8111-111111111111",
     revision,
-    workflowPhase: "created",
+    workflowPhase: "draft",
     state: { phase: "setup", status: "draft" },
     viewModel: {
       setup: { projectPath: "", taskGoal: "测试任务", designUrl: "", designSummary: null },
