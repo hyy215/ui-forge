@@ -8,15 +8,23 @@ import {
   WorkspaceRequestLogger,
   type CommunicationRequestLogger,
 } from "../logging/workspaceRequestLogger.js";
+import { ServerInstanceLock } from "../runtime/serverInstanceLock.js";
 import { CommunicationRequestHandler } from "./communicationRequestHandler.js";
 import { CommunicationStreamRequestHandler } from "./communicationStreamRequestHandler.js";
 import { registerCommunicationRoute } from "./registerCommunicationRoute.js";
 import { registerHealthRoute } from "./registerHealthRoute.js";
 
+/** Server 生命周期使用的最小单实例所有权端口。 */
+export interface AgentServerInstanceLock {
+  acquire(): Promise<void>;
+  release(): Promise<void>;
+}
+
 /** 创建 Agent Server 时允许注入的运行时依赖。 */
 export interface BuildAppOptions {
   d2cWorkflowService?: D2CWorkflowService;
   requestLogger?: CommunicationRequestLogger | false;
+  instanceLock?: AgentServerInstanceLock | false;
   logRootDirectory?: string;
 }
 
@@ -32,6 +40,12 @@ export function buildApp(options: BuildAppOptions = {}) {
       retentionMs: readLogRetentionMs(),
       onError: () => app.log.warn("Workspace request log could not be persisted."),
     }));
+  const instanceLock = options.instanceLock === false
+    ? undefined
+    : options.instanceLock ?? (process.env.NODE_ENV === "test" ? undefined : new ServerInstanceLock(
+      process.env.UI_FORGE_RUNTIME_DIR
+        ?? resolve(process.cwd(), ".ui-forge", "runtime"),
+    ));
   const d2cWorkflowService = options.d2cWorkflowService ?? createD2CWorkflowServiceFromEnvironment({
     ...(requestLogger?.recordModelInvocation
       ? { modelDiagnosticReporter: (event) => requestLogger.recordModelInvocation!(event) }
@@ -47,12 +61,22 @@ export function buildApp(options: BuildAppOptions = {}) {
   });
 
   app.addHook("onReady", async () => {
-    await d2cWorkflowService.initialize();
-    await requestLogger?.initialize?.();
+    await instanceLock?.acquire();
+    try {
+      await d2cWorkflowService.initialize();
+      await requestLogger?.initialize?.();
+    } catch (error: unknown) {
+      await instanceLock?.release();
+      throw error;
+    }
   });
   app.addHook("onClose", async () => {
-    await requestLogger?.dispose?.();
-    await d2cWorkflowService.dispose();
+    try {
+      await requestLogger?.dispose?.();
+      await d2cWorkflowService.dispose();
+    } finally {
+      await instanceLock?.release();
+    }
   });
 
   registerHealthRoute(app);

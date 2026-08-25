@@ -9,6 +9,7 @@ src/
 ├── http/    Fastify 应用组装、健康检查和 shared-protocol 通信路由
 ├── d2c/     D2C 命令门面、客户端快照投影和运行时依赖装配
 ├── logging/ Workspace 身份解析和按任务归档的结构化通信日志
+├── runtime/ 进程所有权、单实例锁和其他宿主生命周期能力
 ├── agentServer.ts 包唯一公共 Facade 类
 └── main.ts        进程配置加载、监听启动和顶层失败处理
 ```
@@ -32,6 +33,7 @@ src/
 - 环境变量、具体 Adapter、Provider 注册、Checkpointer、Artifact Store、Artifact Cleanup Worker 和 D2C Service 创建集中在 D2C 依赖工厂；其他 Server 文件不直接创建 MasterGo、Figma、Fixture、MCP 或 Agent 工具实现。
 - 依赖通过 `AgentServer` 构造参数和显式工厂装配；当前依赖图较小且生命周期清晰，不引入 Inversify、Decorator 或全局容器隐藏依赖关系。
 - D2C Agent 是任务生命周期和内部状态的唯一事实来源；Agent Core 提供通用 Agent 与 LangGraph 封装。除组合入口创建并管理公开 Checkpointer 实现外，Server 不依赖 LangGraph 内部 State 或节点，只依赖公开 Service 端口。
+- 当前运行模式明确为同一 `UI_FORGE_RUNTIME_DIR` 内单活动 Server。Fastify 资源启动前必须取得原子进程锁，正常关闭时释放；崩溃遗留锁只在记录的本机 PID 已失效后接管。支持多活动实例前，不能仅依赖进程内 task Map，必须引入数据库级 revision CAS 或分布式租约。
 - Fixture Provider 必须显式配置；可以使用引用白名单，也可以在本地联调组合入口绑定一个固定默认样本，使任意界面引用返回同一份模拟数据。客户端引用不得被解释为文件路径，默认生产运行时不得因测试便利自动切换到 Fixture。
 
 ## 日志与敏感信息
