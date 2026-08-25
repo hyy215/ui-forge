@@ -78,6 +78,9 @@ const storedArtifactSchema = z.object({
 });
 
 type StoredArtifact = z.infer<typeof storedArtifactSchema>;
+type ArtifactReferenceVerifier = Parameters<
+  D2CAgent.DesignArtifactGarbageCollector["deleteDiscardedBefore"]
+>[1];
 
 /** 暴露给清理协调器和测试的 Artifact 生命周期摘要。 */
 export interface DesignArtifactLifecycleMetadata {
@@ -209,8 +212,11 @@ export class FileDesignArtifactStore implements
     await rm(this.artifactPath(parsedId), { force: true });
   }
 
-  /** 清理超过截止时间仍未绑定、已放弃或已被新版本替代的 Artifact。 */
-  async deleteDiscardedBefore(cutoff: Date): Promise<number> {
+  /** 清理过期废弃文件，并回查 attached Artifact 是否仍由权威任务引用。 */
+  async deleteDiscardedBefore(
+    cutoff: Date,
+    isCurrentReference: ArtifactReferenceVerifier,
+  ): Promise<number> {
     const cutoffTime = cutoff.getTime();
     if (!Number.isFinite(cutoffTime)) throw new Error("Artifact GC 截止时间无效。");
     let deleted = 0;
@@ -219,12 +225,16 @@ export class FileDesignArtifactStore implements
         try {
           const artifact = await this.readStoredArtifact(artifactId);
           const { lifecycle } = artifact;
-          if (lifecycle.status === "attached") return;
           if (Date.parse(lifecycle.updatedAt) > cutoffTime) return;
+          if (lifecycle.status === "attached") {
+            const owner = readAttachedOwner(lifecycle);
+            if (!owner) return;
+            if (await isCurrentReference({ artifactId, owner })) return;
+          }
           await this.delete(artifactId);
           deleted += 1;
         } catch {
-          // GC 跳过损坏或并发移除的文件，正常读取路径会给出明确错误。
+          // GC 跳过损坏、权威状态查询故障或并发移除的文件。
         }
       });
     }
@@ -325,6 +335,20 @@ export class FileDesignArtifactStore implements
       return parsed.success ? [parsed.data] : [];
     });
   }
+}
+
+/** 读取 attached 生命周期中的完整任务所有权；缺失元数据时保守跳过清理。 */
+function readAttachedOwner(
+  lifecycle: DesignArtifactLifecycleMetadata,
+): { taskId: string; workspaceId: string; revision: number } | undefined {
+  if (lifecycle.taskId === undefined
+    || lifecycle.workspaceId === undefined
+    || lifecycle.revision === undefined) return undefined;
+  return {
+    taskId: lifecycle.taskId,
+    workspaceId: lifecycle.workspaceId,
+    revision: lifecycle.revision,
+  };
 }
 
 /** 将值序列化为 JSON，并拒绝无法表示的输入。 */

@@ -1,10 +1,10 @@
-/** 验证文件 Artifact Store 的跨实例恢复、输入校验和幂等清理。 */
+/** 验证文件 Artifact Store 的恢复、输入校验、引用对账和幂等清理。 */
 
 import { randomUUID } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FileDesignArtifactStore } from "./fileDesignArtifactStore.js";
 
 const content = {
@@ -60,11 +60,14 @@ describe("FileDesignArtifactStore", () => {
       revision: 1,
     });
     expect(await store.read(reference.artifactId)).toEqual({ content, reference });
-    expect(await store.deleteDiscardedBefore(new Date("2026-08-18T00:00:00.000Z"))).toBe(1);
+    expect(await store.deleteDiscardedBefore(
+      new Date("2026-08-18T00:00:00.000Z"),
+      async () => false,
+    )).toBe(1);
     await expect(store.read(reference.artifactId)).rejects.toThrow("不存在或已失效");
   });
 
-  it("collects only stale pending or abandoned artifacts", async () => {
+  it("collects stale pending artifacts while retaining the current attached reference", async () => {
     const directory = await mkdtemp(join(tmpdir(), "ui-forge-artifacts-"));
     let now = new Date("2026-08-18T00:00:00.000Z");
     const store = new FileDesignArtifactStore(directory, { now: () => now });
@@ -78,9 +81,51 @@ describe("FileDesignArtifactStore", () => {
     });
     now = new Date("2026-08-20T00:00:00.000Z");
 
-    expect(await store.deleteDiscardedBefore(new Date("2026-08-19T00:00:00.000Z"))).toBe(1);
+    expect(await store.deleteDiscardedBefore(
+      new Date("2026-08-19T00:00:00.000Z"),
+      async ({ artifactId }) => artifactId === attached.artifactId,
+    )).toBe(1);
     await expect(store.read(stale.artifactId)).rejects.toThrow("不存在或已失效");
     await expect(store.read(attached.artifactId)).resolves.toBeDefined();
+  });
+
+  it("deletes stale attached artifacts that are absent from authoritative tasks", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "ui-forge-artifacts-"));
+    let now = new Date("2026-08-18T00:00:00.000Z");
+    const store = new FileDesignArtifactStore(directory, { now: () => now });
+    const current = await store.write(content);
+    const orphaned = await store.write(content);
+    const currentTaskId = randomUUID();
+    const orphanedTaskId = randomUUID();
+    await store.attach(current.artifactId, {
+      taskId: currentTaskId,
+      workspaceId: "git:current",
+      revision: 1,
+    });
+    await store.attach(orphaned.artifactId, {
+      taskId: orphanedTaskId,
+      workspaceId: "git:orphaned",
+      revision: 2,
+    });
+    now = new Date("2026-08-20T00:00:00.000Z");
+    const verifyReference = vi.fn(async ({ artifactId }: { artifactId: string }) => (
+      artifactId === current.artifactId
+    ));
+
+    expect(await store.deleteDiscardedBefore(
+      new Date("2026-08-19T00:00:00.000Z"),
+      verifyReference,
+    )).toBe(1);
+    await expect(store.read(current.artifactId)).resolves.toBeDefined();
+    await expect(store.read(orphaned.artifactId)).rejects.toThrow("不存在或已失效");
+    expect(verifyReference).toHaveBeenCalledWith({
+      artifactId: orphaned.artifactId,
+      owner: {
+        taskId: orphanedTaskId,
+        workspaceId: "git:orphaned",
+        revision: 2,
+      },
+    });
   });
 
   it("serializes garbage collection with an overlapping lifecycle transition", async () => {
@@ -114,6 +159,7 @@ describe("FileDesignArtifactStore", () => {
 
     const garbageCollection = store.deleteDiscardedBefore(
       new Date("2026-08-20T00:00:00.000Z"),
+      async () => false,
     );
     await garbageCollectionRead;
     const attach = store.attach(reference.artifactId, {

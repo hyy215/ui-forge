@@ -53,7 +53,13 @@ export interface DesignArtifactLifecycle {
   abandon(artifactId: string): Promise<void>;
 }
 
-/** 清理不再被当前任务引用或始终未绑定的过期 Artifact 的领域端口。 */
+/** 清理过期 Artifact，并通过权威任务回查避免删除当前仍在使用的绑定。 */
 export interface DesignArtifactGarbageCollector {
-  deleteDiscardedBefore(cutoff: Date): Promise<number>;
+  deleteDiscardedBefore(
+    cutoff: Date,
+    isCurrentReference: (input: {
+      artifactId: string;
+      owner: { taskId: string; workspaceId: string; revision: number };
+    }) => Promise<boolean>,
+  ): Promise<number>;
 }

@@ -1,19 +1,26 @@
-/** 定期回收 D2C 流程未绑定、已放弃或已被替代的设计 Artifact。 */
+/** 定期回收过期且未被权威任务引用的设计 Artifact。 */
 
 import type { D2CAgent } from "@ui-forge/d2c-agent";
 
-/** 配置 Artifact 清理端口、保留时长、调度周期与可测试时间源。 */
+type ArtifactReferenceVerifier = Parameters<
+  D2CAgent.DesignArtifactGarbageCollector["deleteDiscardedBefore"]
+>[1];
+type ArtifactReferenceCandidate = Parameters<ArtifactReferenceVerifier>[0];
+
+/** 配置 Artifact 清理端口、任务查询、保留时长和可测试调度依赖。 */
 export interface ArtifactCleanupWorkerOptions {
   store: D2CAgent.DesignArtifactGarbageCollector;
+  service: Pick<D2CAgent.Service, "getTask">;
   retentionMs: number;
   intervalMs?: number;
   now?: () => Date;
   onError?: (error: unknown) => void;
 }
 
-/** 在 Server 生命周期内按固定周期执行非当前 Artifact 清理。 */
+/** 在 Server 生命周期内对账当前任务引用并清理过期 Artifact。 */
 export class ArtifactCleanupWorker {
   private readonly store: D2CAgent.DesignArtifactGarbageCollector;
+  private readonly service: Pick<D2CAgent.Service, "getTask">;
   private readonly retentionMs: number;
   private readonly intervalMs: number;
   private readonly now: () => Date;
@@ -30,6 +37,7 @@ export class ArtifactCleanupWorker {
       throw new Error("Artifact 清理周期必须是正数值。");
     }
     this.store = options.store;
+    this.service = options.service;
     this.retentionMs = options.retentionMs;
     this.intervalMs = intervalMs;
     this.now = options.now ?? (() => new Date());
@@ -51,9 +59,24 @@ export class ArtifactCleanupWorker {
     this.timer = undefined;
   }
 
-  /** 根据当前时间和保留时长执行一次确定性清理。 */
+  /** 根据当前时间和保留时长执行一次带权威引用对账的清理。 */
   async runOnce(): Promise<number> {
-    return this.store.deleteDiscardedBefore(new Date(this.now().getTime() - this.retentionMs));
+    return this.store.deleteDiscardedBefore(
+      new Date(this.now().getTime() - this.retentionMs),
+      (candidate) => this.isCurrentReference(candidate),
+    );
+  }
+
+  /** 判断 attached Artifact 是否仍由同一 Workspace 的当前任务引用。 */
+  private async isCurrentReference(candidate: ArtifactReferenceCandidate): Promise<boolean> {
+    try {
+      const task = await this.service.getTask(candidate.owner.taskId);
+      return task.workspaceId === candidate.owner.workspaceId
+        && task.inspectedDesign?.artifact?.artifactId === candidate.artifactId;
+    } catch {
+      // Checkpointer 暂时不可用时保守保留，避免清理故障扩大为数据丢失。
+      return true;
+    }
   }
 
   /** 隔离周期清理错误，避免后台 Promise 影响 Server 生命周期。 */
