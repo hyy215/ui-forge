@@ -45,10 +45,6 @@ export function createD2CWorkflowServiceFromEnvironment(
     process.env.UI_FORGE_ARTIFACT_DIR
       ?? fileURLToPath(new URL("../../../../.ui-forge/artifacts", import.meta.url)),
   );
-  const artifactCleanupWorker = new ArtifactCleanupWorker({
-    store: designArtifactStore,
-    retentionMs: readArtifactRetentionMs(),
-  });
   const checkpointResource = createCheckpointResource(
     process.env.DATABASE_URL,
     process.env.UI_FORGE_CHECKPOINT_SCHEMA,
@@ -72,6 +68,11 @@ export function createD2CWorkflowServiceFromEnvironment(
     designArtifactReader: designArtifactStore,
     designArtifactLifecycle: designArtifactStore,
     checkpointer: checkpointResource.checkpointer,
+  });
+  const artifactCleanupWorker = new ArtifactCleanupWorker({
+    store: designArtifactStore,
+    service,
+    retentionMs: readArtifactRetentionMs(),
   });
   return new D2CWorkflowService({
     designProvider,
