@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { d2cWorkflowPhaseSchema } from "./commonProtocol.js";
 import { conversationViewModelSchema } from "./conversationProtocol.js";
+import { conversationD2CWorkflowStateSchema } from "./conversationWorkflowState.js";
 import {
   setupD2CWorkflowStateSchema,
   setupViewModelSchema,
@@ -12,6 +13,7 @@ import { svgD2CWorkflowStateSchema, svgViewModelSchema } from "./svgProtocol.js"
 export const d2cWorkflowStateSchema = z.discriminatedUnion("phase", [
   setupD2CWorkflowStateSchema,
   svgD2CWorkflowStateSchema,
+  conversationD2CWorkflowStateSchema,
 ]);
 
 /** 校验 Server 向客户端提供的 D2C 各阶段展示数据。 */
@@ -32,9 +34,7 @@ export const d2cWorkflowSnapshotSchema = z.object({
 
 /** Server 持有并向客户端传输的 D2C 工作流状态。 */
 export type D2CWorkflowState = z.infer<typeof d2cWorkflowStateSchema>;
-
 /** 完整描述 D2C 工作流各阶段所需展示数据的只读模型。 */
 export type TaskWorkflowViewModel = z.infer<typeof taskWorkflowViewModelSchema>;
-
 /** Server 返回给客户端的权威 D2C 工作流快照。 */
 export type D2CWorkflowSnapshot = z.infer<typeof d2cWorkflowSnapshotSchema>;

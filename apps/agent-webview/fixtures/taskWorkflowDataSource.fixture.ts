@@ -1,4 +1,4 @@
-/** 为本地开发模拟设计读取、项目校验和逐项方案流，不进入生产构建。 */
+/** 为本地开发模拟设计读取、持久确认和逐项方案流，不进入生产构建。 */
 
 import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
 import type { TaskWorkflowDataSource } from "../src/data-sources/task-workflow";
@@ -21,7 +21,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
         ...snapshot,
         revision: snapshot.revision + 1,
         workflowPhase: "svg_ready",
-        state: { phase: "svg", status: "ready" },
+        state: { phase: "svg", status: "svg_ready" },
         viewModel: {
           ...snapshot.viewModel,
           setup: {
@@ -33,6 +33,12 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
         },
       });
     },
+    confirmDesign: async () => replace({
+      ...snapshot,
+      revision: snapshot.revision + 1,
+      workflowPhase: "design_confirmed",
+      state: { phase: "conversation", status: "design_confirmed" },
+    }),
     getDesignDataIndex: async (input) => ({
       artifactId: input.artifactId,
       provider: "mastergo-fixture",
@@ -62,20 +68,9 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
           layout: { summary: "筛选区位于表格上方。", regions: [], evidence: ["Fixture 设计结构"], warnings: [] },
           interactions: [],
         },
-        reusableComponents: [{
-          typeId: "page-container",
-          name: "PageContainer",
-          description: "复用项目现有页面容器承载标题和主体内容。",
-        }],
-        newComponents: [{
-          typeId: "customer-table",
-          name: "CustomerTable",
-          description: "根据设计稿新增客户列表表格区域。",
-        }],
-        componentDecisions: [{
-          candidateId: "customer-table", action: "create-new" as const, source: "new" as const,
-          reason: "Fixture 未提供仓库匹配证据。", evidence: ["仓库候选为空"],
-        }],
+        reusableComponents: [],
+        newComponents: [],
+        componentDecisions: [],
         fileImpacts: [],
         steps: [{
           id: "step-1",
@@ -139,6 +134,8 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
       replace({
         ...snapshot,
         revision: snapshot.revision + 1,
+        workflowPhase: "analysis_ready",
+        state: { phase: "conversation", status: "analysis_ready" },
         viewModel: {
           ...snapshot.viewModel,
           conversation: {
@@ -160,7 +157,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
     reset: async () => replace({
       ...snapshot,
       revision: snapshot.revision + 1,
-      workflowPhase: "created",
+      workflowPhase: "draft",
       state: { phase: "setup", status: "draft" },
       viewModel: {
         setup: { ...snapshot.viewModel.setup, designUrl: "", designSummary: null },

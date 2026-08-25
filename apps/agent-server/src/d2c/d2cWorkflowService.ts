@@ -6,6 +6,7 @@ import {
   d2cTaskCommandInputSchema,
   d2cWorkflowMethods,
   cancelD2CConversationInputSchema,
+  confirmD2CDesignInputSchema,
   getDesignDataIndexInputSchema,
   getDesignDataSectionInputSchema,
   getD2CWorkflowSnapshotInputSchema,
@@ -26,6 +27,7 @@ import {
 
 /** 配置 D2C 通信服务唯一依赖的领域 Service 与宿主资源生命周期。 */
 export interface D2CWorkflowServiceOptions {
+  /** 领域服务拥有确认规则、revision 校验和状态持久化；Server 只负责协议适配。 */
   service: D2CAgent.Service;
   designProvider: string;
   designArtifactReader?: D2CAgent.DesignArtifactReader;
@@ -113,6 +115,11 @@ export class D2CWorkflowService {
           expectedRevision: input.expectedRevision,
           source: { provider: this.designProvider, reference: input.designUrl },
         });
+        break;
+      }
+      case d2cWorkflowMethods.confirmDesign: {
+        const input = confirmD2CDesignInputSchema.parse(params);
+        task = await this.service.confirmDesign(input);
         break;
       }
       case d2cWorkflowMethods.reset:

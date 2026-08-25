@@ -1,6 +1,7 @@
 /** 作为 d2c-agent 包唯一公共入口，暴露设计读取 Service 工厂与领域契约。 */
 
 import type {
+  ConfirmDesignCommand as ConfirmDesignCommandContract,
   D2CTaskCommand as D2CTaskCommandContract,
   InspectDesignCommand as InspectDesignCommandContract,
 } from "./d2cCommand.js";
@@ -114,11 +115,10 @@ export class D2CAgent {
   /** 禁止实例化静态公共入口。 */
   private constructor() {}
 
-  /** 创建设计检查与 SVG 预览确认 D2C Service。 */
+  /** 创建设计读取、持久确认与方案分析 D2C Service。 */
   static createService(options: D2CAgent.ServiceOptions): D2CAgent.Service {
     return createD2CService(options);
   }
-
 }
 
 /** 汇总创建 Service 和实现 D2C 外部端口所需的公共领域类型。 */
@@ -129,6 +129,7 @@ export namespace D2CAgent {
   export type TaskStatus = D2CTaskStatusContract;
   export type TaskCommand = D2CTaskCommandContract;
   export type InspectDesignCommand = InspectDesignCommandContract;
+  export type ConfirmDesignCommand = ConfirmDesignCommandContract;
   export type DesignSource = DesignSourceContract;
   export type DesignContext = DesignContextContract;
   export type DesignRegion = DesignRegionContract;

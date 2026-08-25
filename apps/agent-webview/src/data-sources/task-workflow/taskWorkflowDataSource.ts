@@ -1,4 +1,4 @@
-/** 将通信客户端适配为单视图中的设计检查、SVG 确认与方案分析数据源。 */
+/** 将通信客户端适配为单视图中的设计检查、持久确认与方案分析数据源。 */
 
 import {
   d2cWorkflowMethods,
@@ -6,6 +6,7 @@ import {
   cancelD2CConversationResultSchema,
   designDataIndexSchema,
   designDataSectionSchema,
+  type ConfirmD2CDesignInput,
   type D2CTaskCommandInput,
   type D2CWorkflowSnapshot,
   type DesignDataIndex,
@@ -26,6 +27,7 @@ export interface TaskWorkflowDataSource {
   initialize(signal: AbortSignal): Promise<D2CWorkflowSnapshot>;
   getSnapshot(taskId: string, signal: AbortSignal): Promise<D2CWorkflowSnapshot>;
   inspectDesign(input: InspectD2CDesignInput): Promise<D2CWorkflowSnapshot>;
+  confirmDesign(input: ConfirmD2CDesignInput): Promise<D2CWorkflowSnapshot>;
   getDesignDataIndex(input: GetDesignDataIndexInput, signal?: AbortSignal): Promise<DesignDataIndex>;
   getDesignDataSection(input: GetDesignDataSectionInput, signal?: AbortSignal): Promise<DesignDataSection>;
   streamConversation(
@@ -50,6 +52,9 @@ export function createTaskWorkflowDataSource(
     ),
     inspectDesign: (input) => requestTaskWorkflowSnapshot(
       communicationClient, d2cWorkflowMethods.inspectDesign, input,
+    ),
+    confirmDesign: (input) => requestTaskWorkflowSnapshot(
+      communicationClient, d2cWorkflowMethods.confirmDesign, input,
     ),
     getDesignDataIndex: (input, signal) => communicationClient.request({
       method: d2cWorkflowMethods.getDesignDataIndex,
