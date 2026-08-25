@@ -7,7 +7,7 @@ export const designConfirmationCommand = "确认设计";
 export type DesignConversationSubmission =
   | { kind: "empty" }
   | { kind: "inspect-design"; reference: string }
-  | { kind: "confirm-design" }
+  | { kind: "confirm-design"; confirmation: string }
   | { kind: "invalid-confirmation" };
 
 /** 根据设计是否就绪分类输入，仅允许精确口令触发后续分析。 */
@@ -18,6 +18,8 @@ export function classifyDesignConversationSubmission(
   const normalizedInput = input.trim();
   if (!normalizedInput) return { kind: "empty" };
   if (!designReady) return { kind: "inspect-design", reference: normalizedInput };
-  if (normalizedInput === designConfirmationCommand) return { kind: "confirm-design" };
+  if (normalizedInput === designConfirmationCommand) {
+    return { kind: "confirm-design", confirmation: normalizedInput };
+  }
   return { kind: "invalid-confirmation" };
 }

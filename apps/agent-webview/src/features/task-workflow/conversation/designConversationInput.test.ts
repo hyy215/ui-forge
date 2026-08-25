@@ -17,6 +17,7 @@ describe("classifyDesignConversationSubmission", () => {
   it("accepts only the exact trimmed confirmation command after preview", () => {
     expect(classifyDesignConversationSubmission(true, `  ${designConfirmationCommand}  `)).toEqual({
       kind: "confirm-design",
+      confirmation: designConfirmationCommand,
     });
     expect(classifyDesignConversationSubmission(true, "继续")).toEqual({ kind: "invalid-confirmation" });
     expect(classifyDesignConversationSubmission(true, "确认设计。")).toEqual({ kind: "invalid-confirmation" });

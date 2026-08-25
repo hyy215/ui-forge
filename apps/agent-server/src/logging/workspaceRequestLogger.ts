@@ -155,7 +155,7 @@ export class WorkspaceRequestLogger implements CommunicationRequestLogger {
         durationMs: input.durationMs,
         ...(input.snapshot ? {
           revision: input.snapshot.revision,
-          workflowPhase: input.snapshot.workflowPhase,
+          workflowStatus: input.snapshot.status,
         } : {}),
       });
     });

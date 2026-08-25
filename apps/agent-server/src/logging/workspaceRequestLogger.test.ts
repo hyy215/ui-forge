@@ -82,7 +82,7 @@ describe("workspace request logger", () => {
       workspaceType: "git",
       workspace: "https://github.com/acme/customer-console.git",
       status: "success",
-      workflowPhase: "draft",
+      workflowStatus: "draft",
     });
     expect(records[1]).toMatchObject({ requestId: "request-2", status: "failure" });
     expect(records[2]).toMatchObject({
@@ -156,8 +156,7 @@ function createSnapshot(): D2CWorkflowSnapshot {
   return {
     taskId: "task-123",
     revision: 1,
-    workflowPhase: "draft",
-    state: { phase: "setup", status: "draft" },
+    status: "draft",
     viewModel: {
       setup: {
         projectPath: "/workspaces/customer-console",
