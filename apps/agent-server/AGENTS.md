@@ -7,7 +7,7 @@
 ```text
 src/
 ├── http/    Fastify 应用组装、健康检查和 shared-protocol 通信路由
-├── d2c/     D2C 命令门面、客户端快照投影和运行时依赖装配
+├── d2c/     D2C 方法分发、流运行、事件投影、查询服务和运行时依赖装配
 ├── logging/ Workspace 身份解析和按任务归档的结构化通信日志
 ├── runtime/ 进程所有权、单实例锁和其他宿主生命周期能力
 ├── agentServer.ts 包唯一公共 Facade 类
@@ -15,7 +15,7 @@ src/
 ```
 
 - 按稳定业务能力建立目录，不创建跨边界的 `utils`、`common` 或万能 Service。
-- 每个独立子功能使用单独文件维护；应用组装、路由注册、通信请求执行、协议分发、快照投影和依赖工厂不得合并到同一文件。
+- 每个独立子功能使用单独文件维护；应用组装、路由注册、通信请求执行、协议分发、流运行、事件投影、Artifact 查询和依赖工厂不得合并到同一文件。
 - 测试文件与被测功能同目录并使用 `*.test.ts`。
 - 不创建根目录或功能目录 `index.ts` 聚合导出。包外只公开 `AgentServer` Facade，内部模块通过明确文件路径引用实际功能；`main.ts` 只负责可执行启动，不作为公共 API。
 
@@ -28,7 +28,7 @@ src/
 
 ## D2C 与依赖装配
 
-- `D2CWorkflowService` 是协议到 D2C Agent 的应用门面，只做方法分发和字段映射，不持有任务 Map、revision、设计缓存或第二份工作流状态。原始设计载荷由 `packages/d2c-storage` 保存，服务仅校验任务中的 Artifact 引用后按需投影索引或单个 Section。
+- `D2CWorkflowService` 是协议到 D2C Agent 的薄门面，只做资源入口、Schema 校验和方法分发；长流运行、取消、领域进度投影和 Artifact 查询分别由独立应用对象承担。
 - 快照 Presenter 只把 `D2CTask` 裁剪为 `D2CWorkflowSnapshot`，不执行状态迁移、外部读取或持久化。
 - 环境变量、具体 Adapter、Provider 注册、Checkpointer、Artifact Store、Artifact Cleanup Worker 和 D2C Service 创建集中在 D2C 依赖工厂；其他 Server 文件不直接创建 MasterGo、Figma、Fixture、MCP 或 Agent 工具实现。
 - 依赖通过 `AgentServer` 构造参数和显式工厂装配；当前依赖图较小且生命周期清晰，不引入 Inversify、Decorator 或全局容器隐藏依赖关系。
