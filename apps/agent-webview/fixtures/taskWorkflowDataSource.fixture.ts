@@ -20,8 +20,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
       return replace({
         ...snapshot,
         revision: snapshot.revision + 1,
-        workflowPhase: "svg_ready",
-        state: { phase: "svg", status: "svg_ready" },
+        status: "svg_ready",
         viewModel: {
           ...snapshot.viewModel,
           setup: {
@@ -36,8 +35,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
     confirmDesign: async () => replace({
       ...snapshot,
       revision: snapshot.revision + 1,
-      workflowPhase: "design_confirmed",
-      state: { phase: "conversation", status: "design_confirmed" },
+      status: "design_confirmed",
     }),
     getDesignDataIndex: async (input) => ({
       artifactId: input.artifactId,
@@ -134,8 +132,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
       replace({
         ...snapshot,
         revision: snapshot.revision + 1,
-        workflowPhase: "analysis_ready",
-        state: { phase: "conversation", status: "analysis_ready" },
+        status: "analysis_ready",
         viewModel: {
           ...snapshot.viewModel,
           conversation: {
@@ -157,8 +154,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
     reset: async () => replace({
       ...snapshot,
       revision: snapshot.revision + 1,
-      workflowPhase: "draft",
-      state: { phase: "setup", status: "draft" },
+      status: "draft",
       viewModel: {
         setup: { ...snapshot.viewModel.setup, designUrl: "", designSummary: null },
         svg: { ...snapshot.viewModel.svg, statusMessage: "", tools: [] },

@@ -13,12 +13,6 @@ export const inspectD2CDesignInputSchema = d2cTaskCommandInputSchema.extend({
   designUrl: z.string().trim().min(1),
 });
 
-/** 校验任务尚未启动时的工作流状态。 */
-export const setupD2CWorkflowStateSchema = z.object({
-  phase: z.literal("setup"),
-  status: z.literal("draft"),
-});
-
 /** 校验目标图层的可选设计预览。 */
 export const designPreviewSchema = z.object({
   url: z.string().min(1).max(7 * 1024 * 1024).refine((value) => {

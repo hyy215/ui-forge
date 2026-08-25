@@ -2,9 +2,8 @@
 
 import type { D2CAgent } from "@ui-forge/d2c-agent";
 import type {
-  D2CWorkflowPhase,
   D2CWorkflowSnapshot,
-  D2CWorkflowState,
+  D2CWorkflowStatus,
   DesignComponentRecognition,
   PlanningResult,
   ProjectValidation,
@@ -12,35 +11,22 @@ import type {
   TaskWorkflowViewModel,
 } from "@ui-forge/shared-protocol";
 
+/** 穷尽定义领域任务状态到公开协议状态的真实适配边界。 */
+const workflowStatusByTaskStatus = {
+  draft: "draft",
+  svg_ready: "svg_ready",
+  design_confirmed: "design_confirmed",
+  analysis_ready: "analysis_ready",
+} satisfies Record<D2CAgent.TaskStatus, D2CWorkflowStatus>;
+
 /** 将内部任务转换为 Webview 可安全消费的权威快照。 */
 export function toD2CWorkflowSnapshot(task: D2CAgent.Task): D2CWorkflowSnapshot {
   return {
     taskId: task.taskId,
     revision: task.revision,
-    workflowPhase: createWorkflowPhase(task.status),
-    state: createWorkflowState(task),
+    status: workflowStatusByTaskStatus[task.status],
     viewModel: createViewModel(task),
   };
-}
-
-/** 将领域状态映射为公开工作流阶段。 */
-function createWorkflowPhase(status: D2CAgent.TaskStatus): D2CWorkflowPhase {
-  switch (status) {
-    case "draft": return "draft";
-    case "svg_ready": return "svg_ready";
-    case "design_confirmed": return "design_confirmed";
-    case "analysis_ready": return "analysis_ready";
-  }
-}
-
-/** 将领域持久化状态一对一投影为客户端页面阶段判别联合。 */
-function createWorkflowState(task: D2CAgent.Task): D2CWorkflowState {
-  switch (task.status) {
-    case "draft": return { phase: "setup", status: "draft" };
-    case "svg_ready": return { phase: "svg", status: "svg_ready" };
-    case "design_confirmed": return { phase: "conversation", status: "design_confirmed" };
-    case "analysis_ready": return { phase: "conversation", status: "analysis_ready" };
-  }
 }
 
 /** 创建只包含设计输入与 SVG 预览的客户端模型。 */

@@ -3,28 +3,16 @@
 import { describe, expect, it, vi } from "vitest";
 import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
 import type { TaskWorkflowDataSource } from "../../../data-sources/task-workflow";
-import { hasStartedConversation, resetTaskWorkflow } from "./useTaskWorkflow";
+import { getD2CViewPhase, resetTaskWorkflow } from "./useTaskWorkflow";
 
-describe("hasStartedConversation", () => {
-  it("keeps an inspected SVG behind explicit confirmation", () => {
-    const snapshot = createSnapshot(2);
-    snapshot.workflowPhase = "svg_ready";
-    snapshot.state = { phase: "svg", status: "svg_ready" };
-    expect(hasStartedConversation(snapshot)).toBe(false);
-  });
-
-  it("restores a persisted design confirmation before analysis finishes", () => {
-    const snapshot = createSnapshot(3);
-    snapshot.workflowPhase = "design_confirmed";
-    snapshot.state = { phase: "conversation", status: "design_confirmed" };
-    expect(hasStartedConversation(snapshot)).toBe(true);
-  });
-
-  it("restores confirmation after analysis has completed", () => {
-    const snapshot = createSnapshot(4);
-    snapshot.workflowPhase = "analysis_ready";
-    snapshot.state = { phase: "conversation", status: "analysis_ready" };
-    expect(hasStartedConversation(snapshot)).toBe(true);
+describe("getD2CViewPhase", () => {
+  it.each([
+    ["draft", "setup"],
+    ["svg_ready", "svg"],
+    ["design_confirmed", "conversation"],
+    ["analysis_ready", "conversation"],
+  ] as const)("derives %s as the %s view", (status, phase) => {
+    expect(getD2CViewPhase(status)).toBe(phase);
   });
 });
 
@@ -64,8 +52,7 @@ function createSnapshot(revision: number): D2CWorkflowSnapshot {
   return {
     taskId: "11111111-1111-4111-8111-111111111111",
     revision,
-    workflowPhase: "draft",
-    state: { phase: "setup", status: "draft" },
+    status: "draft",
     viewModel: {
       setup: { projectPath: "", taskGoal: "测试任务", designUrl: "", designSummary: null },
       svg: { taskGoal: "测试任务", statusMessage: "等待设计", tools: [] },

@@ -6,7 +6,7 @@ import type { DesignComponentRecognition } from "./design-components/designCompo
 import type { ProjectInspection } from "./project-context/projectInspection.js";
 import type { PlanningResult } from "./planning/planningResult.js";
 
-/** 当前 D2C 工作流允许持久化的显式业务阶段。 */
+/** 当前 D2C 工作流允许持久化的显式业务状态。 */
 export type D2CTaskStatus =
   | "draft"
   | "svg_ready"

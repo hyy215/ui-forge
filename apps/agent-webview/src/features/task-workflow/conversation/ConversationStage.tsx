@@ -34,7 +34,7 @@ export interface ConversationStageProps {
   designConfirmed: boolean;
   isInspectingDesign: boolean;
   onInspectDesign: (designUrl: string) => void;
-  onConfirmDesign: () => void;
+  onConfirmDesign: (confirmation: string) => void;
   onReset: () => void;
   onRetryStream: () => void;
   onStopConversation: () => void;
@@ -109,7 +109,7 @@ export function ConversationStage({
       case "confirm-design":
         setComposerValue("");
         setComposerError(undefined);
-        onConfirmDesign();
+        onConfirmDesign(submission.confirmation);
         return;
       case "invalid-confirmation":
         setComposerError(`请输入完整口令“${designConfirmationCommand}”以开始分析。`);

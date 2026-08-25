@@ -36,8 +36,7 @@ describe("agent server", () => {
     expect(message.success).toBe(true);
     if (!message.success) return;
     const snapshot = d2cWorkflowSnapshotSchema.parse(message.data);
-    expect(snapshot.state).toEqual({ phase: "setup", status: "draft" });
-    expect(snapshot.workflowPhase).toBe("draft");
+    expect(snapshot.status).toBe("draft");
   });
 
   it("rejects stale D2C commands with a correlated error response", async () => {
@@ -153,7 +152,7 @@ describe("agent server", () => {
     const inspectedMessage = communicationResponseMessageSchema.parse(inspected.json());
     if (!inspectedMessage.success) throw new Error(inspectedMessage.error.message);
     const inspectedSnapshot = d2cWorkflowSnapshotSchema.parse(inspectedMessage.data);
-    expect(inspectedSnapshot.workflowPhase).toBe("svg_ready");
+    expect(inspectedSnapshot.status).toBe("svg_ready");
 
     const confirmed = await app.inject({
       method: "POST",
@@ -167,7 +166,7 @@ describe("agent server", () => {
     const confirmedMessage = communicationResponseMessageSchema.parse(confirmed.json());
     if (!confirmedMessage.success) throw new Error(confirmedMessage.error.message);
     const confirmedSnapshot = d2cWorkflowSnapshotSchema.parse(confirmedMessage.data);
-    expect(confirmedSnapshot.workflowPhase).toBe("design_confirmed");
+    expect(confirmedSnapshot.status).toBe("design_confirmed");
 
     const streamed = await app.inject({
       method: "POST",

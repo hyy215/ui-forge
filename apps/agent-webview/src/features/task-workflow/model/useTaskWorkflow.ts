@@ -1,7 +1,10 @@
 /** 管理单视图 D2C 快照、持久设计确认边界与方案分析流。 */
 
 import { useEffect, useReducer, useRef, useState } from "react";
-import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
+import type {
+  D2CWorkflowSnapshot,
+  D2CWorkflowStatus,
+} from "@ui-forge/shared-protocol";
 import type { TaskWorkflowDataSource } from "../../../data-sources/task-workflow";
 import {
   createConversationStreamState,
@@ -25,7 +28,8 @@ export function useTaskWorkflow(
   const [conversationRetrySequence, setConversationRetrySequence] = useState(0);
   const startedConversationStreams = useRef(new Set<string>());
   const activeConversationRun = useRef<Promise<void> | null>(null);
-  const designConfirmed = hasStartedConversation(snapshot);
+  const viewPhase = getD2CViewPhase(snapshot.status);
+  const designConfirmed = viewPhase === "conversation";
 
   useEffect(() => {
     if (!designConfirmed) return;
@@ -83,6 +87,7 @@ export function useTaskWorkflow(
 
   return {
     snapshot,
+    viewPhase,
     conversation,
     designConfirmed,
     commandError,
@@ -99,12 +104,12 @@ export function useTaskWorkflow(
         setIsInspectingDesign(false);
       }
     },
-    confirmDesign: async () => {
+    confirmDesign: async (confirmation: string) => {
       setCommandError(undefined);
       try {
         setSnapshot(await dataSource.confirmDesign({
           ...commandInput(),
-          confirmation: "确认设计",
+          confirmation,
         }));
       } catch (error: unknown) {
         setCommandError(normalizeCommandError(error));
@@ -140,10 +145,18 @@ export function useTaskWorkflow(
   };
 }
 
-/** 根据已持久化的第二步结果恢复设计确认状态。 */
-export function hasStartedConversation(snapshot: D2CWorkflowSnapshot): boolean {
-  return snapshot.workflowPhase === "design_confirmed"
-    || snapshot.workflowPhase === "analysis_ready";
+/** Webview 根据持久业务状态计算的临时展示阶段。 */
+export type D2CViewPhase = "setup" | "svg" | "conversation";
+
+/** 将公开业务状态派生为 Webview 展示阶段，不维护第二套服务端状态。 */
+export function getD2CViewPhase(status: D2CWorkflowStatus): D2CViewPhase {
+  switch (status) {
+    case "draft": return "setup";
+    case "svg_ready": return "svg";
+    case "design_confirmed":
+    case "analysis_ready":
+      return "conversation";
+  }
 }
 
 /** 终止并等待当前分析，随后基于服务端最新 revision 重置任务。 */

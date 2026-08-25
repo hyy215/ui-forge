@@ -15,5 +15,5 @@ export interface InspectDesignCommand extends D2CTaskCommand {
 
 /** 将人工确认作为独立持久化命令提交。 */
 export interface ConfirmDesignCommand extends D2CTaskCommand {
-  confirmation: "确认设计";
+  confirmation: string;
 }

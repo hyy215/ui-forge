@@ -29,6 +29,7 @@ import type { SecondStepProgressReporter } from "./second-step/secondStepProgres
 import type { DesignSystemKnowledgeProvider } from "./design-system/designSystemKnowledge.js";
 
 const defaultTaskGoal = "结合目标 React + Ant Design 项目与 MasterGo 设计稿生成整体修改方案";
+const requiredDesignConfirmation = "确认设计";
 
 /** Agent Server 可调用的完整 D2C 领域服务；确认规则与状态持久化均由该边界拥有。 */
 export interface D2CService {
@@ -189,7 +190,9 @@ class DefaultD2CService implements D2CService {
     return this.withTaskUpdateLock(command.taskId, async () => {
       const current = await this.requireTask(command.taskId);
       this.requireCommandRevision(command, current);
-      if (command.confirmation !== "确认设计") throw new Error("请输入精确口令“确认设计”。");
+      if (command.confirmation !== requiredDesignConfirmation) {
+        throw new Error(`请输入精确口令“${requiredDesignConfirmation}”。`);
+      }
       if (current.status !== "svg_ready" || !current.inspectedDesign) {
         throw new Error("当前任务没有可确认的设计预览。");
       }

@@ -90,7 +90,7 @@ describe("D2CService", () => {
     expect(inspected.inspectedDesign?.context.preview?.url).toBe(previewUrl);
   });
 
-  it("rejects analysis until the exact confirmation command is persisted", async () => {
+  it("keeps exact confirmation as a domain rule before analysis", async () => {
     const plan = vi.fn(async (input: PlanDeepAgentInput) => ({
       componentRecognition: input.recognition,
       plan: reviewablePlan,
@@ -110,7 +110,7 @@ describe("D2CService", () => {
     await expect(service.confirmDesign({
       taskId: inspected.taskId,
       expectedRevision: inspected.revision,
-      confirmation: "确认" as "确认设计",
+      confirmation: "确认",
     })).rejects.toThrow("确认设计");
     expect(plan).not.toHaveBeenCalled();
   });
