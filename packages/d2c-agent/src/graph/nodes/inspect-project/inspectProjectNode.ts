@@ -16,7 +16,9 @@ export function createInspectProjectNode(
   return {
     id: inspectProjectNodeId,
     execute: async (state) => {
-      if (!state.task) throw new Error("项目检查节点缺少任务。");
+      if (!state.task?.inspectedDesign) {
+        throw new Error("项目检查节点缺少已持久化的设计检查结果。");
+      }
       const reporter = resolveReporter(state.task.taskId);
       await reporter?.({ type: "project-inspection-start" });
       const startedAt = performance.now();
@@ -26,7 +28,13 @@ export function createInspectProjectNode(
         inspection: structuredClone(inspection),
         durationMs: elapsedMilliseconds(startedAt),
       });
-      return { projectInspection: inspection };
+      return {
+        execution: {
+          ...state.execution,
+          inspection: structuredClone(state.task.inspectedDesign),
+          projectInspection: inspection,
+        },
+      };
     },
   };
 }

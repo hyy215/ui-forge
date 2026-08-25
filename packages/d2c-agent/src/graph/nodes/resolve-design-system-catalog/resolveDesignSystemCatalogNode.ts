@@ -19,7 +19,8 @@ export function createResolveDesignSystemCatalogNode(
   return {
     id: resolveDesignSystemCatalogNodeId,
     execute: async (state) => {
-      if (!state.task || !state.projectInspection || state.projectInspection.kind === "unsupported") {
+      const inspection = state.execution?.projectInspection;
+      if (!state.task || !inspection || inspection.kind === "unsupported") {
         throw new Error("设计系统目录节点缺少已通过门禁的目标项目。");
       }
       const reporter = resolveReporter(state.task.taskId);
@@ -29,7 +30,7 @@ export function createResolveDesignSystemCatalogNode(
       const startedAt = performance.now();
       const resolution = provider
         ? await provider.resolveCatalog({
-            inspection: structuredClone(state.projectInspection),
+            inspection: structuredClone(inspection),
             baseCatalog: structuredClone(baseCatalog),
             ...(signal ? { signal } : {}),
           })
@@ -44,8 +45,11 @@ export function createResolveDesignSystemCatalogNode(
         durationMs: elapsedMilliseconds(startedAt),
       });
       return {
-        componentCatalog: structuredClone(resolution.catalog),
-        designSystemWarnings: [...resolution.warnings],
+        execution: {
+          ...state.execution,
+          componentCatalog: structuredClone(resolution.catalog),
+          designSystemWarnings: [...resolution.warnings],
+        },
       };
     },
   };

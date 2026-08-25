@@ -14,8 +14,14 @@ export function createInspectDesignNode(
   return {
     id: inspectDesignNodeId,
     execute: async (state) => {
-      if (!state.designSource) throw new Error("D2C Graph 设计检查节点缺少设计来源。");
-      return { inspection: await resolver.inspect(state.designSource) };
+      const source = state.execution?.designSource;
+      if (!source) throw new Error("D2C Graph 设计检查节点缺少设计来源。");
+      return {
+        execution: {
+          ...state.execution,
+          inspection: await resolver.inspect(source),
+        },
+      };
     },
   };
 }
