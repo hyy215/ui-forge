@@ -1,11 +1,11 @@
 ---
 name: commit
-description: 通过冻结候选快照、一次性发现问题、维护固定问题台账和执行确定性质量门禁来审核并提交仓库变更。用户调用 `$commit`、要求提交当前或 staged changes，或要求在提交前完整概述 diff、核对项目约束、检查无用代码与合理的公共提取机会、运行验证，并仅在没有阻断项时创建 Git commit 时使用。Review and commit repository changes only after a bounded, evidence-based pre-commit review passes.
+description: 通过冻结候选快照、一次性发现问题、维护固定问题台账和执行确定性质量门禁来审核并提交仓库变更，并在仓库明确要求时完成单提交 Draft PR 交付。用户调用 `$commit`、要求提交当前或 staged changes、要求以 PR 交付，或要求在提交前完整概述 diff、核对项目约束、检查无用代码与合理的公共提取机会、运行验证时使用。Review and deliver repository changes only after a bounded, evidence-based quality gate passes.
 ---
 
 # 提交质量门禁
 
-审核并提交一个精确、冻结的候选快照。用户要求提交即授权在门禁通过后创建一个本地 commit；除非另行授权，否则禁止 push、amend、发布、安装依赖、删除文件或扩大范围。
+审核并提交一个精确、冻结的候选快照。用户要求提交即授权在门禁通过后创建一个本地 commit；当适用的仓库 `AGENTS.md` 明确把 PR 规定为默认交付方式时，已获授权的代码变更任务还授权在门禁通过后执行本技能定义的受限 push、Draft PR 创建、一次 commit message 最终化和远端校验。除此之外禁止 push、amend、发布、安装依赖、删除文件、合并 PR 或扩大范围。
 
 本流程必须有界：对同一候选快照只执行一次完整发现式审核。修复后的复审只验证问题台账、修复增量、受影响接口和既定门禁，不得重新对未变化代码进行开放式找茬。
 
@@ -117,13 +117,30 @@ description: 通过冻结候选快照、一次性发现问题、维护固定问�
 
 没有 blocker 时明确声明门禁通过；非阻断建议单列，不掩盖结果。
 
-## 9. 仅提交审核快照
+## 9. 创建候选 commit
 
 1. 只 stage 已审核候选路径，保留排除的工作区修改。
 2. 运行 `git diff --cached --check`、`git diff --cached --stat`，将 staged 路径和 Patch 与审核快照逐项对账。仅 stage 操作造成表示变化而内容相同时无需重新发现式审核；内容变化则门禁失败。
 3. 最后扫描 staged Patch 和路径中的密钥及禁止产物。
-4. 使用用户提供的 commit message；否则根据主要变更生成简洁 subject，不虚构 issue ID 或成果。
-5. 使用 `git commit` 创建一个本地 commit；禁止 `--no-verify`、amend 和 push。
-6. 报告 commit hash、subject、提交分组、验证矩阵结果、问题台账最终状态和剩余工作区变更。
+4. 使用用户提供的 commit message；否则根据主要变更生成简洁 subject，不虚构 issue ID 或成果。仓库要求 PR 交付时，候选正文先记录真实的“修改方案”，并使用 `PR: pending` 占位；不得预估或猜测 PR 编号。
+5. 使用 `git commit` 创建一个本地候选 commit；禁止 `--no-verify`。本步骤本身不执行 amend 或 push。
+6. 记录候选 commit hash、tree hash、subject、提交分组、验证矩阵结果、问题台账最终状态和剩余工作区变更，为 PR 最终化建立不变量。
 
 commit 失败时报告原始错误并保持工作区完整。
+
+## 10. 自动交付 Draft PR
+
+仅当适用的仓库规则明确要求 PR 交付时执行本节；否则在本地候选 commit 创建后结束。
+
+1. 确认当前分支不是默认分支、分支名符合仓库约定、候选 commit 相对最新 `origin/main` 恰好领先一个 commit，且工作区与 index 没有本技能引入的未提交内容。任一条件不满足都停止，不通过重写无关历史来凑成单提交。
+2. 将当前任务分支推送到 `origin`。禁止推送默认分支、使用普通 `--force` 或绕过远端保护。
+3. 使用可用的 GitHub 连接器或已授权 API 创建以 `main` 为基准的 Draft PR。PR 标题与候选 subject 一致；正文包含目标、修改方案、验证证据、风险和未完成事项。记录服务端返回的 PR 编号与规范 URL，不从分支名推断 URL。
+4. 使用规范 PR URL 生成最终 commit message。正文必须包含“修改方案：”和独占一行的 `PR: <canonical-url>`；修改方案至少包含一条真实、非空的列表项。
+5. 使用 `git commit --amend` 仅替换候选 commit message。amend 前后 tree hash、候选路径内容和排除的工作区状态必须一致；任何内容变化都使门禁失败。
+6. 在 PR 尚未开始人工审阅且远端仍指向本技能刚推送的候选 commit 时，只执行一次 `git push --force-with-lease`。lease 不匹配、出现新 review 或远端分支被他人更新时立即停止，禁止覆盖。
+7. 校验本地 `HEAD`、远端任务分支和 PR Head SHA 完全一致，并确认 PR 仍为 Draft。等待或读取 `check` 与 `commit-metadata` 等必需检查的状态；检查失败时保持 Draft 并报告失败证据，不自动修复或合并。
+8. PR 创建后任一步骤失败时，报告候选/最终 commit SHA、PR URL、远端状态和可恢复边界；不得要求用户执行未说明风险的历史重写，也不得把不一致状态宣称为已交付。
+
+## 11. 交付报告
+
+报告最终 commit hash 与 subject、提交分组、验证矩阵、问题台账最终状态、剩余工作区修改，以及 Draft PR 的可点击完整链接和检查状态。只有本地、远端和 PR Head SHA 一致时才声明 PR 已交付；本技能永不自动合并或关闭 PR。
