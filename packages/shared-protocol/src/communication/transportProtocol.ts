@@ -4,6 +4,7 @@ import { z } from "zod";
 /** 传输层内部方法，不进入具体业务方法命名空间。 */
 export const communicationTransportMethods = {
   cancelStream: "ui-forge.communication.cancel-stream",
+  negotiateProtocol: "ui-forge.communication.negotiate-protocol",
 } as const;
 
 /** 校验 Webview 请求宿主终止指定传输流的参数。 */
