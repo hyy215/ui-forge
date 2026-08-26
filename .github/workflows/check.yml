@@ -2,9 +2,12 @@ name: check
 
 on:
   pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
+  merge_group:
 
 permissions:
   contents: read
@@ -36,3 +39,20 @@ jobs:
 
       - name: Build applications
         run: npm run build:apps
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify critical Webview interactions
+        run: npm run test:e2e
+
+      - name: Upload Playwright failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-evidence
+          path: |
+            apps/agent-webview/playwright-report/
+            apps/agent-webview/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

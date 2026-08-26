@@ -6,6 +6,8 @@
 node_modules/
 dist/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 
 # Local environment and runtime data
