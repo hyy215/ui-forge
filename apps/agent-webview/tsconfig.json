@@ -11,5 +11,5 @@
   "references": [
     { "path": "../../packages/shared-protocol" }
   ],
-  "include": ["src", "fixtures", "development", "vite.config.ts"]
+  "include": ["src", "fixtures", "development", "e2e", "vite.config.ts", "playwright.config.ts"]
 }

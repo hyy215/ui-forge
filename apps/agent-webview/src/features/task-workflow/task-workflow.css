@@ -299,6 +299,8 @@
 }
 
 @media (max-width: 600px) {
+  .stage-heading { align-items: stretch; flex-direction: column; }
+  .stage-heading-actions { width: 100%; max-width: none; justify-content: flex-start; }
   .conversation-aside { top: 12px; right: 12px; bottom: auto; width: calc(100% - 24px); max-height: calc(100% - 24px); }
 }
 

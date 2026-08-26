@@ -20,9 +20,11 @@
     "dev:webview": "npm run dev -w @ui-forge/agent-webview",
     "dev:webview:server": "npm run dev:server -w @ui-forge/agent-webview",
     "test": "vitest run",
+    "test:e2e": "playwright test --config apps/agent-webview/playwright.config.ts",
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@types/node": "26.2.0",
     "typescript": "7.0.2",
     "vitest": "4.1.10"

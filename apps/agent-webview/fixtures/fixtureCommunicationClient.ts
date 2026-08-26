@@ -2,6 +2,7 @@
 
 import {
   cancelD2CConversationInputSchema,
+  confirmD2CDesignInputSchema,
   d2cTaskCommandInputSchema,
   d2cWorkflowMethods,
   getDesignDataIndexInputSchema,
@@ -32,6 +33,8 @@ async function handleRequest(request: CommunicationRequest<unknown>): Promise<un
       );
     case d2cWorkflowMethods.inspectDesign:
       return fixtureTaskWorkflowDataSource.inspectDesign(inspectD2CDesignInputSchema.parse(request.params));
+    case d2cWorkflowMethods.confirmDesign:
+      return fixtureTaskWorkflowDataSource.confirmDesign(confirmD2CDesignInputSchema.parse(request.params));
     case d2cWorkflowMethods.getDesignDataIndex:
       return fixtureTaskWorkflowDataSource.getDesignDataIndex(getDesignDataIndexInputSchema.parse(request.params), signal);
     case d2cWorkflowMethods.getDesignDataSection:
