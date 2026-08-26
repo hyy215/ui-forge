@@ -1,15 +1,21 @@
-/** 注册 shared-protocol 通信端点并将合法请求分发到 D2C 服务。 */
+/** 注册协议协商和 shared-protocol 业务通信端点。 */
 
 import { Readable } from "node:stream";
 import type { FastifyInstance } from "fastify";
 import {
+  communicationCapabilities,
   communicationInboundMessageSchema,
+  communicationTransportMethods,
+  createFailedCommunicationResponseMessage,
+  createSuccessfulCommunicationResponseMessage,
+  currentCommunicationProtocolVersion,
+  negotiateCommunicationProtocolInputSchema,
   type CommunicationStreamMessage,
 } from "@ui-forge/shared-protocol";
 import type { CommunicationRequestHandler } from "./communicationRequestHandler.js";
 import type { CommunicationStreamRequestHandler } from "./communicationStreamRequestHandler.js";
 
-/** 注册统一通信路由，并在传输边界完成 Schema 校验和错误关联。 */
+/** 注册统一通信路由，并在传输边界完成协议协商、Schema 校验和错误关联。 */
 export function registerCommunicationRoute(
   app: FastifyInstance,
   requestHandler: CommunicationRequestHandler,
@@ -26,6 +32,28 @@ export function registerCommunicationRoute(
     }
 
     const message = messageResult.data;
+    if (message.kind === "request" && message.method === communicationTransportMethods.negotiateProtocol) {
+      try {
+        const input = negotiateCommunicationProtocolInputSchema.parse(message.params);
+        if (input.protocolVersion !== currentCommunicationProtocolVersion) {
+          throw new Error(
+            `通信协议版本不兼容：Client=${input.protocolVersion}，Server=${currentCommunicationProtocolVersion}。`,
+          );
+        }
+        const supported = new Set<string>(communicationCapabilities);
+        const missing = input.requiredCapabilities.filter((capability) => !supported.has(capability));
+        if (missing.length > 0) throw new Error(`Agent Server 缺少必需通信能力：${missing.join("、")}。`);
+        return createSuccessfulCommunicationResponseMessage(message.requestId, {
+          protocolVersion: currentCommunicationProtocolVersion,
+          capabilities: [...communicationCapabilities],
+        });
+      } catch (error: unknown) {
+        return createFailedCommunicationResponseMessage(
+          message.requestId,
+          error instanceof Error ? error.message : "通信协议协商失败。",
+        );
+      }
+    }
     if (message.kind === "notification") return reply.status(202).send();
     if (message.kind === "stream-request") {
       reply.header("content-type", "application/x-ndjson; charset=utf-8");
