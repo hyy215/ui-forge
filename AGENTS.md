@@ -6,7 +6,7 @@ ui-forge 是集成于 VS Code 的 D2C 研发交付智能体，面向 React + Typ
 
 项目从 MasterGo 获取设计上下文，检索目标仓库已有组件和设计规范，生成可审阅的代码 Patch，并在用户批准后完成代码验证、页面渲染和视觉验收。
 
-当前实现包含设计读取、预览与仓库证据驱动的审阅型规划：读取并缓存 Design URL，从设计数据确定性合成安全 SVG 预览，确认设计后先检查目标项目，再提取平台无关组件候选、受控扫描目标仓库组件与依赖，并由受限主 Plan Agent 委派独立视觉 Subagent 生成组件、布局和静态交互理解、复用决策、文件影响及结构化步骤。Planning 领域已提供未接线的版本化 Plan、人工字段锁、`PlanDelta` 合并和 Review 结论契约；反馈传输、Patch、执行验证与交付尚未实现，不得以静态结果或未接线代码伪装为可用能力。
+当前实现包含设计读取、预览、仓库证据驱动的审阅型规划与候选代码生成：读取并缓存 Design URL，从设计数据确定性合成安全 SVG 预览，确认设计后先检查目标项目，再提取平台无关组件候选、受控扫描目标仓库组件与依赖，并由受限主 Plan Agent 委派独立视觉 Subagent 生成组件、布局和静态交互理解、复用决策、文件影响及结构化步骤。Planning 领域通过版本化 Plan、人工字段锁、`PlanDelta` 合并、Review 结论和 Patch 绑定保护人工意图；用户明确确认方案后，Graph 重新读取计划文件并由受限 Code Agent 生成只供审阅的结构化候选 Patch。反馈传输、Patch 受控应用、执行验证与交付尚未实现，不得以静态结果或未接线代码伪装为可用能力。
 
 ## 开始工作前
 
@@ -68,8 +68,8 @@ evals/                      评测声明、原始结果和报告
 - `packages/agent-core` 只提供领域无关的 Agent、工具注入、受限 Deep Agent 和 LangGraph 封装；它对领域包隐藏 `StateGraph`、`Annotation` 和状态 channel，不得持有 D2C 状态、设计模型或任务生命周期。
 - `packages/d2c-agent` 持有任务生命周期、内部状态和乐观并发版本；任务 UUID 同时作为 LangGraph `thread_id`，生产 Checkpointer 由组合入口注入。Agent Server 只负责校验通信命令、调用 D2C Service，并将内部任务投影为 `shared-protocol` 快照，不维护第二份权威工作流状态。
 - D2C 工作流通过 `agent-core` 的统一 Graph 与 Checkpoint 契约编排设计读取节点，不直接依赖 LangGraph API。设计来源使用稳定的 `provider + reference` 标识，并由 Resolver 路由到具体 Adapter。Adapter 封装 MCP 或其他传输细节，两个 Agent 包都不依赖具体供应商、MCP 客户端或 `shared-protocol`。
-- 一个 D2C Service 只创建一个共享 Graph；当前拓扑为 `START → inspectDesign → interrupt → inspectProject → resolveDesignSystemCatalog → recognizeDesignComponents → analyzeProjectContext → planDeepAgent → END`，不支持的项目从 `inspectProject` 直接结束。不同任务通过 `thread_id` 隔离，不按任务或功能重复编译 Graph。
-- 未实现的反馈传输、Patch、执行验证和交付能力只允许保留明确边界，不接入当前 Graph、协议或 UI。版本化 Plan 领域逻辑可以独立实现并测试，但不得宣称为已接线的用户能力。
+- 一个 D2C Service 只创建一个共享 Graph；当前拓扑为 `START → inspectDesign → interrupt → inspectProject → resolveDesignSystemCatalog → recognizeDesignComponents → analyzeProjectContext → planDeepAgent → interrupt → generateCode → END`，不支持的项目从 `inspectProject` 直接结束。不同任务通过 `thread_id` 隔离，不按任务或功能重复编译 Graph。
+- 未实现的反馈传输、Patch 受控应用、执行验证和交付能力只允许保留明确边界，不接入当前 Graph、协议或 UI。候选 Patch 只能在用户明确确认当前 Plan 后生成并审阅，不得宣称已经写入或验证。
 - 固定交付路径采用确定性 Workflow；组件选择、代码规划和错误修复可以使用模型决策。
 - 模型只能提出结构化 Patch，不能直接覆盖用户文件。
 - 写入必须绑定用户批准的 Patch 哈希，并在应用前检查文件版本。

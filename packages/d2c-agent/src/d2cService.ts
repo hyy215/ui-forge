@@ -27,6 +27,15 @@ import {
 import type { DesignVisualEvidenceProvider } from "./second-step/designVisualEvidence.js";
 import type { SecondStepProgressReporter } from "./second-step/secondStepProgress.js";
 import type { DesignSystemKnowledgeProvider } from "./design-system/designSystemKnowledge.js";
+import {
+  createCodeGenerationAgent,
+  type CodeGenerationAgent,
+  type CodeGenerationAgentModelOptions,
+} from "./code-generation/codeGenerationAgent.js";
+import type { ProjectCodeContextReader } from "./code-generation/projectCodeContext.js";
+import type { CodeGenerationProgressReporter } from "./code-generation/codeGenerationProgress.js";
+import { createEvolvingPlanningResult } from "./planning/evolvingPlan.js";
+import { createPlanningIntent } from "./planning/createPlanningIntent.js";
 
 const defaultTaskGoal = "结合目标 React + Ant Design 项目与 MasterGo 设计稿生成整体修改方案";
 const requiredDesignConfirmation = "确认设计";
@@ -50,6 +59,12 @@ export interface D2CService {
     reportProgress?: SecondStepProgressReporter,
     signal?: AbortSignal,
   ): Promise<D2CTask>;
+  /** 按当前已审阅 Plan 生成并持久化候选 Patch，不写入目标项目。 */
+  generateCode(
+    command: D2CTaskCommand,
+    reportProgress?: CodeGenerationProgressReporter,
+    signal?: AbortSignal,
+  ): Promise<D2CTask>;
   /** 清除当前设计与预览确认结果，回到设计输入状态。 */
   reset(command: D2CTaskCommand): Promise<D2CTask>;
 }
@@ -62,6 +77,12 @@ export interface D2CServiceOptions {
   projectContextAnalyzer?: ProjectContextAnalyzer;
   planDeepAgent?: PlanDeepAgent;
   modelOptions?: PlanDeepAgentModelOptions;
+  /** 可在测试或宿主组合边界替换默认 Code Agent。 */
+  codeGenerationAgent?: CodeGenerationAgent;
+  /** 单独覆盖代码阶段模型配置；省略时复用规划模型配置。 */
+  codeGenerationModelOptions?: CodeGenerationAgentModelOptions;
+  /** 读取计划文件与复用参考文件的受控文本快照。 */
+  projectCodeContextReader?: ProjectCodeContextReader;
   visualEvidenceProvider?: DesignVisualEvidenceProvider;
   designArtifactReader?: DesignArtifactReader;
   designComponentRecognizer?: DesignComponentRecognizer;
@@ -106,6 +127,10 @@ class DefaultD2CService implements D2CService {
       options.designSystemKnowledgeProvider,
       projectContextAnalyzer,
     );
+    const codeGenerationAgent = options.codeGenerationAgent ?? createCodeGenerationAgent(
+      componentCatalog,
+      options.codeGenerationModelOptions ?? options.modelOptions,
+    );
     this.graph = createD2CGraph({
       designContextResolver: createDesignContextResolver(options.designSourceAdapters),
       projectInspector: options.projectInspector,
@@ -116,6 +141,10 @@ class DefaultD2CService implements D2CService {
         ? { designSystemKnowledgeProvider: options.designSystemKnowledgeProvider }
         : {}),
       planDeepAgent,
+      codeGenerationAgent,
+      projectCodeContextReader: options.projectCodeContextReader ?? {
+        read: async () => { throw new Error("当前未配置目标仓库代码上下文读取器。"); },
+      },
       ...(options.designArtifactReader ? { artifactReader: options.designArtifactReader } : {}),
       ...(options.checkpointer ? { checkpointer: options.checkpointer } : {}),
     });
@@ -186,6 +215,7 @@ class DefaultD2CService implements D2CService {
     });
   }
 
+  /** 校验精确人工口令并持久化设计确认暂停点。 */
   async confirmDesign(command: ConfirmDesignCommand): Promise<D2CTask> {
     return this.withTaskUpdateLock(command.taskId, async () => {
       const current = await this.requireTask(command.taskId);
@@ -212,7 +242,7 @@ class DefaultD2CService implements D2CService {
   ): Promise<D2CTask> {
     return this.withTaskUpdateLock(command.taskId, async () => {
       const current = await this.requireTask(command.taskId);
-      if (current.status === "analysis_ready") return copyTask(current);
+      if (current.status === "analysis_ready" || current.status === "patch_ready") return copyTask(current);
       this.requireCommandRevision(command, current);
       if (current.status !== "design_confirmed" || !current.inspectedDesign) {
         throw new Error("请先读取并确认 MasterGo 设计。");
@@ -232,6 +262,52 @@ class DefaultD2CService implements D2CService {
           ? { componentRecognition: structuredClone(analysis.componentRecognition) }
           : {}),
         ...(analysis.plan ? { plan: structuredClone(analysis.plan) } : {}),
+        ...(analysis.plan && analysis.componentRecognition
+          ? {
+              evolvingPlan: createEvolvingPlanningResult(
+                createPlanningIntent(analysis.plan, analysis.componentRecognition),
+                analysis.plan,
+              ),
+            }
+          : {}),
+      });
+    });
+  }
+
+  /** 只允许可审阅方案进入代码生成，并把用户点击视为对当前 Plan 版本的生成授权。 */
+  async generateCode(
+    command: D2CTaskCommand,
+    reportProgress?: CodeGenerationProgressReporter,
+    signal?: AbortSignal,
+  ): Promise<D2CTask> {
+    return this.withTaskUpdateLock(command.taskId, async () => {
+      const current = await this.requireTask(command.taskId);
+      if (current.status === "patch_ready" && current.codeGeneration?.status === "ready") {
+        return copyTask(current);
+      }
+      this.requireCommandRevision(command, current);
+      if (current.status !== "analysis_ready" || !current.plan || !current.evolvingPlan) {
+        throw new Error("请先完成并审阅整体修改方案。");
+      }
+      if (current.plan.status !== "reviewable") {
+        throw new Error("当前方案仍有上下文缺口，不能生成候选 Patch。");
+      }
+      if (current.evolvingPlan.execution.files.length === 0) {
+        throw new Error("当前方案没有可以生成代码的文件操作。");
+      }
+      let generated;
+      try {
+        generated = await this.graph.generateCode(command.taskId, reportProgress, signal);
+      } catch (error: unknown) {
+        throw normalizeError(error, "候选代码 Patch 生成失败。");
+      }
+      const outcome = structuredClone(generated.outcome);
+      return this.graph.saveTask({
+        ...copyTask(current),
+        revision: current.revision + 1,
+        status: outcome.status === "ready" ? "patch_ready" : "analysis_ready",
+        codeGeneration: outcome,
+        ...(generated.evolvingPlan ? { evolvingPlan: structuredClone(generated.evolvingPlan) } : {}),
       });
     });
   }
@@ -252,6 +328,8 @@ class DefaultD2CService implements D2CService {
       delete next.projectInspection;
       delete next.componentRecognition;
       delete next.plan;
+      delete next.evolvingPlan;
+      delete next.codeGeneration;
       const reset = await this.graph.saveTask(next);
       if (artifactId) await this.supersedeArtifactSafely(artifactId);
       return reset;
@@ -272,6 +350,7 @@ class DefaultD2CService implements D2CService {
     }
   }
 
+  /** 串行化同一任务的命令提交，避免 revision 与 Graph 结果相互覆盖。 */
   private async withTaskUpdateLock<T>(taskId: string, operation: () => Promise<T>): Promise<T> {
     const previous = this.taskUpdateLocks.get(taskId) ?? Promise.resolve();
     let release = (): void => {};

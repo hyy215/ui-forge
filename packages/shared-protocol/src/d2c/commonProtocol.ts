@@ -7,6 +7,7 @@ export const d2cWorkflowStatuses = [
   "svg_ready",
   "design_confirmed",
   "analysis_ready",
+  "patch_ready",
 ] as const;
 
 /** 校验 Server 通过快照向客户端公开的 D2C 工作流业务状态。 */

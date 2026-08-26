@@ -9,6 +9,8 @@ export const d2cWorkflowMethods = {
   getDesignDataSection: "ui-forge.d2c.get-design-data-section",
   streamConversation: "ui-forge.d2c.stream-conversation",
   cancelConversation: "ui-forge.d2c.cancel-conversation",
+  streamCodeGeneration: "ui-forge.d2c.stream-code-generation",
+  cancelCodeGeneration: "ui-forge.d2c.cancel-code-generation",
   reset: "ui-forge.d2c.reset",
 } as const;
 

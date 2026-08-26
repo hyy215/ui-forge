@@ -5,13 +5,16 @@ import type { DesignSource } from "./design-context/designSource.js";
 import type { DesignComponentRecognition } from "./design-components/designComponentRecognition.js";
 import type { ProjectInspection } from "./project-context/projectInspection.js";
 import type { PlanningResult } from "./planning/planningResult.js";
+import type { EvolvingPlanningResult } from "./planning/evolvingPlan.js";
+import type { CodeGenerationOutcome } from "./code-generation/codePatch.js";
 
 /** 当前 D2C 工作流允许持久化的显式业务状态。 */
 export type D2CTaskStatus =
   | "draft"
   | "svg_ready"
   | "design_confirmed"
-  | "analysis_ready";
+  | "analysis_ready"
+  | "patch_ready";
 
 /** D2C Service 保存的当前权威任务。 */
 export interface D2CTask {
@@ -26,4 +29,6 @@ export interface D2CTask {
   projectInspection?: ProjectInspection;
   componentRecognition?: DesignComponentRecognition;
   plan?: PlanningResult;
+  evolvingPlan?: EvolvingPlanningResult;
+  codeGeneration?: CodeGenerationOutcome;
 }

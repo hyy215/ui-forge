@@ -109,6 +109,27 @@ import type {
   DesignSystemKnowledgeRecord as DesignSystemKnowledgeRecordContract,
   DesignSystemKnowledgeSection as DesignSystemKnowledgeSectionContract,
 } from "./design-system/designSystemKnowledge.js";
+import type {
+  CodeGenerationAgent as CodeGenerationAgentContract,
+  CodeGenerationAgentInput as CodeGenerationAgentInputContract,
+  CodeGenerationAgentModelOptions as CodeGenerationAgentModelOptionsContract,
+  CodeGenerationAgentResult as CodeGenerationAgentResultContract,
+} from "./code-generation/codeGenerationAgent.js";
+import type {
+  CodeGenerationOutcome as CodeGenerationOutcomeContract,
+  CodePatchOperation as CodePatchOperationContract,
+  CodePatchSet as CodePatchSetContract,
+  CodeStepPatch as CodeStepPatchContract,
+} from "./code-generation/codePatch.js";
+import type {
+  ProjectCodeContext as ProjectCodeContextContract,
+  ProjectCodeContextReader as ProjectCodeContextReaderContract,
+  ProjectCodeFileSnapshot as ProjectCodeFileSnapshotContract,
+} from "./code-generation/projectCodeContext.js";
+import type {
+  CodeGenerationProgressEvent as CodeGenerationProgressEventContract,
+  CodeGenerationProgressReporter as CodeGenerationProgressReporterContract,
+} from "./code-generation/codeGenerationProgress.js";
 
 /** 仅通过一个静态工厂创建 D2C Service，隐藏内部 Resolver、Graph 和工具装配。 */
 export class D2CAgent {
@@ -194,6 +215,32 @@ export namespace D2CAgent {
   export type PlanDeepAgentInput = PlanDeepAgentInputContract;
   export type PlanDeepAgentResult = PlanDeepAgentResultContract;
   export type PlanDeepAgentModelOptions = PlanDeepAgentModelOptionsContract;
+  /** 按版本化 Plan 生成候选 Patch 的受限 Agent 端口。 */
+  export type CodeGenerationAgent = CodeGenerationAgentContract;
+  /** Code Agent 单次调用的权威输入。 */
+  export type CodeGenerationAgentInput = CodeGenerationAgentInputContract;
+  /** Code Agent 返回的候选 Patch 与新 Plan 绑定。 */
+  export type CodeGenerationAgentResult = CodeGenerationAgentResultContract;
+  /** 代码阶段允许由组合入口提供的模型参数。 */
+  export type CodeGenerationAgentModelOptions = CodeGenerationAgentModelOptionsContract;
+  /** 代码生成成功或明确阻塞的持久业务结论。 */
+  export type CodeGenerationOutcome = CodeGenerationOutcomeContract;
+  /** 绑定单一 Plan 版本的候选 Patch 集合。 */
+  export type CodePatchSet = CodePatchSetContract;
+  /** 绑定单个 Plan 步骤的候选 Patch。 */
+  export type CodeStepPatch = CodeStepPatchContract;
+  /** 单个文件的结构化内容变换。 */
+  export type CodePatchOperation = CodePatchOperationContract;
+  /** Code Agent 可见的受控仓库文本上下文。 */
+  export type ProjectCodeContext = ProjectCodeContextContract;
+  /** 单个计划或参考文件的生成前快照。 */
+  export type ProjectCodeFileSnapshot = ProjectCodeFileSnapshotContract;
+  /** 由文件系统 Adapter 实现的代码上下文读取端口。 */
+  export type ProjectCodeContextReader = ProjectCodeContextReaderContract;
+  /** 代码生成阶段允许报告的有限进度事件。 */
+  export type CodeGenerationProgressEvent = CodeGenerationProgressEventContract;
+  /** 单次代码生成运行使用的进度接收器。 */
+  export type CodeGenerationProgressReporter = CodeGenerationProgressReporterContract;
   export type DesignVisualEvidence = DesignVisualEvidenceContract;
   export type DesignVisualImage = DesignVisualImageContract;
   export type DesignVisualEvidenceProvider = DesignVisualEvidenceProviderContract;

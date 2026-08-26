@@ -4,12 +4,14 @@ import { d2cWorkflowStatusSchema } from "./commonProtocol.js";
 import { conversationViewModelSchema } from "./conversationProtocol.js";
 import { setupViewModelSchema } from "./setupProtocol.js";
 import { svgViewModelSchema } from "./svgProtocol.js";
+import { codeGenerationViewModelSchema } from "./codeGenerationProtocol.js";
 
 /** 校验 Server 向客户端提供的 D2C 各阶段展示数据。 */
 export const taskWorkflowViewModelSchema = z.object({
   setup: setupViewModelSchema,
   svg: svgViewModelSchema,
   conversation: conversationViewModelSchema,
+  codeGeneration: codeGenerationViewModelSchema,
 });
 
 /** 校验 Server 每次命令完成后返回的权威 D2C 工作流快照。 */

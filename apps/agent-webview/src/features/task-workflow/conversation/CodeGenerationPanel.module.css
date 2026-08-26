@@ -1,0 +1,133 @@
+.panel {
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.header div {
+  display: grid;
+  gap: 3px;
+}
+
+.header small {
+  color: var(--ant-color-text-secondary);
+}
+
+.body {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 18px;
+}
+
+.progressList {
+  display: grid;
+  gap: 8px;
+}
+
+.progressList > div {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+}
+
+.progressList span {
+  background: var(--ant-color-primary);
+  border-radius: 50%;
+  height: 8px;
+  width: 8px;
+}
+
+.progressList p {
+  margin: 0;
+}
+
+.progressList small,
+.hashes code,
+.patchTitle code {
+  color: var(--ant-color-text-secondary);
+}
+
+.hashes {
+  display: grid;
+  gap: 6px;
+}
+
+.acceptanceReview {
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.acceptanceHeader,
+.acceptanceList > li > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.acceptanceHeader :global(.ant-tag),
+.acceptanceList :global(.ant-tag) {
+  margin: 0;
+}
+
+.acceptanceList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.acceptanceList > li > ul {
+  color: var(--ant-color-text-secondary);
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.patchList {
+  display: grid;
+  gap: 12px;
+}
+
+.patchList > section {
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.patchTitle {
+  align-items: center;
+  background: var(--ant-color-fill-quaternary);
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 10px;
+}
+
+.patchList details {
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+.patchList summary {
+  cursor: pointer;
+  padding: 9px 10px;
+}
+
+.patchList pre {
+  background: var(--ant-color-fill-tertiary);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  line-height: 1.55;
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre;
+}

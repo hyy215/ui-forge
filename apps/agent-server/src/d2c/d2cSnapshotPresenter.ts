@@ -9,6 +9,7 @@ import type {
   ProjectValidation,
   SvgTool,
   TaskWorkflowViewModel,
+  CodeGenerationViewModel,
 } from "@ui-forge/shared-protocol";
 
 /** 穷尽定义领域任务状态到公开协议状态的真实适配边界。 */
@@ -17,6 +18,7 @@ const workflowStatusByTaskStatus = {
   svg_ready: "svg_ready",
   design_confirmed: "design_confirmed",
   analysis_ready: "analysis_ready",
+  patch_ready: "patch_ready",
 } satisfies Record<D2CAgent.TaskStatus, D2CWorkflowStatus>;
 
 /** 将内部任务转换为 Webview 可安全消费的权威快照。 */
@@ -58,6 +60,43 @@ function createViewModel(task: D2CAgent.Task): TaskWorkflowViewModel {
         ? toDesignComponentRecognition(task.componentRecognition)
         : null,
       plan: task.plan ? toPlanningResult(task.plan) : null,
+    },
+    codeGeneration: toCodeGenerationViewModel(task.codeGeneration),
+  };
+}
+
+/** 将内部候选 Patch 裁剪为不含待写入完整内容的公开审阅模型。 */
+export function toCodeGenerationViewModel(
+  outcome: D2CAgent.CodeGenerationOutcome | undefined,
+): CodeGenerationViewModel {
+  if (!outcome) return { status: "idle" };
+  if (outcome.status === "blocked") {
+    return {
+      status: "blocked",
+      summary: outcome.summary,
+      reasons: [...outcome.reasons],
+      warnings: [...outcome.warnings],
+    };
+  }
+  return {
+    status: "ready",
+    patchSet: {
+      patchSetHash: outcome.patchSet.patchSetHash,
+      planVersion: outcome.patchSet.planVersion,
+      planHash: outcome.patchSet.planHash,
+      summary: outcome.patchSet.summary,
+      patches: outcome.patchSet.patches.map((patch) => ({
+        stepId: patch.stepId,
+        patchHash: patch.patchHash,
+        operations: patch.operations.map((operation) => ({
+          path: operation.path,
+          action: operation.action,
+          beforeHash: operation.beforeHash,
+          afterHash: operation.afterHash,
+          reviewDiff: operation.reviewDiff,
+        })),
+      })),
+      warnings: [...outcome.patchSet.warnings],
     },
   };
 }
@@ -134,6 +173,7 @@ function createSvgStatusMessage(task: D2CAgent.Task): string {
     case "svg_ready": return "直接展示设计读取阶段返回的 SVG。";
     case "design_confirmed": return "设计已确认，等待项目与组件分析。";
     case "analysis_ready": return "设计已确认，方案分析已完成。";
+    case "patch_ready": return "设计已确认，候选代码 Patch 已生成。";
   }
 }
 

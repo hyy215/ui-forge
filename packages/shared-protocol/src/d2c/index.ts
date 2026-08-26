@@ -1,5 +1,6 @@
 /** 汇总导出 D2C 工作流通信协议。 */
 export * from "./commonProtocol.js";
+export * from "./codeGenerationProtocol.js";
 export * from "./conversationProtocol.js";
 export * from "./designConfirmationProtocol.js";
 export * from "./designDataProtocol.js";

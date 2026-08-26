@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createD2CService } from "./d2cService.js";
 import type { PlanDeepAgentInput } from "./second-step/planDeepAgent.js";
+import { bindPatchToPlan } from "./planning/evolvingPlan.js";
 
 const source = { provider: "mastergo", reference: "design-1" };
 const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>';
@@ -225,6 +226,83 @@ describe("D2CService", () => {
     expect(supersede).toHaveBeenCalledWith(artifactReference.artifactId);
   });
 
+  it("resumes from the approved Plan and persists a hash-bound candidate Patch", async () => {
+    const patchHash = "c".repeat(64);
+    const generate = vi.fn(async (input: import("./code-generation/codeGenerationAgent.js").CodeGenerationAgentInput) => ({
+      outcome: {
+        status: "ready" as const,
+        patchSet: {
+          patchSetHash: "a".repeat(64),
+          planVersion: input.plan.planVersion,
+          planHash: input.plan.planHash,
+          summary: "候选页面代码",
+          patches: [{
+            stepId: "layout",
+            patchHash,
+            operations: [{
+              path: "src/Page.tsx",
+              action: "create" as const,
+              beforeHash: null,
+              afterHash: "b".repeat(64),
+              content: "export function Page() { return null; }\n",
+              reviewDiff: "--- /dev/null\n+++ b/src/Page.tsx",
+            }],
+          }],
+          warnings: [],
+        },
+      },
+      plan: bindPatchToPlan(input.plan, {
+        patchHash,
+        planHash: input.plan.planHash,
+        stepId: "layout",
+      }),
+    }));
+    const service = createCodeGenerationService(generate, "missing");
+    const analyzed = await inspectConfirmAndAnalyze(service);
+    const generated = await service.generateCode({
+      taskId: analyzed.taskId,
+      expectedRevision: analyzed.revision,
+    });
+    const repeated = await service.generateCode({
+      taskId: generated.taskId,
+      expectedRevision: generated.revision,
+    });
+
+    expect(generated).toMatchObject({
+      status: "patch_ready",
+      revision: analyzed.revision + 1,
+      codeGeneration: { status: "ready", patchSet: { patchSetHash: "a".repeat(64) } },
+    });
+    expect(generated.evolvingPlan?.patchBindings).toContainEqual(expect.objectContaining({ patchHash, status: "active" }));
+    expect(repeated).toEqual(generated);
+    expect(generate).toHaveBeenCalledOnce();
+  });
+
+  it("blocks generation before the model when a planned create file now exists", async () => {
+    const generate = vi.fn();
+    const service = createCodeGenerationService(generate, "existing");
+    const analyzed = await inspectConfirmAndAnalyze(service);
+
+    const blocked = await service.generateCode({
+      taskId: analyzed.taskId,
+      expectedRevision: analyzed.revision,
+    });
+    const retried = await service.generateCode({
+      taskId: blocked.taskId,
+      expectedRevision: blocked.revision,
+    });
+
+    expect(blocked).toMatchObject({
+      status: "analysis_ready",
+      codeGeneration: {
+        status: "blocked",
+        summary: "代码生成前的文件版本检查未通过。",
+      },
+    });
+    expect(retried.codeGeneration).toMatchObject({ status: "blocked" });
+    expect(generate).not.toHaveBeenCalled();
+  });
+
   it("supersedes the artifact selected under the task lock during concurrent reset", async () => {
     let inspectionCount = 0;
     let releaseSecondInspection = (): void => {};
@@ -331,3 +409,105 @@ function createAnalyzableService(
     planDeepAgent: { plan },
   });
 }
+
+/** 创建带真实 Graph 暂停点和可控 Code Agent/文件快照的服务。 */
+function createCodeGenerationService(
+  generate: import("./code-generation/codeGenerationAgent.js").CodeGenerationAgent["generate"],
+  fileStatus: "existing" | "missing",
+) {
+  return createD2CService({
+    designSourceAdapters: [{ id: "mastergo", inspect: async () => ({ ...inspection, artifact: artifactReference }) }],
+    projectInspector: { inspect: async (projectRoot) => ({
+      kind: "react_antd",
+      projectRoot,
+      packageJsonPath: `${projectRoot}/package.json`,
+      reactVersion: "^19.0.0",
+      antdVersion: "^6.0.0",
+    }) },
+    projectContextAnalyzer: { analyze: async () => ({
+      kind: "react_antd", files: [], filesComplete: true, matches: [], warnings: [],
+    }) },
+    projectCodeContextReader: { read: async () => ({
+      files: [{
+        path: "src/Page.tsx",
+        role: "planned",
+        status: fileStatus,
+        byteSize: fileStatus === "existing" ? 18 : 0,
+        ...(fileStatus === "existing"
+          ? { sha256: "d".repeat(64), content: "export const old = 1;\n" }
+          : {}),
+      }],
+      warnings: [],
+    }) },
+    componentCatalog,
+    designArtifactReader: {
+      read: async () => ({
+        reference: artifactReference,
+        content: {
+          source,
+          name: "客户列表",
+          nodeCount: 1,
+          regions: [],
+          tokens: {},
+          structure: { roots: [], truncated: false },
+          sections: [],
+        },
+      }),
+      readSection: async () => ({ id: "section", label: "section", data: {} }),
+    },
+    designComponentRecognizer: { recognize: () => componentRecognition },
+    planDeepAgent: { plan: async (input) => ({ componentRecognition: input.recognition, plan: codeReadyPlan }) },
+    codeGenerationAgent: { generate },
+  });
+}
+
+/** 运行代码生成测试共享的设计读取、确认与方案分析。 */
+async function inspectConfirmAndAnalyze(service: ReturnType<typeof createD2CService>) {
+  const initial = await service.initialize({ projectPath: "/workspace" });
+  const inspected = await service.inspectDesign({
+    taskId: initial.taskId,
+    expectedRevision: initial.revision,
+    source,
+  });
+  const confirmed = await service.confirmDesign({
+    taskId: inspected.taskId,
+    expectedRevision: inspected.revision,
+    confirmation: "确认设计",
+  });
+  return service.analyzeSecondStep({
+    taskId: confirmed.taskId,
+    expectedRevision: confirmed.revision,
+  });
+}
+
+const codeReadyPlan = {
+  ...reviewablePlan,
+  contextGaps: [],
+  fileImpacts: [{
+    path: "src/Page.tsx",
+    action: "create" as const,
+    reason: "新增页面",
+    affectedSymbols: ["Page"],
+    downstreamConsumers: [],
+    risk: "low" as const,
+    evidence: ["设计结构"],
+  }],
+  steps: [{
+    ...reviewablePlan.steps[0]!,
+    id: "layout",
+    files: [{ path: "src/Page.tsx", action: "create" as const }],
+  }, {
+    id: "validation",
+    kind: "validation" as const,
+    targetId: "plan",
+    title: "验证",
+    description: "验证候选代码",
+    decision: "validate" as const,
+    dependsOn: ["layout"],
+    files: [],
+    evidence: ["计划约束"],
+    acceptanceCriteria: ["后续执行检查"],
+    risks: [],
+  }],
+  files: ["src/Page.tsx"],
+};

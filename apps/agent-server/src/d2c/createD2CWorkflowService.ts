@@ -10,6 +10,7 @@ import {
 import { FileDesignArtifactStore } from "@ui-forge/d2c-storage";
 import {
   FileSystemProjectContextAnalyzer,
+  FileSystemProjectCodeContextReader,
   FileSystemProjectInspector,
 } from "@ui-forge/component-indexer";
 import { MemorySaver, type BaseCheckpointSaver } from "@langchain/langgraph";
@@ -61,6 +62,7 @@ export function createD2CWorkflowServiceFromEnvironment(
     designSourceAdapters: [designAdapter],
     projectInspector,
     projectContextAnalyzer: new FileSystemProjectContextAnalyzer(),
+    projectCodeContextReader: new FileSystemProjectCodeContextReader(),
     componentCatalog: readComponentCatalogFromEnvironment(),
     designSystemKnowledgeProvider,
     modelOptions: readSecondStepModelOptions(options.modelDiagnosticReporter),

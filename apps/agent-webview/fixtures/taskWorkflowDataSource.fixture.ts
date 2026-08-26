@@ -69,7 +69,15 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
         reusableComponents: [],
         newComponents: [],
         componentDecisions: [],
-        fileImpacts: [],
+        fileImpacts: [{
+          path: "src/CustomerList.tsx",
+          action: "create" as const,
+          reason: "实现客户列表页面",
+          affectedSymbols: ["CustomerList"],
+          downstreamConsumers: [],
+          risk: "low" as const,
+          evidence: ["Fixture 设计结构"],
+        }],
         steps: [{
           id: "step-1",
           kind: "layout" as const,
@@ -78,13 +86,13 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
           description: "组合页面容器、筛选区和客户表格。",
           decision: "create" as const,
           dependsOn: [],
-          files: [],
+          files: [{ path: "src/CustomerList.tsx", action: "create" as const }],
           evidence: ["Fixture 设计结构"],
           acceptanceCriteria: ["页面结构与设计区域一致"],
           risks: [],
         }],
-        files: [],
-        contextGaps: ["Fixture 未提供仓库文件清单"],
+        files: ["src/CustomerList.tsx"],
+        contextGaps: [],
         stopConditions: ["项目构建失败或设计上下文不完整时停止"],
       };
       const events = [
@@ -151,6 +159,53 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
       });
     },
     cancelConversation: async () => ({ cancelled: true }),
+    streamCodeGeneration: async (_input, onEvent, signal) => {
+      const patchSet = {
+        patchSetHash: "a".repeat(64),
+        planVersion: 1,
+        planHash: "b".repeat(64),
+        summary: "已按客户列表方案生成候选页面代码。",
+        patches: [{
+          stepId: "step-1",
+          patchHash: "c".repeat(64),
+          operations: [{
+            path: "src/CustomerList.tsx",
+            action: "create" as const,
+            beforeHash: null,
+            afterHash: "d".repeat(64),
+            reviewDiff: "--- /dev/null\n+++ b/src/CustomerList.tsx\n@@ -1,0 +1,1 @@\n+export function CustomerList() { return <div>客户列表</div>; }",
+          }],
+        }],
+        warnings: [],
+      };
+      const events = [
+        { type: "code-generation-start" as const },
+        {
+          type: "code-generation-progress" as const,
+          phase: "reading-context" as const,
+          summary: "正在重新读取并校验 1 个计划文件。",
+        },
+        {
+          type: "code-generation-progress" as const,
+          phase: "generating-code" as const,
+          summary: "Code Agent 正在生成候选代码。",
+        },
+        { type: "code-generation-result" as const, result: { status: "ready" as const, patchSet } },
+        { type: "code-generation-complete" as const },
+      ];
+      for (const event of events) {
+        if (signal?.aborted) throw new DOMException("Fixture 代码流已取消。", "AbortError");
+        await onEvent(event);
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+      replace({
+        ...snapshot,
+        revision: snapshot.revision + 1,
+        status: "patch_ready",
+        viewModel: { ...snapshot.viewModel, codeGeneration: { status: "ready", patchSet } },
+      });
+    },
+    cancelCodeGeneration: async () => ({ cancelled: true }),
     reset: async () => replace({
       ...snapshot,
       revision: snapshot.revision + 1,
@@ -165,6 +220,7 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
           designComponentRecognition: null,
           plan: null,
         },
+        codeGeneration: { status: "idle" },
       },
     }),
   };

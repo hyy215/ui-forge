@@ -111,6 +111,7 @@ function createSnapshot(): D2CWorkflowSnapshot {
         designComponentRecognition: null,
         plan: null,
       },
+      codeGeneration: { status: "idle" },
     },
   };
 }

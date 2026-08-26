@@ -20,6 +20,7 @@ function successfulNegotiationResult() {
       "ordered-stream",
       "stream-cancel",
       "persisted-design-confirmation",
+      "reviewable-code-patch",
     ],
   };
 }
