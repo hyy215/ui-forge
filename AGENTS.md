@@ -16,6 +16,26 @@ ui-forge 是集成于 VS Code 的 D2C 研发交付智能体，面向 React + Typ
 
 `references/` 保存外部资料和学习笔记，不属于项目实现，也不应提交到仓库。
 
+## Git 与 PR 交付
+
+- 所有产生仓库文件变更的任务都通过独立 PR 交付；纯分析、解释或没有文件变更的任务不创建空 PR。
+- 开始修改前从最新 `origin/main` 创建 `codex/<task-name>` 独立分支。禁止直接在 `main` 上修改或提交，不复用已完成任务的分支，不混入用户已有或与任务无关的修改。
+- 一个任务 PR 最终只保留一个业务 commit。提交前必须按仓库提交技能冻结候选快照、完成审核并通过适用的质量门禁。
+- 质量门禁通过后，Agent 自动推送候选 commit 并创建以 `main` 为基准的 Draft PR。取得 PR URL 后，自动 amend 候选 commit，使最终 commit message 包含简要修改方案和完整 PR URL；随后只允许在尚未开始人工审阅的新建任务分支上执行一次 `git push --force-with-lease`。
+- 最终 commit message 使用以下正文结构；修改方案至少包含一条非空列表项，`PR:` 后必须是当前 PR 的完整 URL：
+
+  ```text
+  <type>(<scope>): <summary>
+
+  修改方案：
+  - <implementation item>
+
+  PR: https://github.com/<owner>/<repo>/pull/<number>
+  ```
+
+- 最终交付前必须确认本地 commit、远端任务分支和 PR Head SHA 一致，并在回复中提供可点击的 PR 链接。推送、PR 创建、amend、远端校验或必需检查失败时，明确标记为尚未交付并保留可恢复状态。
+- `main` 禁止 Merge commit，优先使用 Rebase merge，同时允许 Squash merge。Agent 不自动合并、关闭 PR，不执行上述最终化步骤之外的 force push，也不改写已进入人工审阅的提交历史。
+
 ## 目录职责
 
 ```text
@@ -105,7 +125,7 @@ docker compose up -d
 - 测试设计来源只允许读取构造时显式登记的脱敏 Fixture，不接受客户端提交的任意本地路径；生产环境默认使用实时设计来源，启用 Fixture 必须通过明确配置。
 - 文件工具必须校验规范化路径、真实路径和允许范围，拒绝路径逃逸与符号链接逃逸。
 - 命令执行来自白名单或用户确认配置，不执行模型生成的任意命令字符串。
-- 不自动安装依赖、提交、推送、发布或删除用户文件。
+- 不自动安装依赖、合并 PR、发布或删除用户文件。对已获授权且产生仓库文件变更的任务，允许按“Git 与 PR 交付”约定自动创建任务分支、提交、推送、创建 Draft PR、最终化 commit message 和校验远端状态。
 - 不使用破坏性 Git 操作回退 Agent 修改；使用 Patch、版本指纹和检查点。
 
 ## 项目说明维护
