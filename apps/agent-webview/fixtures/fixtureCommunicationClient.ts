@@ -11,6 +11,8 @@ import {
   initializeD2CWorkflowInputSchema,
   inspectD2CDesignInputSchema,
   streamD2CConversationInputSchema,
+  streamD2CCodeGenerationInputSchema,
+  cancelD2CCodeGenerationInputSchema,
 } from "@ui-forge/shared-protocol";
 import type {
   CommunicationClient,
@@ -43,6 +45,10 @@ async function handleRequest(request: CommunicationRequest<unknown>): Promise<un
       return fixtureTaskWorkflowDataSource.cancelConversation(
         cancelD2CConversationInputSchema.parse(request.params),
       );
+    case d2cWorkflowMethods.cancelCodeGeneration:
+      return fixtureTaskWorkflowDataSource.cancelCodeGeneration(
+        cancelD2CCodeGenerationInputSchema.parse(request.params),
+      );
     case d2cWorkflowMethods.reset:
       return fixtureTaskWorkflowDataSource.reset(d2cTaskCommandInputSchema.parse(request.params));
     default:
@@ -52,14 +58,23 @@ async function handleRequest(request: CommunicationRequest<unknown>): Promise<un
 
 /** 校验 Fixture 流请求并逐条转发领域事件。 */
 async function handleStream(request: CommunicationStreamRequest<unknown>): Promise<void> {
-  if (request.method !== d2cWorkflowMethods.streamConversation) {
-    throw new Error(`Fixture 不支持流式通信方法：${request.method}`);
+  if (request.method === d2cWorkflowMethods.streamConversation) {
+    await fixtureTaskWorkflowDataSource.streamConversation(
+      streamD2CConversationInputSchema.parse(request.params),
+      (event) => request.onEvent(request.eventSchema.parse(event)),
+      request.signal,
+    );
+    return;
   }
-  await fixtureTaskWorkflowDataSource.streamConversation(
-    streamD2CConversationInputSchema.parse(request.params),
-    (event) => request.onEvent(request.eventSchema.parse(event)),
-    request.signal,
-  );
+  if (request.method === d2cWorkflowMethods.streamCodeGeneration) {
+    await fixtureTaskWorkflowDataSource.streamCodeGeneration(
+      streamD2CCodeGenerationInputSchema.parse(request.params),
+      (event) => request.onEvent(request.eventSchema.parse(event)),
+      request.signal,
+    );
+    return;
+  }
+  throw new Error(`Fixture 不支持流式通信方法：${request.method}`);
 }
 
 /** 本地开发使用的环境无关通信客户端。 */

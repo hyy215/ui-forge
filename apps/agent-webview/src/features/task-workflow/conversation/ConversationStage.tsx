@@ -16,6 +16,8 @@ import { DesignComponentRecognitionPanel } from "./DesignComponentRecognitionPan
 import { DeterministicConclusionPanel } from "./DeterministicConclusionPanel";
 import { DisabledComposer } from "./DisabledComposer";
 import { PlanningProgressPanel } from "./PlanningProgressPanel";
+import { CodeGenerationPanel } from "./CodeGenerationPanel";
+import type { CodeGenerationState } from "../model/codeGenerationState";
 import { ResultsIcon } from "./ResultsIcon";
 import { UserMessage } from "./UserMessage";
 import {
@@ -39,6 +41,10 @@ export interface ConversationStageProps {
   onRetryStream: () => void;
   onStopConversation: () => void;
   isStoppingConversation: boolean;
+  codeGeneration: CodeGenerationState;
+  isStoppingCodeGeneration: boolean;
+  onGenerateCode: () => void;
+  onStopCodeGeneration: () => void;
 }
 
 /** 展示设计读取消息、右侧预览确认和确认后的真实分析流。 */
@@ -57,6 +63,10 @@ export function ConversationStage({
   onRetryStream,
   onStopConversation,
   isStoppingConversation,
+  codeGeneration,
+  isStoppingCodeGeneration,
+  onGenerateCode,
+  onStopCodeGeneration,
 }: ConversationStageProps) {
   const [composerValue, setComposerValue] = useState("");
   const [submittedDesignUrl, setSubmittedDesignUrl] = useState(setup.designUrl);
@@ -272,7 +282,17 @@ export function ConversationStage({
                 recognition={conversation.designComponentRecognition}
                 status={conversation.status}
               /> : null}
-              <PlanningProgressPanel conversation={conversation} />
+              <PlanningProgressPanel
+                conversation={conversation}
+                collapseForCodeGeneration={codeGeneration.status !== "idle"}
+              />
+              <CodeGenerationPanel
+                plan={conversation.plan}
+                state={codeGeneration}
+                isStopping={isStoppingCodeGeneration}
+                onGenerate={onGenerateCode}
+                onStop={onStopCodeGeneration}
+              />
             </>}
           </aside>
         </div>

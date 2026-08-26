@@ -16,7 +16,7 @@ test("completes the design review interaction without external services", async 
 
   try {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /从设计稿到.*可审阅的前端方案/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /从设计稿到.*可审阅的代码 Patch/ })).toBeVisible();
     await page.getByRole("button", { name: "开始分析设计" }).click();
     const workflowHeading = page.getByRole("heading", { name: "生成前端视图" });
     await expect(workflowHeading).toBeVisible();
@@ -61,6 +61,17 @@ test("completes the design review interaction without external services", async 
     }
     await expect(page.getByText("根据当前设计证据生成客户列表审阅方案。")).toBeVisible();
     await expect(page.getByText("搭建客户列表页面结构")).toBeVisible();
+    await expect(page.getByText("布局与交互理解")).toBeVisible();
+    await page.getByRole("button", { name: "按此方案生成代码" }).click();
+    await expect(page.getByText("候选 Patch 已生成但尚未应用")).toBeVisible();
+    await expect(page.getByRole("button", { name: "展开整体修改方案" })).toBeVisible();
+    await expect(page.getByText("布局与交互理解")).toBeHidden();
+    await expect(page.getByText("验收条件状态")).toBeVisible();
+    await expect(page.getByText("页面结构与设计区域一致")).toBeVisible();
+    await expect(page.getByText("0 项已验证 · 1 项待验证")).toBeVisible();
+    await expect(page.getByText("create src/CustomerList.tsx").last()).toBeVisible();
+    await page.getByRole("button", { name: "展开整体修改方案" }).click();
+    await expect(page.getByText("布局与交互理解")).toBeVisible();
 
     if (isNarrow) {
       await page.getByRole("button", { name: "关闭结果浮层" }).click();

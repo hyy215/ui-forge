@@ -44,6 +44,10 @@ export function UiForgeApp({ dataSource, initialSnapshot }: UiForgeAppProps) {
               onRetryStream={workflow.retryConversationStream}
               onStopConversation={() => void workflow.stopConversation()}
               isStoppingConversation={workflow.isStoppingConversation}
+              codeGeneration={workflow.codeGeneration}
+              isStoppingCodeGeneration={workflow.isStoppingCodeGeneration}
+              onGenerateCode={workflow.generateCode}
+              onStopCodeGeneration={() => void workflow.stopCodeGeneration()}
             />
           </div>
         </div>

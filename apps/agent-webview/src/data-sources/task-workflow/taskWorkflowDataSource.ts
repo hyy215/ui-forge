@@ -18,6 +18,12 @@ import {
   type CancelD2CConversationInput,
   type CancelD2CConversationResult,
   type StreamD2CConversationInput,
+  codeGenerationStreamEventSchema,
+  cancelD2CCodeGenerationResultSchema,
+  type CodeGenerationStreamEvent,
+  type StreamD2CCodeGenerationInput,
+  type CancelD2CCodeGenerationInput,
+  type CancelD2CCodeGenerationResult,
 } from "@ui-forge/shared-protocol";
 import type { CommunicationClient } from "../../communication/clientContract";
 import { requestTaskWorkflowSnapshot } from "./requestTaskWorkflowSnapshot";
@@ -36,6 +42,12 @@ export interface TaskWorkflowDataSource {
     signal?: AbortSignal,
   ): Promise<void>;
   cancelConversation(input: CancelD2CConversationInput): Promise<CancelD2CConversationResult>;
+  streamCodeGeneration(
+    input: StreamD2CCodeGenerationInput,
+    onEvent: (event: CodeGenerationStreamEvent) => void | Promise<void>,
+    signal?: AbortSignal,
+  ): Promise<void>;
+  cancelCodeGeneration(input: CancelD2CCodeGenerationInput): Promise<CancelD2CCodeGenerationResult>;
   reset(input: D2CTaskCommandInput): Promise<D2CWorkflowSnapshot>;
 }
 
@@ -79,6 +91,18 @@ export function createTaskWorkflowDataSource(
       method: d2cWorkflowMethods.cancelConversation,
       params: input,
       responseSchema: cancelD2CConversationResultSchema,
+    }),
+    streamCodeGeneration: (input, onEvent, signal) => communicationClient.stream({
+      method: d2cWorkflowMethods.streamCodeGeneration,
+      params: input,
+      eventSchema: codeGenerationStreamEventSchema,
+      onEvent,
+      ...(signal ? { signal } : {}),
+    }),
+    cancelCodeGeneration: (input) => communicationClient.request({
+      method: d2cWorkflowMethods.cancelCodeGeneration,
+      params: input,
+      responseSchema: cancelD2CCodeGenerationResultSchema,
     }),
     reset: (input) => requestTaskWorkflowSnapshot(
       communicationClient, d2cWorkflowMethods.reset, input,

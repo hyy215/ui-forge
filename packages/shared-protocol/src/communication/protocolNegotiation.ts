@@ -11,6 +11,7 @@ export const communicationCapabilities = [
   "ordered-stream",
   "stream-cancel",
   "persisted-design-confirmation",
+  "reviewable-code-patch",
 ] as const;
 
 /** 第一方 UI 正常工作所需的最小能力集合。 */
@@ -19,6 +20,7 @@ export const firstPartyRequiredCommunicationCapabilities = [
   "ordered-stream",
   "stream-cancel",
   "persisted-design-confirmation",
+  "reviewable-code-patch",
 ] as const;
 
 /** 校验服务端声明的稳定能力，不接受未知能力污染当前 Client。 */

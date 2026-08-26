@@ -10,6 +10,7 @@ describe("toD2CWorkflowSnapshot", () => {
     "svg_ready",
     "design_confirmed",
     "analysis_ready",
+    "patch_ready",
   ] as const)(
     "projects %s without introducing a second status vocabulary",
     (status) => {

@@ -16,10 +16,14 @@ import {
   type D2CWorkflowSnapshot,
   type DesignDataIndex,
   type DesignDataSection,
+  cancelD2CCodeGenerationInputSchema,
+  type CancelD2CCodeGenerationResult,
+  type CodeGenerationStreamEvent,
 } from "@ui-forge/shared-protocol";
 import { D2CConversationRunner } from "./d2cConversationRunner.js";
 import { D2CDesignDataQueryService } from "./d2cDesignDataQueryService.js";
 import { toD2CWorkflowSnapshot } from "./d2cSnapshotPresenter.js";
+import { D2CCodeGenerationRunner } from "./d2cCodeGenerationRunner.js";
 
 /** 配置 D2C 通信服务的领域命令、查询和宿主资源生命周期。 */
 export interface D2CWorkflowServiceOptions {
@@ -34,7 +38,7 @@ export interface D2CWorkflowServiceOptions {
 
 /** D2C 通信服务能够返回的快照或按需设计数据。 */
 export type D2CWorkflowResult = D2CWorkflowSnapshot | DesignDataIndex | DesignDataSection
-  | CancelD2CConversationResult;
+  | CancelD2CConversationResult | CancelD2CCodeGenerationResult;
 
 /** 只负责资源入口、Schema 校验和方法到应用操作的分发。 */
 export class D2CWorkflowService {
@@ -45,8 +49,10 @@ export class D2CWorkflowService {
   private readonly disposeResources: (() => Promise<void>) | undefined;
   private readonly designDataQueries: D2CDesignDataQueryService;
   private readonly conversationRunner: D2CConversationRunner;
+  private readonly codeGenerationRunner: D2CCodeGenerationRunner;
   private initialization: Promise<void> | undefined;
 
+  /** 装配协议门面、查询服务以及两个互相隔离的长流 Runner。 */
   constructor(options: D2CWorkflowServiceOptions) {
     this.service = options.service;
     this.designProvider = options.designProvider;
@@ -58,6 +64,7 @@ export class D2CWorkflowService {
       ...(options.designArtifactReader ? { designArtifactReader: options.designArtifactReader } : {}),
     });
     this.conversationRunner = new D2CConversationRunner({ service: options.service });
+    this.codeGenerationRunner = new D2CCodeGenerationRunner(options.service);
   }
 
   /** 幂等初始化 Checkpointer 等异步运行时资源。 */
@@ -100,6 +107,10 @@ export class D2CWorkflowService {
         const input = cancelD2CConversationInputSchema.parse(params);
         return { cancelled: this.conversationRunner.cancel(input.taskId) };
       }
+      case d2cWorkflowMethods.cancelCodeGeneration: {
+        const input = cancelD2CCodeGenerationInputSchema.parse(params);
+        return { cancelled: this.codeGenerationRunner.cancel(input.taskId) };
+      }
       case d2cWorkflowMethods.inspectDesign: {
         const input = inspectD2CDesignInputSchema.parse(params);
         task = await this.service.inspectDesign({
@@ -128,8 +139,16 @@ export class D2CWorkflowService {
     method: string,
     params: unknown,
     signal?: AbortSignal,
-  ): AsyncIterable<ConversationStreamEvent> {
+  ): AsyncIterable<ConversationStreamEvent | CodeGenerationStreamEvent> {
     await this.initialize();
-    yield* this.conversationRunner.stream(method, params, signal);
+    if (method === d2cWorkflowMethods.streamConversation) {
+      yield* this.conversationRunner.stream(method, params, signal);
+      return;
+    }
+    if (method === d2cWorkflowMethods.streamCodeGeneration) {
+      yield* this.codeGenerationRunner.stream(method, params, signal);
+      return;
+    }
+    throw new Error(`不支持的 D2C 流式通信方法：${method}`);
   }
 }

@@ -16,6 +16,7 @@ describe("communication protocol negotiation", () => {
         "ordered-stream",
         "stream-cancel",
         "persisted-design-confirmation",
+        "reviewable-code-patch",
       ],
     });
   });

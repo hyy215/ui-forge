@@ -10,6 +10,10 @@ import {
   createConversationStreamState,
   reduceConversationStreamState,
 } from "./conversationStreamState";
+import {
+  createCodeGenerationState,
+  reduceCodeGenerationState,
+} from "./codeGenerationState";
 
 /** 创建由服务端权威快照驱动的单视图工作流模型。 */
 export function useTaskWorkflow(
@@ -22,14 +26,27 @@ export function useTaskWorkflow(
     initialSnapshot.viewModel.conversation,
     createConversationStreamState,
   );
+  const [codeGeneration, dispatchCodeGeneration] = useReducer(
+    reduceCodeGenerationState,
+    initialSnapshot.viewModel.codeGeneration,
+    createCodeGenerationState,
+  );
   const [commandError, setCommandError] = useState<string>();
   const [isInspectingDesign, setIsInspectingDesign] = useState(false);
   const [isStoppingConversation, setIsStoppingConversation] = useState(false);
+  const [isStoppingCodeGeneration, setIsStoppingCodeGeneration] = useState(false);
   const [conversationRetrySequence, setConversationRetrySequence] = useState(0);
   const startedConversationStreams = useRef(new Set<string>());
   const activeConversationRun = useRef<Promise<void> | null>(null);
+  const activeCodeGenerationRun = useRef<Promise<void> | null>(null);
+  const activeCodeGenerationController = useRef<AbortController | null>(null);
   const viewPhase = getD2CViewPhase(snapshot.status);
   const designConfirmed = viewPhase === "conversation";
+
+  useEffect(() => () => {
+    activeCodeGenerationController.current?.abort();
+    activeCodeGenerationController.current = null;
+  }, []);
 
   useEffect(() => {
     if (!designConfirmed) return;
@@ -89,10 +106,12 @@ export function useTaskWorkflow(
     snapshot,
     viewPhase,
     conversation,
+    codeGeneration,
     designConfirmed,
     commandError,
     isInspectingDesign,
     isStoppingConversation,
+    isStoppingCodeGeneration,
     inspectDesign: async (designUrl: string) => {
       setCommandError(undefined);
       setIsInspectingDesign(true);
@@ -122,9 +141,11 @@ export function useTaskWorkflow(
           dataSource,
           snapshot.taskId,
           activeConversationRun.current,
+          activeCodeGenerationRun.current,
         );
         setSnapshot(resetSnapshot);
         dispatchConversation({ type: "reset", viewModel: resetSnapshot.viewModel.conversation });
+        dispatchCodeGeneration({ type: "reset", viewModel: resetSnapshot.viewModel.codeGeneration });
       } catch (error: unknown) {
         setCommandError(normalizeCommandError(error));
       }
@@ -141,6 +162,51 @@ export function useTaskWorkflow(
         setCommandError(normalizeCommandError(error));
       }
     },
+    generateCode: () => {
+      if (activeCodeGenerationRun.current) return;
+      setCommandError(undefined);
+      setIsStoppingCodeGeneration(false);
+      dispatchCodeGeneration({ type: "stream-started" });
+      const controller = new AbortController();
+      activeCodeGenerationController.current = controller;
+      const run = dataSource.streamCodeGeneration(
+        commandInput(),
+        (event) => {
+          dispatchCodeGeneration({ type: "stream-event", event });
+          if (event.type === "code-generation-stopped") setIsStoppingCodeGeneration(false);
+        },
+        controller.signal,
+      ).then(async () => {
+        const latest = await dataSource.getSnapshot(snapshot.taskId, controller.signal);
+        setSnapshot(latest);
+        setIsStoppingCodeGeneration(false);
+      }).catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setIsStoppingCodeGeneration(false);
+        dispatchCodeGeneration({
+          type: "stream-failed",
+          message: normalizeCommandError(error),
+        });
+      });
+      activeCodeGenerationRun.current = run;
+      void run.finally(() => {
+        if (activeCodeGenerationRun.current === run) activeCodeGenerationRun.current = null;
+        if (activeCodeGenerationController.current === controller) {
+          activeCodeGenerationController.current = null;
+        }
+      });
+    },
+    stopCodeGeneration: async () => {
+      if (isStoppingCodeGeneration) return;
+      setIsStoppingCodeGeneration(true);
+      try {
+        const result = await dataSource.cancelCodeGeneration({ taskId: snapshot.taskId });
+        if (!result.cancelled) setIsStoppingCodeGeneration(false);
+      } catch (error: unknown) {
+        setIsStoppingCodeGeneration(false);
+        dispatchCodeGeneration({ type: "stream-failed", message: normalizeCommandError(error) });
+      }
+    },
     retryConversationStream: () => setConversationRetrySequence((value) => value + 1),
   };
 }
@@ -155,6 +221,7 @@ export function getD2CViewPhase(status: D2CWorkflowStatus): D2CViewPhase {
     case "svg_ready": return "svg";
     case "design_confirmed":
     case "analysis_ready":
+    case "patch_ready":
       return "conversation";
   }
 }
@@ -164,10 +231,15 @@ export async function resetTaskWorkflow(
   dataSource: TaskWorkflowDataSource,
   taskId: string,
   activeRun: Promise<void> | null,
+  activeCodeGenerationRun: Promise<void> | null = null,
 ): Promise<D2CWorkflowSnapshot> {
   if (activeRun) {
     await dataSource.cancelConversation({ taskId });
     await activeRun;
+  }
+  if (activeCodeGenerationRun) {
+    await dataSource.cancelCodeGeneration({ taskId });
+    await activeCodeGenerationRun;
   }
   const latest = await dataSource.getSnapshot(taskId, new AbortController().signal);
   return dataSource.reset({ taskId, expectedRevision: latest.revision });
