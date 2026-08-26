@@ -24,8 +24,10 @@
     "@ui-forge/design-system-adapter": "0.1.0",
     "@ui-forge/mastergo-adapter": "0.1.0",
     "@ui-forge/shared-protocol": "0.1.0",
+    "@ui-forge/tools": "0.1.0",
     "@langchain/langgraph": "^1.4.10",
     "@langchain/langgraph-checkpoint-postgres": "^1.0.4",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.0.4",
     "fastify": "5.11.3",
     "sharp": "^0.35.3"
   },

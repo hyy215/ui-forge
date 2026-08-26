@@ -5,3 +5,4 @@ export {
   type DesignArtifactLifecycleMetadata,
   type FileDesignArtifactStoreOptions,
 } from "./fileDesignArtifactStore.js";
+export { FileDeliveryEvidenceStore } from "./fileDeliveryEvidenceStore.js";

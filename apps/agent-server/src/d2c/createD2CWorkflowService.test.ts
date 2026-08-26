@@ -1,6 +1,6 @@
 /** 验证 Agent Server 能通过显式环境配置启用仓库内真实设计测试来源。 */
 
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,9 +25,68 @@ beforeEach(async () => {
     await mkdtemp(join(tmpdir(), "ui-forge-server-artifacts-")),
   );
   vi.stubEnv("DATABASE_URL", "");
+  vi.stubEnv("UI_FORGE_CHECKPOINT_BACKEND", "memory");
 });
 
 describe("runtime dependencies", () => {
+  it("keeps tasks from separate real directories isolated even when Git remotes match", async () => {
+    const firstProjectPath = await createGitWorkspace("ui-forge-workspace-first-");
+    const secondProjectPath = await createGitWorkspace("ui-forge-workspace-second-");
+    const service = createD2CWorkflowServiceFromEnvironment();
+    const first = d2cWorkflowSnapshotSchema.parse(await service.handle(
+      d2cWorkflowMethods.initialize,
+      { projectPath: firstProjectPath },
+    ));
+    await service.handle(d2cWorkflowMethods.initialize, { projectPath: secondProjectPath });
+
+    await expect(service.handle(d2cWorkflowMethods.listTasks, { projectPath: firstProjectPath }))
+      .resolves.toMatchObject({ items: [{ taskId: first.taskId }], nextCursor: null });
+    await expect(service.handle(d2cWorkflowMethods.getSnapshot, {
+      taskId: first.taskId,
+      projectPath: secondProjectPath,
+    })).rejects.toThrow("任务不属于当前 Workspace");
+    await service.dispose();
+  });
+
+  it("persists, discovers and permanently deletes tasks across local SQLite runtimes", async () => {
+    const runtimeDirectory = await mkdtemp(join(tmpdir(), "ui-forge-checkpoints-"));
+    const projectPath = await mkdtemp(join(tmpdir(), "ui-forge-workspace-"));
+    vi.stubEnv("UI_FORGE_RUNTIME_DIR", runtimeDirectory);
+    vi.stubEnv("UI_FORGE_CHECKPOINT_BACKEND", "sqlite");
+
+    const firstService = createD2CWorkflowServiceFromEnvironment();
+    const created = d2cWorkflowSnapshotSchema.parse(await firstService.handle(
+      d2cWorkflowMethods.initialize,
+      { projectPath },
+    ));
+    await firstService.dispose();
+
+    const restoredService = createD2CWorkflowServiceFromEnvironment();
+    const restored = d2cWorkflowSnapshotSchema.parse(await restoredService.handle(
+      d2cWorkflowMethods.getSnapshot,
+      { taskId: created.taskId, projectPath },
+    ));
+    const listed = await restoredService.handle(d2cWorkflowMethods.listTasks, { projectPath });
+
+    expect(restored).toMatchObject({ taskId: created.taskId, revision: 0, status: "draft" });
+    expect(listed).toMatchObject({ items: [{ taskId: created.taskId }], nextCursor: null });
+    await expect(restoredService.handle(d2cWorkflowMethods.deleteTask, {
+      taskId: created.taskId,
+      expectedRevision: restored.revision,
+      projectPath,
+    })).resolves.toEqual({ taskId: created.taskId, deleted: true });
+    await restoredService.dispose();
+
+    const afterDeletionService = createD2CWorkflowServiceFromEnvironment();
+    await expect(afterDeletionService.handle(d2cWorkflowMethods.getSnapshot, {
+      taskId: created.taskId,
+      projectPath,
+    })).rejects.toThrow("任务不存在");
+    await expect(afterDeletionService.handle(d2cWorkflowMethods.listTasks, { projectPath }))
+      .resolves.toMatchObject({ items: [], nextCursor: null });
+    await afterDeletionService.dispose();
+  });
+
   it("loads and validates a user-defined component catalog", async () => {
     const directory = await mkdtemp(join(tmpdir(), "ui-forge-component-catalog-"));
     const catalogPath = join(directory, "catalog.json");
@@ -68,6 +127,7 @@ describe("runtime dependencies", () => {
       taskId: initial.taskId,
       expectedRevision: initial.revision,
       designUrl: "table-filter",
+      projectPath,
     }));
 
     expect(inspected.viewModel.setup.designSummary).toMatchObject({
@@ -81,11 +141,11 @@ describe("runtime dependencies", () => {
 
     const index = designDataIndexSchema.parse(await service.handle(
       d2cWorkflowMethods.getDesignDataIndex,
-      { taskId: initial.taskId, artifactId: artifact.artifactId },
+      { taskId: initial.taskId, artifactId: artifact.artifactId, projectPath },
     ));
     const section = designDataSectionSchema.parse(await service.handle(
       d2cWorkflowMethods.getDesignDataSection,
-      { taskId: initial.taskId, artifactId: artifact.artifactId, sectionIndex: 0 },
+      { taskId: initial.taskId, artifactId: artifact.artifactId, sectionIndex: 0, projectPath },
     ));
 
     expect(index.nodeCount).toBe(177);
@@ -136,3 +196,18 @@ describe("runtime dependencies", () => {
       .toThrow("MODEL_STRUCTURED_OUTPUT_MODE 必须是 json-text 或 tool");
   });
 });
+
+/** 创建共享同一 origin remote、但拥有不同真实路径的最小 Git Workspace。 */
+async function createGitWorkspace(prefix: string): Promise<string> {
+  const workspace = await mkdtemp(join(tmpdir(), prefix));
+  const gitDirectory = join(workspace, ".git");
+  await mkdir(gitDirectory);
+  await writeFile(join(gitDirectory, "config"), [
+    "[core]",
+    "\trepositoryformatversion = 0",
+    "\tbare = false",
+    "[remote \"origin\"]",
+    "\turl = https://example.invalid/shared/ui-forge.git",
+  ].join("\n"), "utf8");
+  return workspace;
+}

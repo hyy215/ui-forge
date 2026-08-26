@@ -25,6 +25,11 @@ const capabilities = [
     title: "生成结构化方案",
     description: "结合结构证据与视觉判断，生成仅供审阅的组件结论和前端实现方案。",
   },
+  {
+    index: "05",
+    title: "生成并安全写入代码",
+    description: "Plan 授权后生成并安全写入候选 Patch；真实命令随后展示并单独精确授权。",
+  },
 ];
 
 /** 渲染客户端首页并引导用户进入 D2C 设计分析任务。 */
@@ -38,35 +43,36 @@ export function HomePage() {
           <span>UF</span>
           <strong>ui-forge</strong>
         </Link>
-        <Tag color="blue">MVP · 方案审阅模式</Tag>
+        <Tag color="blue">MVP · 受控写入模式</Tag>
       </header>
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>DESIGN TO CODE PLANNING AGENT</p>
-          <h1>从设计稿到<br />可审阅的前端方案。</h1>
+          <p className={styles.eyebrow}>DESIGN TO CODE REVIEW AGENT</p>
+          <h1>从设计稿到<br />安全落盘的前端代码。</h1>
           <p className={styles.summary}>
             ui-forge 集成在 VS Code 中，读取 MasterGo 设计并生成安全 SVG 预览；确认设计后，
-            检查目标项目、判断组件候选并生成结构化方案。
+            检查目标项目、判断组件候选并生成结构化方案；Plan 与真实命令分别确认后完成受控交付。
           </p>
           <div className={styles.actions}>
-            <Button type="primary" size="large" onClick={() => navigate(appPaths.taskWorkflow)}>
+            <Button type="primary" size="large" onClick={() => navigate(appPaths.taskWorkflowNew)}>
               开始分析设计
             </Button>
-            <span>当前版本不会修改项目文件</span>
+            <span>写入与命令执行分别授权，目录外命令仅允许人工操作</span>
           </div>
         </div>
 
         <aside className={styles.workflowCard} aria-label="当前工作流概览">
           <div className={styles.workflowHeader}>
             <span>当前工作流</span>
-            <i>审阅模式</i>
+            <i>受控交付</i>
           </div>
           <ol>
             <li><span>1</span><div><strong>输入设计链接</strong><small>MasterGo 页面或节点</small></div></li>
             <li><span>2</span><div><strong>读取并生成预览</strong><small>标准化结构 · 安全 SVG</small></div></li>
             <li><span>3</span><div><strong>确认设计并检查项目</strong><small>精确口令 · 支持性校验</small></div></li>
             <li><span>4</span><div><strong>判断组件并生成方案</strong><small>视觉判断 · 结构化方案</small></div></li>
+            <li><span>5</span><div><strong>确认方案并生成代码</strong><small>版本预检 · 安全落盘</small></div></li>
           </ol>
         </aside>
       </section>
@@ -75,7 +81,7 @@ export function HomePage() {
         <div className={styles.sectionHeading}>
           <div>
             <p>CORE CAPABILITIES</p>
-            <h2 id="capability-title">从设计输入到结构化方案</h2>
+            <h2 id="capability-title">从设计输入到受控代码写入</h2>
           </div>
           <span>当前支持 React + TypeScript、Ant Design 单页面或页面区域</span>
         </div>

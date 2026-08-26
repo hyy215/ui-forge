@@ -18,8 +18,12 @@ export function createAppRouter(dependencies: AppDependencies) {
       element: <HomePage />,
     },
     {
+      path: appPaths.taskWorkflowNew,
+      element: <TaskWorkflowBootstrap dataSource={taskWorkflowDataSource} mode="new" />,
+    },
+    {
       path: appPaths.taskWorkflow,
-      element: <TaskWorkflowBootstrap dataSource={taskWorkflowDataSource} />,
+      element: <TaskWorkflowBootstrap dataSource={taskWorkflowDataSource} mode="existing" />,
     },
     {
       path: "*",

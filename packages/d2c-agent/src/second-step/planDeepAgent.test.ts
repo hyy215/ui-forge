@@ -537,6 +537,44 @@ describe("createPlanDeepAgent", () => {
     expect(visualSubagent.review).toHaveBeenCalledOnce();
   });
 
+  it("rejects cross-kind target ID collisions before accepting the Plan pause point", async () => {
+    const visualSubagent = { review: vi.fn(async () => ({ suggestions: [], designUnderstanding })) };
+    vi.spyOn(AgentCore, "createRestrictedDeepAgent").mockImplementation((options) => ({
+      invoke: async (input) => {
+        const tools = createInvocationTools(options, input);
+        await requireTool(tools, "review_visual_components").execute({});
+        const response = createResponse();
+        const invalid = {
+          ...response,
+          plan: {
+            ...response.plan,
+            steps: response.plan.steps.map((step) => step.kind === "layout"
+              ? { ...step, targetId: "component:1" }
+              : step),
+          },
+        };
+        await expect(requireTool(tools, "submit_plan").execute(invalid)).resolves.toMatchObject({
+          accepted: false,
+          error: "方案意图目标 ID 在 layout 与 component 间重复：component:1",
+        });
+        await requireTool(tools, "submit_plan").execute(response);
+        return { response: "done" };
+      },
+    }));
+    const agent = createPlanDeepAgent(undefined, catalog, {}, visualSubagent);
+
+    await expect(agent.plan({
+      taskId: "task-intent-target-collision",
+      taskGoal: "实现客户列表",
+      inspection,
+      projectInspection,
+      recognition,
+      projectContext,
+    })).resolves.toMatchObject({ plan: { status: "reviewable" } });
+
+    expect(visualSubagent.review).toHaveBeenCalledOnce();
+  });
+
   it("promotes an uncovered visual component into a formal decision and atomic component step", async () => {
     const visualSubagent = { review: vi.fn(async () => ({
       suggestions: [],

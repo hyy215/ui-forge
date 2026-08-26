@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { d2cTaskCommandInputSchema } from "./commonProtocol.js";
+import { planApprovalViewModelSchema } from "./planApprovalProtocol.js";
 
 /** 校验目标项目进入规划前的公开分类。 */
 export const projectValidationSchema = z.discriminatedUnion("kind", [
@@ -201,6 +202,9 @@ export const planningResultSchema = z.object({
   fileImpacts: z.array(planningFileImpactSchema),
   steps: z.array(planningStepSchema).min(1),
   files: z.array(z.string().min(1)),
+  validationTarget: z.object({
+    previewPath: z.string().regex(/^\/(?!\/)(?:[^?#]*)$/),
+  }),
   contextGaps: z.array(z.string().min(1)),
   stopConditions: z.array(z.string().min(1)).min(1),
 });
@@ -239,6 +243,7 @@ export const toolExecutionMetricsSchema = z.object({
 /** 校验用户主动终止当前对话流所需的任务标识。 */
 export const cancelD2CConversationInputSchema = z.object({
   taskId: z.string().uuid(),
+  projectPath: z.string().optional(),
 });
 
 /** 校验 Server 是否找到并取消了当前任务运行。 */
@@ -253,6 +258,7 @@ export const conversationViewModelSchema = z.object({
   projectValidation: projectValidationSchema.nullable(),
   designComponentRecognition: designComponentRecognitionSchema.nullable(),
   plan: planningResultSchema.nullable(),
+  planApproval: planApprovalViewModelSchema.nullable(),
 });
 
 /** 校验开始第二步流式输出时携带的乐观并发参数。 */

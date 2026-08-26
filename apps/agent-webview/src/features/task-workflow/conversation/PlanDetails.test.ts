@@ -47,6 +47,7 @@ describe("PlanDetails", () => {
         designElementIds: ["element-search"], acceptanceCriteria: ["布局区域顺序一致"], risks: [],
       }],
       files: ["src/Page.tsx"],
+      validationTarget: { previewPath: "/" },
       contextGaps: [],
       stopConditions: ["验证失败时停止"],
     } }));

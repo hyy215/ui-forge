@@ -550,6 +550,7 @@ function createValidatedSubmission(
     fileImpacts: structuredClone(response.plan.fileImpacts),
     steps: structuredClone(response.plan.steps),
     files: [...response.plan.files],
+    validationTarget: { previewPath: "/" },
     contextGaps: [...response.plan.contextGaps],
     stopConditions: [...response.plan.stopConditions],
   }, input.projectContext.files), input.projectContext.files, input.projectContext.filesComplete);
@@ -602,6 +603,9 @@ function collectValidationError(errors: string[], validate: () => void): void {
 /** 汇总视觉覆盖、步骤职责、复用动作和文件生命周期中的全部质量问题。 */
 function collectPlanQualityIssues(input: PlanDeepAgentInput, plan: PlanningResult): string[] {
   const errors: string[] = [];
+  if (plan.validationTarget.previewPath !== "/") {
+    errors.push("当前 MVP 只允许在项目根页面 / 执行自动渲染验收。");
+  }
   const elements = plan.designUnderstanding.elements ?? [];
   const elementById = new Map(elements.map((element) => [element.id, element]));
   const covered = new Set<string>();
@@ -880,6 +884,7 @@ function validateImplementationPlan(
   const completedStepIds = new Set<string>();
   const componentTargets = new Set<string>();
   const interactionTargets = new Set<string>();
+  const intentTargetKinds = new Map<string, "layout" | "component" | "interaction">();
   const interactionIds = new Set(plan.designUnderstanding.interactions.map((interaction) => interaction.id));
   const kindOrder = new Map<PlanningResult["steps"][number]["kind"], number>([
     ["initialize", 0], ["layout", 1], ["component", 2], ["interaction", 3],
@@ -893,6 +898,13 @@ function validateImplementationPlan(
     previousOrder = order;
     const missingDependencies = step.dependsOn.filter((dependency) => !completedStepIds.has(dependency));
     if (missingDependencies.length > 0) throw new Error(`方案步骤依赖尚未完成：${missingDependencies.join("、")}`);
+    if (step.kind === "layout" || step.kind === "component" || step.kind === "interaction") {
+      const existingKind = intentTargetKinds.get(step.targetId);
+      if (existingKind && existingKind !== step.kind) {
+        throw new Error(`方案意图目标 ID 在 ${existingKind} 与 ${step.kind} 间重复：${step.targetId}`);
+      }
+      intentTargetKinds.set(step.targetId, step.kind);
+    }
     if (step.kind === "component") {
       if (!candidateIds.has(step.targetId) || componentTargets.has(step.targetId)) {
         throw new Error(`组件步骤必须且只能处理一个有效候选：${step.targetId}`);
@@ -938,7 +950,7 @@ function validateImplementationPlan(
 /** 在审阅型方案阶段仅拒绝绝对路径和目录逃逸，不执行文件存在性门禁。 */
 function validatePlannedPath(path: string): void {
   const normalized = path.replaceAll("\\", "/");
-  if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized)
+  if (path !== normalized || !normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized)
     || normalized.split("/").some((part) => part === "" || part === "." || part === "..")) {
     throw new Error(`方案包含不安全文件路径：${path}`);
   }

@@ -11,6 +11,13 @@ describe("getD2CViewPhase", () => {
     ["svg_ready", "svg"],
     ["design_confirmed", "conversation"],
     ["analysis_ready", "conversation"],
+    ["plan_approved", "conversation"],
+    ["patch_ready", "conversation"],
+    ["patch_applied", "conversation"],
+    ["command_approval_required", "conversation"],
+    ["command_approved", "conversation"],
+    ["validation_blocked", "conversation"],
+    ["delivery_ready", "conversation"],
   ] as const)("derives %s as the %s view", (status, phase) => {
     expect(getD2CViewPhase(status)).toBe(phase);
   });
@@ -45,6 +52,33 @@ describe("resetTaskWorkflow", () => {
     await resetTaskWorkflow(dataSource, latest.taskId, null);
     expect(reset).toHaveBeenCalledWith({ taskId: latest.taskId, expectedRevision: 7 });
   });
+
+  it("cancels and waits for active code generation before resetting", async () => {
+    let finishCodeGeneration = (): void => {};
+    const activeCodeGenerationRun = new Promise<void>((resolve) => { finishCodeGeneration = resolve; });
+    const latest = createSnapshot(9);
+    const resetSnapshot = createSnapshot(10);
+    const cancelCodeGeneration = vi.fn(async () => {
+      finishCodeGeneration();
+      return { cancelled: true };
+    });
+    const getSnapshot = vi.fn(async () => latest);
+    const reset = vi.fn(async () => resetSnapshot);
+    const dataSource = {
+      cancelCodeGeneration,
+      getSnapshot,
+      reset,
+    } as unknown as TaskWorkflowDataSource;
+
+    await expect(resetTaskWorkflow(
+      dataSource,
+      latest.taskId,
+      null,
+      activeCodeGenerationRun,
+    )).resolves.toBe(resetSnapshot);
+    expect(cancelCodeGeneration).toHaveBeenCalledWith({ taskId: latest.taskId });
+    expect(reset).toHaveBeenCalledWith({ taskId: latest.taskId, expectedRevision: 9 });
+  });
 });
 
 /** 创建只包含重置测试所需字段的协议快照。 */
@@ -62,7 +96,9 @@ function createSnapshot(revision: number): D2CWorkflowSnapshot {
         projectValidation: null,
         designComponentRecognition: null,
         plan: null,
+        planApproval: null,
       },
+      codeGeneration: { status: "idle" },
     },
   };
 }

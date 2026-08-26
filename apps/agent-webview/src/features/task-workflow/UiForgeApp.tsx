@@ -1,4 +1,4 @@
-/** 组合设计读取与方案生成能力，呈现单视图 D2C 对话工作台。 */
+/** 组合设计读取、方案授权、代码生成与受控应用能力的单视图工作台。 */
 
 import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
 import type { TaskWorkflowDataSource } from "../../data-sources/task-workflow";
@@ -12,7 +12,7 @@ export interface UiForgeAppProps {
   initialSnapshot: D2CWorkflowSnapshot;
 }
 
-/** 渲染单一对话视图，在用户确认 SVG 预览后再启动方案分析。 */
+/** 渲染单一对话视图，并把一次 Plan 授权串联到自动生成与安全落盘。 */
 export function UiForgeApp({ dataSource, initialSnapshot }: UiForgeAppProps) {
   const workflow = useTaskWorkflow(dataSource, initialSnapshot);
   const { snapshot, commandError, isInspectingDesign } = workflow;
@@ -44,6 +44,17 @@ export function UiForgeApp({ dataSource, initialSnapshot }: UiForgeAppProps) {
               onRetryStream={workflow.retryConversationStream}
               onStopConversation={() => void workflow.stopConversation()}
               isStoppingConversation={workflow.isStoppingConversation}
+              workflowStatus={snapshot.status}
+              planApproval={snapshot.viewModel.conversation.planApproval}
+              conversationStreamActive={workflow.conversation.streamActive}
+              isApprovingPlan={workflow.isApprovingPlan}
+              isApprovingCommands={workflow.isApprovingCommands}
+              onApprovePlan={() => void workflow.approvePlan()}
+              onApproveCommands={() => void workflow.approveDeliveryCommands()}
+              codeGeneration={workflow.codeGeneration}
+              isStoppingCodeGeneration={workflow.isStoppingCodeGeneration}
+              onGenerateCode={workflow.generateCode}
+              onStopCodeGeneration={() => void workflow.stopCodeGeneration()}
             />
           </div>
         </div>

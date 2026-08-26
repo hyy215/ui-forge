@@ -98,6 +98,31 @@ export function createGraph<TState extends object>(
         asNode,
       );
     },
+
+    /** 从 Checkpointer 永久删除一个精确线程；未配置持久化时拒绝伪装成功。 */
+    async deleteState(threadId) {
+      if (!options.checkpointer) throw new Error("未配置 Checkpointer 的 Graph 不能删除状态。");
+      await options.checkpointer.deleteThread(threadId);
+    },
+
+    /** 从 Checkpointer 发现线程，并通过编译 Graph 读取各线程的最新状态。 */
+    async listStates() {
+      if (!options.checkpointer) return [];
+      const threadIds = new Set<string>();
+      for await (const tuple of options.checkpointer.list({
+        configurable: { checkpoint_ns: "" },
+      })) {
+        const threadId = tuple.config.configurable?.thread_id;
+        if (typeof threadId === "string" && threadId.length > 0) threadIds.add(threadId);
+      }
+      const states = await Promise.all([...threadIds].map(async (threadId) => {
+        const snapshot = await checkpointGraph.getState(createThreadConfig(threadId));
+        return snapshot.values.value === undefined
+          ? undefined
+          : { threadId, state: structuredClone(snapshot.values.value) };
+      }));
+      return states.filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
+    },
   };
 }
 

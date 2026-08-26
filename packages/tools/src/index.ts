@@ -1,4 +1,12 @@
+/** 暴露受控工具契约与目标 Workspace 写入适配器。 */
+
 import type { ZodType } from "zod";
+
+export { FileSystemProjectPatchApplier } from "./fileSystemProjectPatchApplier.js";
+export {
+  FileSystemProjectDeliveryValidator,
+  type FileSystemProjectDeliveryValidatorOptions,
+} from "./fileSystemProjectDeliveryValidator.js";
 
 export type ToolPermission = "read" | "propose" | "write" | "execute";
 

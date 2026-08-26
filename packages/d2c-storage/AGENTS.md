@@ -7,6 +7,7 @@
 ```text
 src/
 ├── fileDesignArtifactStore.ts  设计 Artifact 的安全文件存储 Adapter
+├── fileDeliveryEvidenceStore.ts  交付验收 PNG 的任务所有权存储 Adapter
 └── d2cStorage.ts               包公共入口
 ```
 

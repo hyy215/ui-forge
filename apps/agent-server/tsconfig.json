@@ -10,7 +10,8 @@
     { "path": "../../packages/d2c-agent" },
     { "path": "../../packages/d2c-storage" },
     { "path": "../../packages/design-system-adapter" },
-    { "path": "../../packages/mastergo-adapter" }
+    { "path": "../../packages/mastergo-adapter" },
+    { "path": "../../packages/tools" }
   ],
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]

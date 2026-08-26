@@ -62,6 +62,48 @@ describe("workspace request logger", () => {
       validationIssueCount: 2,
       validationIssuePaths: ["layout.regions.0.direction:invalid_value", "elements:invalid_type"],
     });
+    await logger.recordModelInvocation({
+      taskId: snapshot.taskId,
+      stage: "visual-analysis.semantic-validation",
+      attempt: 1,
+      status: "semantic-output-invalid",
+      errorName: "VisualSemanticValidationError",
+      errorCode: "VISUAL_SUGGESTION_MISSING",
+      retryable: true,
+      validationIssueCount: 1,
+      validationRules: ["suggestions.cover-all-candidates"],
+    });
+    const command = {
+      commandId: "build-vite",
+      purpose: "build-vite" as const,
+      cwd: "/workspaces/customer-console",
+      executable: "/usr/bin/node",
+      arguments: ["/workspaces/customer-console/node_modules/vite/bin/vite.js", "build"],
+      displayCommand: "/usr/bin/node /workspaces/customer-console/node_modules/vite/bin/vite.js build",
+      timeoutMs: 300_000,
+      networkAccess: "none" as const,
+      workspaceScope: "within-workspace" as const,
+    };
+    for (const event of [
+      { type: "proposed" as const, taskId: snapshot.taskId, commandPlanHash: "a".repeat(64), commands: [command] },
+      { type: "approved" as const, taskId: snapshot.taskId, commandPlanHash: "a".repeat(64), commands: [command] },
+      { type: "started" as const, taskId: snapshot.taskId, commandPlanHash: "a".repeat(64), command },
+      {
+        type: "completed" as const,
+        taskId: snapshot.taskId,
+        commandPlanHash: "a".repeat(64),
+        command,
+        exitCode: 0,
+        durationMs: 18,
+      },
+      {
+        type: "blocked" as const,
+        taskId: snapshot.taskId,
+        commandPlanHash: "a".repeat(64),
+        command,
+        reasonCode: "COMMAND_EXIT_NONZERO",
+      },
+    ]) await logger.recordCommandAudit(event);
 
     const workspaceDirectories = await readdir(rootDirectory);
     expect(workspaceDirectories).toHaveLength(1);
@@ -75,7 +117,7 @@ describe("workspace request logger", () => {
     const contents = await readFile(logPath, "utf8");
     const records = contents.trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
 
-    expect(records).toHaveLength(5);
+    expect(records).toHaveLength(11);
     expect(records[0]).toMatchObject({
       requestId: "request-1",
       taskId: snapshot.taskId,
@@ -109,10 +151,40 @@ describe("workspace request logger", () => {
       validationIssueCount: 2,
       validationIssuePaths: "layout.regions.0.direction:invalid_value,elements:invalid_type",
     });
+    expect(records[5]).toMatchObject({
+      event: "model.invocation",
+      stage: "visual-analysis.semantic-validation",
+      status: "semantic-output-invalid",
+      errorName: "VisualSemanticValidationError",
+      errorCode: "VISUAL_SUGGESTION_MISSING",
+      retryable: "true",
+      validationIssueCount: 1,
+      validationRules: "suggestions.cover-all-candidates",
+    });
+    expect(records.slice(6).map((record) => record.event)).toEqual([
+      "command.proposed",
+      "command.approved",
+      "command.started",
+      "command.completed",
+      "command.blocked",
+    ]);
+    expect(records[6]).toMatchObject({
+      taskId: snapshot.taskId,
+      commandPlanHash: "a".repeat(64),
+      commandId: "build-vite",
+      cwd: "/workspaces/customer-console",
+      executable: "/usr/bin/node",
+      arguments: JSON.stringify(command.arguments),
+      displayCommand: command.displayCommand,
+    });
+    expect(records[9]).toMatchObject({ exitCode: 0, durationMs: 18 });
+    expect(records[10]).toMatchObject({ reasonCode: "COMMAND_EXIT_NONZERO" });
     expect(contents).not.toContain("api-key-value");
     expect(contents).not.toContain("token-user");
     expect(contents).not.toContain("params");
     expect(contents).not.toContain("invalidResponse");
+    expect(contents).not.toContain("environment");
+    expect(contents).not.toContain("outputSummary");
   });
 
   it("rotates oversized task logs and deletes expired monthly partitions", async () => {
@@ -149,6 +221,40 @@ describe("workspace request logger", () => {
     await expect(logger.collectGarbage(new Date("2026-08-18T00:00:00.000Z"))).resolves.toBe(2);
     await expect(readdir(rootDirectory)).resolves.toEqual([]);
   });
+
+  it("keeps a successful permanent deletion audit in the supplied workspace", async () => {
+    const rootDirectory = await mkdtemp(join(tmpdir(), "ui-forge-logs-"));
+    const logger = new WorkspaceRequestLogger({
+      rootDirectory,
+      workspaceIdentityResolver: new WorkspaceIdentityResolver(async () => undefined),
+      now: () => new Date("2026-08-17T01:02:03.000Z"),
+    });
+
+    await logger.recordSuccess({
+      requestId: "request-delete",
+      method: "ui-forge.d2c.delete-task",
+      durationMs: 4,
+      taskId: "task-deleted",
+      projectPath: "/workspaces/customer-console",
+    });
+
+    const [workspaceDirectory] = await readdir(rootDirectory);
+    expect(workspaceDirectory).toMatch(/^customer-console-[a-f0-9]{16}$/);
+    const contents = await readFile(join(
+      rootDirectory,
+      workspaceDirectory!,
+      "2026-08",
+      "task-deleted.jsonl",
+    ), "utf8");
+    expect(JSON.parse(contents)).toMatchObject({
+      requestId: "request-delete",
+      taskId: "task-deleted",
+      method: "ui-forge.d2c.delete-task",
+      status: "success",
+      workspaceType: "local",
+      workspace: "/workspaces/customer-console",
+    });
+  });
 });
 
 /** 构造日志测试所需的最小合法公开快照。 */
@@ -171,6 +277,7 @@ function createSnapshot(): D2CWorkflowSnapshot {
         projectValidation: null,
         designComponentRecognition: null,
         plan: null,
+        planApproval: null,
       },
     },
   };

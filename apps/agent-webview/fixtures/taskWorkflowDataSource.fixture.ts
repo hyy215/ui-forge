@@ -1,6 +1,10 @@
 /** 为本地开发模拟设计读取、持久确认和逐项方案流，不进入生产构建。 */
 
-import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
+import type {
+  CodeGenerationStreamEvent,
+  D2CWorkflowSnapshot,
+  DeliveryCommandPlanViewModel,
+} from "@ui-forge/shared-protocol";
 import type { TaskWorkflowDataSource } from "../src/data-sources/task-workflow";
 import { createTaskWorkflowFixture, createTaskWorkflowSnapshot } from "./taskWorkflow.fixture";
 
@@ -37,6 +41,48 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
       revision: snapshot.revision + 1,
       status: "design_confirmed",
     }),
+    approvePlan: async (input) => replace({
+      ...snapshot,
+      revision: snapshot.revision + 1,
+      status: "plan_approved",
+      viewModel: {
+        ...snapshot.viewModel,
+        conversation: {
+          ...snapshot.viewModel.conversation,
+          planApproval: {
+            status: "approved",
+            planVersion: input.planVersion,
+            planHash: input.planHash,
+            approvedAt: new Date().toISOString(),
+            executionMode: input.executionMode,
+          },
+        },
+      },
+    }),
+    approveDeliveryCommands: async (input) => {
+      const codeGeneration = snapshot.viewModel.codeGeneration;
+      if (codeGeneration.status !== "ready"
+        || codeGeneration.deliveryCommands.status !== "approval_required"
+        || codeGeneration.deliveryCommands.commandPlanHash !== input.commandPlanHash) {
+        throw new Error("Fixture 命令计划已经变化。");
+      }
+      return replace({
+        ...snapshot,
+        revision: snapshot.revision + 1,
+        status: "command_approved",
+        viewModel: {
+          ...snapshot.viewModel,
+          codeGeneration: {
+            ...codeGeneration,
+            deliveryCommands: {
+              ...codeGeneration.deliveryCommands,
+              status: "approved",
+              approvedAt: new Date().toISOString(),
+            },
+          },
+        },
+      });
+    },
     getDesignDataIndex: async (input) => ({
       artifactId: input.artifactId,
       provider: "mastergo-fixture",
@@ -56,6 +102,18 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
       byteSize: 2,
       data: {},
     }),
+    getDeliveryEvidence: async (input) => ({
+      reference: {
+        evidenceId: input.evidenceId,
+        kind: "actual",
+        mimeType: "image/png",
+        byteSize: 68,
+        sha256: "e".repeat(64),
+        width: 1,
+        height: 1,
+      },
+      dataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    }),
     streamConversation: async (_input, onEvent, signal) => {
       const messageId = "fixture-project-validation";
       const toolCallId = "fixture-inspect-project";
@@ -69,7 +127,15 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
         reusableComponents: [],
         newComponents: [],
         componentDecisions: [],
-        fileImpacts: [],
+        fileImpacts: [{
+          path: "src/CustomerList.tsx",
+          action: "create" as const,
+          reason: "实现客户列表页面",
+          affectedSymbols: ["CustomerList"],
+          downstreamConsumers: [],
+          risk: "low" as const,
+          evidence: ["Fixture 设计结构"],
+        }],
         steps: [{
           id: "step-1",
           kind: "layout" as const,
@@ -78,13 +144,14 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
           description: "组合页面容器、筛选区和客户表格。",
           decision: "create" as const,
           dependsOn: [],
-          files: [],
+          files: [{ path: "src/CustomerList.tsx", action: "create" as const }],
           evidence: ["Fixture 设计结构"],
           acceptanceCriteria: ["页面结构与设计区域一致"],
           risks: [],
         }],
-        files: [],
-        contextGaps: ["Fixture 未提供仓库文件清单"],
+        files: ["src/CustomerList.tsx"],
+        validationTarget: { previewPath: "/" },
+        contextGaps: [],
         stopConditions: ["项目构建失败或设计上下文不完整时停止"],
       };
       const events = [
@@ -146,11 +213,164 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
             },
             designComponentRecognition: null,
             plan,
+            planApproval: {
+              status: "pending",
+              planVersion: 1,
+              planHash: "b".repeat(64),
+            },
           },
         },
       });
     },
     cancelConversation: async () => ({ cancelled: true }),
+    streamCodeGeneration: async (_input, onEvent, signal) => {
+      const executingApprovedCommands = snapshot.status === "command_approved";
+      const patchSet = {
+        patchSetHash: "a".repeat(64),
+        planVersion: 1,
+        planHash: "b".repeat(64),
+        summary: "已按客户列表方案生成候选页面代码。",
+        patches: [{
+          stepId: "step-1",
+          patchHash: "c".repeat(64),
+          operations: [{
+            path: "src/CustomerList.tsx",
+            action: "create" as const,
+            beforeHash: null,
+            afterHash: "d".repeat(64),
+            reviewDiff: "--- /dev/null\n+++ b/src/CustomerList.tsx\n@@ -1,0 +1,1 @@\n+export function CustomerList() { return <div>客户列表</div>; }",
+          }],
+        }],
+        warnings: [],
+      };
+      const application = {
+        status: "applied" as const,
+        patchSetHash: patchSet.patchSetHash,
+        files: [{ path: "src/CustomerList.tsx", action: "create" as const }],
+        alreadyApplied: false,
+        appliedAt: new Date().toISOString(),
+      };
+      const commandPlanBase = {
+        patchSetHash: patchSet.patchSetHash,
+        workspaceRoot: "/workspace/demo",
+        commandPlanHash: "e".repeat(64),
+        commands: [{
+          commandId: "build-vite",
+          purpose: "build-vite" as const,
+          cwd: "/workspace/demo",
+          executable: "/usr/local/bin/node",
+          arguments: ["/workspace/demo/node_modules/vite/bin/vite.js", "build"],
+          displayCommand: "/usr/local/bin/node /workspace/demo/node_modules/vite/bin/vite.js build",
+          timeoutMs: 300_000,
+          networkAccess: "none" as const,
+          workspaceScope: "within-workspace" as const,
+        }],
+        summary: "系统将执行 1 条 Workspace 内真实命令。",
+        preparedAt: "2026-08-28T00:00:00.000Z",
+      };
+      const deliveryCommands = (executingApprovedCommands
+        ? {
+            ...commandPlanBase,
+            status: "approved",
+            approvedAt: "2026-08-28T00:00:01.000Z",
+          }
+        : {
+            ...commandPlanBase,
+            status: "approval_required",
+          }) satisfies DeliveryCommandPlanViewModel;
+      const passedDeliveryValidation = {
+        status: "passed" as const,
+        patchSetHash: patchSet.patchSetHash,
+        summary: "构建、页面渲染和视觉差异门禁均已通过。",
+        build: {
+          status: "passed" as const,
+          command: "npm run build",
+          durationMs: 480,
+          summary: "目标项目构建通过。",
+          outputSummary: "vite build completed",
+        },
+        render: {
+          status: "passed" as const,
+          durationMs: 320,
+          summary: "页面渲染通过。",
+          previewPath: "/",
+          viewport: { width: 1440, height: 900 },
+        },
+        visual: {
+          status: "passed" as const,
+          durationMs: 210,
+          summary: "视觉差异门禁通过。",
+          pixelDifferenceRatio: 0.04,
+          threshold: 0.1,
+        },
+        validatedAt: new Date().toISOString(),
+      };
+      const deliveryValidation = executingApprovedCommands
+        ? passedDeliveryValidation
+        : { status: "pending" as const };
+      const events: CodeGenerationStreamEvent[] = [
+        { type: "code-generation-start" as const },
+        ...(!executingApprovedCommands ? [{
+          type: "code-generation-progress" as const,
+          phase: "reading-context" as const,
+          summary: "正在重新读取并校验 1 个计划文件。",
+        }, {
+          type: "code-generation-progress" as const,
+          phase: "generating-code" as const,
+          summary: "Code Agent 正在生成候选代码。",
+        }, {
+          type: "code-generation-progress" as const,
+          phase: "applying-patch" as const,
+          summary: "已通过版本预检并安全应用 1 个目标文件。",
+        }] : [{
+          type: "code-generation-progress" as const,
+          phase: "building-project" as const,
+          summary: "目标项目构建通过。",
+        },
+        {
+          type: "code-generation-progress" as const,
+          phase: "rendering-page" as const,
+          summary: "目标页面已完成受控渲染和截图。",
+        },
+        {
+          type: "code-generation-progress" as const,
+          phase: "evaluating-visual" as const,
+          summary: "视觉差异门禁通过。",
+        }]),
+        {
+          type: "code-generation-result" as const,
+          result: {
+            status: "ready" as const,
+            patchSet,
+            application,
+            deliveryCommands,
+            deliveryValidation,
+          },
+        },
+        { type: "code-generation-complete" as const },
+      ];
+      for (const event of events) {
+        if (signal?.aborted) throw new DOMException("Fixture 代码流已取消。", "AbortError");
+        await onEvent(event);
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+      replace({
+        ...snapshot,
+        revision: snapshot.revision + (executingApprovedCommands ? 1 : 3),
+        status: executingApprovedCommands ? "delivery_ready" : "command_approval_required",
+        viewModel: {
+          ...snapshot.viewModel,
+          codeGeneration: {
+            status: "ready",
+            patchSet,
+            application,
+            deliveryCommands,
+            deliveryValidation,
+          },
+        },
+      });
+    },
+    cancelCodeGeneration: async () => ({ cancelled: true }),
     reset: async () => replace({
       ...snapshot,
       revision: snapshot.revision + 1,
@@ -164,7 +384,9 @@ export function createFixtureTaskWorkflowDataSource(): TaskWorkflowDataSource {
           projectValidation: null,
           designComponentRecognition: null,
           plan: null,
+          planApproval: null,
         },
+        codeGeneration: { status: "idle" },
       },
     }),
   };
