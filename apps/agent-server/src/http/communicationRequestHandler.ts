@@ -63,6 +63,7 @@ export class CommunicationRequestHandler {
       durationMs: this.elapsedMilliseconds(startedAt),
       ...(snapshotResult.success ? { snapshot: snapshotResult.data } : {}),
       ...(!snapshotResult.success && context.taskId ? { taskId: context.taskId } : {}),
+      ...(!snapshotResult.success && context.projectPath ? { projectPath: context.projectPath } : {}),
     }));
     return createSuccessfulCommunicationResponseMessage(message.requestId, result);
   }

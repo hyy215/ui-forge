@@ -3,7 +3,7 @@
 import { z } from "zod";
 
 /** 当前第一方 Client 与 Server 支持的通信协议版本。 */
-export const currentCommunicationProtocolVersion = 1 as const;
+export const currentCommunicationProtocolVersion = 7 as const;
 
 /** 当前协议公开且可稳定协商的能力集合。 */
 export const communicationCapabilities = [
@@ -11,6 +11,13 @@ export const communicationCapabilities = [
   "ordered-stream",
   "stream-cancel",
   "persisted-design-confirmation",
+  "persisted-plan-approval",
+  "reviewable-code-patch",
+  "automatic-controlled-patch-application",
+  "automatic-delivery-validation",
+  "exact-workspace-command-approval",
+  "persistent-workspace-task-list",
+  "permanent-workspace-task-deletion",
 ] as const;
 
 /** 第一方 UI 正常工作所需的最小能力集合。 */
@@ -19,6 +26,13 @@ export const firstPartyRequiredCommunicationCapabilities = [
   "ordered-stream",
   "stream-cancel",
   "persisted-design-confirmation",
+  "persisted-plan-approval",
+  "reviewable-code-patch",
+  "automatic-controlled-patch-application",
+  "automatic-delivery-validation",
+  "exact-workspace-command-approval",
+  "persistent-workspace-task-list",
+  "permanent-workspace-task-deletion",
 ] as const;
 
 /** 校验服务端声明的稳定能力，不接受未知能力污染当前 Client。 */

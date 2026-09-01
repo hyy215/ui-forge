@@ -65,6 +65,47 @@ describe("createGraph", () => {
     await expect(graph.getState("missing")).resolves.toBeUndefined();
   });
 
+  it("为每个 Checkpoint thread 只枚举最新状态", async () => {
+    const graph = createGraph<{ revision: number }>({
+      nodes: [{ id: "persist", execute: () => ({}) }],
+      edges: [
+        { from: graphStart, to: "persist" },
+        { from: "persist", to: graphEnd },
+      ],
+      checkpointer: createMemoryCheckpointer(),
+    });
+
+    await graph.setState("task-1", { revision: 1 });
+    await graph.setState("task-1", { revision: 2 });
+    await graph.setState("task-2", { revision: 4 });
+
+    await expect(graph.listStates()).resolves.toEqual(expect.arrayContaining([
+      { threadId: "task-1", state: { revision: 2 } },
+      { threadId: "task-2", state: { revision: 4 } },
+    ]));
+  });
+
+  it("永久删除一个精确 Checkpoint thread 且不影响其他线程", async () => {
+    const graph = createGraph<{ revision: number }>({
+      nodes: [{ id: "persist", execute: () => ({}) }],
+      edges: [
+        { from: graphStart, to: "persist" },
+        { from: "persist", to: graphEnd },
+      ],
+      checkpointer: createMemoryCheckpointer(),
+    });
+    await graph.setState("task-1", { revision: 1 });
+    await graph.setState("task-2", { revision: 2 });
+
+    await graph.deleteState("task-1");
+
+    await expect(graph.getState("task-1")).resolves.toBeUndefined();
+    await expect(graph.getState("task-2")).resolves.toEqual({ revision: 2 });
+    await expect(graph.listStates()).resolves.toEqual([
+      { threadId: "task-2", state: { revision: 2 } },
+    ]);
+  });
+
   it("允许 Checkpoint Graph 使用同一拓扑执行瞬时能力而不污染线程状态", async () => {
     const graph = createGraph<{ value: number }>({
       nodes: [{ id: "increment", execute: (state) => ({ value: state.value + 1 }) }],

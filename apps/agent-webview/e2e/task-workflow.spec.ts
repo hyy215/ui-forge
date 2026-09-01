@@ -16,7 +16,7 @@ test("completes the design review interaction without external services", async 
 
   try {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /从设计稿到.*可审阅的前端方案/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /从设计稿到.*安全落盘的前端代码/ })).toBeVisible();
     await page.getByRole("button", { name: "开始分析设计" }).click();
     const workflowHeading = page.getByRole("heading", { name: "生成前端视图" });
     await expect(workflowHeading).toBeVisible();
@@ -61,6 +61,28 @@ test("completes the design review interaction without external services", async 
     }
     await expect(page.getByText("根据当前设计证据生成客户列表审阅方案。")).toBeVisible();
     await expect(page.getByText("搭建客户列表页面结构")).toBeVisible();
+    await expect(page.getByText("布局与交互理解")).toBeVisible();
+    const approvePlan = page.getByRole("button", { name: "批准方案并生成、应用" });
+    await expect(approvePlan).toBeEnabled();
+    await approvePlan.click();
+    await expect(page.getByText("代码已安全写入，等待批准真实命令")).toBeVisible();
+    await expect(page.getByText("/usr/local/bin/node /workspace/demo/node_modules/vite/bin/vite.js build")).toBeVisible();
+    await expect(page.getByText("cwd：")).toBeVisible();
+    const approveCommands = page.getByRole("button", { name: "批准以上真实命令" });
+    await expect(approveCommands).toBeEnabled();
+    await approveCommands.click();
+    await expect(page.getByText("代码已安全写入并通过自动交付验收")).toBeVisible();
+    await expect(page.getByText("自动交付验收", { exact: true })).toBeVisible();
+    await expect(page.getByText("3 项通过", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "批准当前 Patch" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "展开整体修改方案" })).toBeVisible();
+    await expect(page.getByText("布局与交互理解")).toBeHidden();
+    await expect(page.getByText("验收条件状态")).toBeVisible();
+    await expect(page.getByText("页面结构与设计区域一致")).toBeVisible();
+    await expect(page.getByText("3 项自动门禁通过 · 1 条方案条件有验收证据")).toBeVisible();
+    await expect(page.getByText("create src/CustomerList.tsx").last()).toBeVisible();
+    await page.getByRole("button", { name: "展开整体修改方案" }).click();
+    await expect(page.getByText("布局与交互理解")).toBeVisible();
 
     if (isNarrow) {
       await page.getByRole("button", { name: "关闭结果浮层" }).click();

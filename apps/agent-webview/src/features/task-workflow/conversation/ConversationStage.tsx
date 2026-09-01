@@ -1,8 +1,13 @@
-/** 在单一对话视图中串联 Design URL 读取、SVG 确认与方案分析。 */
+/** 在单一对话视图中串联设计读取、方案授权、代码生成与应用结果。 */
 
 import { useEffect, useState } from "react";
 import { Alert, Avatar, Button, Empty, Input, Space, Tag, Typography } from "antd";
-import type { SvgTool, TaskWorkflowViewModel } from "@ui-forge/shared-protocol";
+import type {
+  D2CWorkflowStatus,
+  PlanApprovalViewModel,
+  SvgTool,
+  TaskWorkflowViewModel,
+} from "@ui-forge/shared-protocol";
 import type { TaskWorkflowDataSource } from "../../../data-sources/task-workflow";
 import {
   createConversationFailureTitle,
@@ -16,6 +21,8 @@ import { DesignComponentRecognitionPanel } from "./DesignComponentRecognitionPan
 import { DeterministicConclusionPanel } from "./DeterministicConclusionPanel";
 import { DisabledComposer } from "./DisabledComposer";
 import { PlanningProgressPanel } from "./PlanningProgressPanel";
+import { CodeGenerationPanel } from "./CodeGenerationPanel";
+import type { CodeGenerationState } from "../model/codeGenerationState";
 import { ResultsIcon } from "./ResultsIcon";
 import { UserMessage } from "./UserMessage";
 import {
@@ -39,6 +46,17 @@ export interface ConversationStageProps {
   onRetryStream: () => void;
   onStopConversation: () => void;
   isStoppingConversation: boolean;
+  workflowStatus: D2CWorkflowStatus;
+  planApproval: PlanApprovalViewModel | null;
+  conversationStreamActive: boolean;
+  isApprovingPlan: boolean;
+  isApprovingCommands: boolean;
+  onApprovePlan: () => void;
+  onApproveCommands: () => void;
+  codeGeneration: CodeGenerationState;
+  isStoppingCodeGeneration: boolean;
+  onGenerateCode: () => void;
+  onStopCodeGeneration: () => void;
 }
 
 /** 展示设计读取消息、右侧预览确认和确认后的真实分析流。 */
@@ -57,6 +75,17 @@ export function ConversationStage({
   onRetryStream,
   onStopConversation,
   isStoppingConversation,
+  workflowStatus,
+  planApproval,
+  conversationStreamActive,
+  isApprovingPlan,
+  isApprovingCommands,
+  onApprovePlan,
+  onApproveCommands,
+  codeGeneration,
+  isStoppingCodeGeneration,
+  onGenerateCode,
+  onStopCodeGeneration,
 }: ConversationStageProps) {
   const [composerValue, setComposerValue] = useState("");
   const [submittedDesignUrl, setSubmittedDesignUrl] = useState(setup.designUrl);
@@ -174,6 +203,13 @@ export function ConversationStage({
                     {conversation.status === "validating_project" && conversation.processEntries.length === 0
                       ? <p className="streaming-placeholder"><span />正在校验当前项目…</p>
                       : null}
+                    {workflowStatus === "design_confirmed" && conversation.status === "idle" && <Alert
+                      type="info"
+                      showIcon
+                      title="任务已恢复"
+                      description="已保留设计确认结果。继续后才会检查项目、识别组件并生成方案。"
+                      action={<Button size="small" type="primary" onClick={onRetryStream}>继续分析</Button>}
+                    />}
                     <AgentProcess conversation={conversation} />
                     {conversation.status === "stopped" && <Alert
                       type="info"
@@ -272,7 +308,26 @@ export function ConversationStage({
                 recognition={conversation.designComponentRecognition}
                 status={conversation.status}
               /> : null}
-              <PlanningProgressPanel conversation={conversation} />
+              <PlanningProgressPanel
+                conversation={conversation}
+                collapseForCodeGeneration={codeGeneration.status !== "idle"}
+              />
+              <CodeGenerationPanel
+                taskId={taskId}
+                dataSource={dataSource}
+                plan={conversation.plan}
+                workflowStatus={workflowStatus}
+                planApproval={planApproval}
+                conversationStreamActive={conversationStreamActive}
+                isApprovingPlan={isApprovingPlan}
+                isApprovingCommands={isApprovingCommands}
+                state={codeGeneration}
+                isStopping={isStoppingCodeGeneration}
+                onApprove={onApprovePlan}
+                onApproveCommands={onApproveCommands}
+                onGenerate={onGenerateCode}
+                onStop={onStopCodeGeneration}
+              />
             </>}
           </aside>
         </div>

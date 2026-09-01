@@ -24,6 +24,32 @@
         "command": "ui-forge.createTask",
         "title": "创建任务",
         "icon": "$(add)"
+      },
+      {
+        "command": "ui-forge.openTask",
+        "title": "打开任务"
+      },
+      {
+        "command": "ui-forge.renameTask",
+        "title": "重命名任务"
+      },
+      {
+        "command": "ui-forge.archiveTask",
+        "title": "归档任务"
+      },
+      {
+        "command": "ui-forge.restoreTask",
+        "title": "恢复任务"
+      },
+      {
+        "command": "ui-forge.deleteTask",
+        "title": "永久删除任务",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "ui-forge.refreshTasks",
+        "title": "刷新任务",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -49,6 +75,38 @@
           "command": "ui-forge.createTask",
           "when": "view == ui-forge.sidebar",
           "group": "navigation"
+        },
+        {
+          "command": "ui-forge.refreshTasks",
+          "when": "view == ui-forge.sidebar",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "ui-forge.openTask",
+          "when": "view == ui-forge.sidebar && (viewItem == uiForgeActiveTask || viewItem == uiForgeArchivedTask)",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ui-forge.renameTask",
+          "when": "view == ui-forge.sidebar && (viewItem == uiForgeActiveTask || viewItem == uiForgeArchivedTask)",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ui-forge.archiveTask",
+          "when": "view == ui-forge.sidebar && viewItem == uiForgeActiveTask",
+          "group": "navigation@3"
+        },
+        {
+          "command": "ui-forge.restoreTask",
+          "when": "view == ui-forge.sidebar && viewItem == uiForgeArchivedTask",
+          "group": "navigation@3"
+        },
+        {
+          "command": "ui-forge.deleteTask",
+          "when": "view == ui-forge.sidebar && (viewItem == uiForgeActiveTask || viewItem == uiForgeArchivedTask)",
+          "group": "inline@4"
         }
       ]
     }

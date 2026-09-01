@@ -18,6 +18,8 @@ export interface ModelInvocationDiagnostic {
     | "turn-failed"
     | "structured-output-invalid"
     | "structured-output-repaired"
+    | "semantic-output-invalid"
+    | "semantic-output-repaired"
     | "succeeded"
     | "failed";
   turn?: number;
@@ -31,6 +33,7 @@ export interface ModelInvocationDiagnostic {
   retryable?: boolean;
   validationIssueCount?: number;
   validationIssuePaths?: string[];
+  validationRules?: string[];
 }
 
 /** 接收不含消息、图片、凭据或思维内容的模型调用诊断事件。 */

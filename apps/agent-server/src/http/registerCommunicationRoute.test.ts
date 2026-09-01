@@ -1,5 +1,8 @@
 /** 验证 Agent Server 统一通信入口与 D2C 服务的协议集成。 */
 import { afterEach, describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { D2CAgent } from "@ui-forge/d2c-agent";
 import {
   communicationResponseMessageSchema,
@@ -13,13 +16,17 @@ import { D2CWorkflowService } from "../d2c/d2cWorkflowService.js";
 import { buildApp } from "./buildApp.js";
 
 const apps: ReturnType<typeof buildApp>[] = [];
+const workspaceDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
+  await Promise.all(workspaceDirectories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
 describe("agent server", () => {
   it("initializes a server-owned D2C workflow through the communication endpoint", async () => {
+    const projectPath = await mkdtemp(join(tmpdir(), "ui-forge-http-workspace-"));
+    workspaceDirectories.push(projectPath);
     const app = buildApp();
     apps.push(app);
     const response = await app.inject({
@@ -28,7 +35,7 @@ describe("agent server", () => {
       payload: createCommunicationRequestMessage(
         "test-1",
         d2cWorkflowMethods.initialize,
-        { projectPath: "/workspace" },
+        { projectPath },
       ),
     });
 

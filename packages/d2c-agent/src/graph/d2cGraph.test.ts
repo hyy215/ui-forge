@@ -184,6 +184,7 @@ const reviewablePlan = {
     decision: "create" as const, dependsOn: [], files: [], evidence: ["设计结构"], acceptanceCriteria: ["可审阅"], risks: [],
   }],
   files: [],
+  validationTarget: { previewPath: "/" },
   contextGaps: ["缺少仓库文件证据"],
   stopConditions: ["不得直接写入"],
 };

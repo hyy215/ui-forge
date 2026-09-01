@@ -1,6 +1,8 @@
 /** 将单视图 Fixture 数据源适配为生产一致的通信客户端。 */
 
 import {
+  approveD2CPlanInputSchema,
+  approveD2CDeliveryCommandsInputSchema,
   cancelD2CConversationInputSchema,
   confirmD2CDesignInputSchema,
   d2cTaskCommandInputSchema,
@@ -11,6 +13,8 @@ import {
   initializeD2CWorkflowInputSchema,
   inspectD2CDesignInputSchema,
   streamD2CConversationInputSchema,
+  streamD2CCodeGenerationInputSchema,
+  cancelD2CCodeGenerationInputSchema,
 } from "@ui-forge/shared-protocol";
 import type {
   CommunicationClient,
@@ -35,6 +39,12 @@ async function handleRequest(request: CommunicationRequest<unknown>): Promise<un
       return fixtureTaskWorkflowDataSource.inspectDesign(inspectD2CDesignInputSchema.parse(request.params));
     case d2cWorkflowMethods.confirmDesign:
       return fixtureTaskWorkflowDataSource.confirmDesign(confirmD2CDesignInputSchema.parse(request.params));
+    case d2cWorkflowMethods.approvePlan:
+      return fixtureTaskWorkflowDataSource.approvePlan(approveD2CPlanInputSchema.parse(request.params));
+    case d2cWorkflowMethods.approveDeliveryCommands:
+      return fixtureTaskWorkflowDataSource.approveDeliveryCommands(
+        approveD2CDeliveryCommandsInputSchema.parse(request.params),
+      );
     case d2cWorkflowMethods.getDesignDataIndex:
       return fixtureTaskWorkflowDataSource.getDesignDataIndex(getDesignDataIndexInputSchema.parse(request.params), signal);
     case d2cWorkflowMethods.getDesignDataSection:
@@ -42,6 +52,10 @@ async function handleRequest(request: CommunicationRequest<unknown>): Promise<un
     case d2cWorkflowMethods.cancelConversation:
       return fixtureTaskWorkflowDataSource.cancelConversation(
         cancelD2CConversationInputSchema.parse(request.params),
+      );
+    case d2cWorkflowMethods.cancelCodeGeneration:
+      return fixtureTaskWorkflowDataSource.cancelCodeGeneration(
+        cancelD2CCodeGenerationInputSchema.parse(request.params),
       );
     case d2cWorkflowMethods.reset:
       return fixtureTaskWorkflowDataSource.reset(d2cTaskCommandInputSchema.parse(request.params));
@@ -52,14 +66,23 @@ async function handleRequest(request: CommunicationRequest<unknown>): Promise<un
 
 /** 校验 Fixture 流请求并逐条转发领域事件。 */
 async function handleStream(request: CommunicationStreamRequest<unknown>): Promise<void> {
-  if (request.method !== d2cWorkflowMethods.streamConversation) {
-    throw new Error(`Fixture 不支持流式通信方法：${request.method}`);
+  if (request.method === d2cWorkflowMethods.streamConversation) {
+    await fixtureTaskWorkflowDataSource.streamConversation(
+      streamD2CConversationInputSchema.parse(request.params),
+      (event) => request.onEvent(request.eventSchema.parse(event)),
+      request.signal,
+    );
+    return;
   }
-  await fixtureTaskWorkflowDataSource.streamConversation(
-    streamD2CConversationInputSchema.parse(request.params),
-    (event) => request.onEvent(request.eventSchema.parse(event)),
-    request.signal,
-  );
+  if (request.method === d2cWorkflowMethods.streamCodeGeneration) {
+    await fixtureTaskWorkflowDataSource.streamCodeGeneration(
+      streamD2CCodeGenerationInputSchema.parse(request.params),
+      (event) => request.onEvent(request.eventSchema.parse(event)),
+      request.signal,
+    );
+    return;
+  }
+  throw new Error(`Fixture 不支持流式通信方法：${request.method}`);
 }
 
 /** 本地开发使用的环境无关通信客户端。 */

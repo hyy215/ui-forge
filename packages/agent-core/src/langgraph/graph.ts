@@ -46,6 +46,12 @@ export interface GraphInvokeOptions {
   checkpoint?: boolean;
 }
 
+/** 一个由 Checkpointer 发现的线程及其最新完整状态。 */
+export interface GraphThreadState<TState extends object> {
+  threadId: string;
+  state: TState;
+}
+
 /** 对领域包隐藏 channel、编译器和 Checkpoint 快照的状态图。 */
 export interface Graph<TState extends object> {
   /** 执行完整图；默认写入已配置的 Checkpointer，也可显式瞬时执行。 */
@@ -56,4 +62,8 @@ export interface Graph<TState extends object> {
   getState(threadId: string): Promise<TState | undefined>;
   /** 替换线程的完整状态，同时保留已有暂停位置。 */
   setState(threadId: string, state: TState): Promise<void>;
+  /** 永久删除指定线程的全部 Checkpoint 和待处理写入。 */
+  deleteState(threadId: string): Promise<void>;
+  /** 枚举 Checkpointer 中每个线程的最新完整状态。 */
+  listStates(): Promise<GraphThreadState<TState>[]>;
 }

@@ -214,6 +214,7 @@ const execution: PlanningResult = {
     decision: "validate", dependsOn: ["navigation"], files: [], evidence: ["计划约束"], acceptanceCriteria: ["检查通过"], risks: [],
   }],
   files: ["src/Navigation.tsx"],
+  validationTarget: { previewPath: "/" },
   contextGaps: [],
   stopConditions: ["未批准 Patch 前不得写入"],
 };

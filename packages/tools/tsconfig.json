@@ -1,5 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist", "types": ["node"] },
+  "references": [
+    { "path": "../d2c-agent" },
+    { "path": "../visual-evaluator" }
+  ],
   "include": ["src"]
 }

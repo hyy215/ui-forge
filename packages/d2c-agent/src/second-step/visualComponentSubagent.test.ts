@@ -85,6 +85,96 @@ describe("createVisualComponentSubagent", () => {
     await expect(review(agent)).rejects.toThrow("返回了目录外类型：table");
   });
 
+  it("repairs one semantic validation failure and records only stable diagnostics", async () => {
+    const diagnostics: AgentCore.ModelInvocationDiagnostic[] = [];
+    const initialInvoke = vi.fn(async (_input: AgentCore.AgentInput) => ({
+      response: "done",
+      structuredResponse: createStructuredResponse([completeSuggestions()[0]]),
+      usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
+    }));
+    const repairInvoke = vi.fn(async (_input: AgentCore.AgentInput) => ({
+      response: "done",
+      structuredResponse: createStructuredResponse(completeSuggestions()),
+      usage: { inputTokens: 80, outputTokens: 10, totalTokens: 90 },
+    }));
+    const createSpy = vi.spyOn(AgentCore, "createRestrictedDeepAgent")
+      .mockReturnValueOnce({ invoke: initialInvoke })
+      .mockReturnValueOnce({ invoke: repairInvoke });
+    const agent = createVisualComponentSubagent({
+      diagnosticStage: "visual-analysis",
+      diagnosticReporter: (event) => { diagnostics.push(event); },
+    });
+
+    await expect(review(agent)).resolves.toMatchObject({
+      suggestions: completeSuggestions(),
+      tokenUsage: { inputTokens: 180, outputTokens: 30, totalTokens: 210 },
+    });
+
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect(createSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      diagnosticStage: "visual-analysis.semantic-repair",
+      systemPrompt: expect.stringContaining("唯一一次语义纠正"),
+    }));
+    expect(initialInvoke).toHaveBeenCalledOnce();
+    expect(repairInvoke).toHaveBeenCalledOnce();
+    expect(repairInvoke.mock.calls[0]?.[0].messages).toHaveLength(3);
+    expect(repairInvoke.mock.calls[0]?.[0].messages[2]?.content).toContain(
+      '"validationCode":"VISUAL_SUGGESTION_MISSING"',
+    );
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        taskId: "task-1",
+        stage: "visual-analysis.semantic-validation",
+        attempt: 1,
+        status: "semantic-output-invalid",
+        errorCode: "VISUAL_SUGGESTION_MISSING",
+        retryable: true,
+        validationRules: ["suggestions.cover-all-candidates"],
+      }),
+      expect.objectContaining({
+        attempt: 2,
+        status: "semantic-output-repaired",
+        errorCode: "VISUAL_SUGGESTION_MISSING",
+        validationRules: ["suggestions.cover-all-candidates"],
+      }),
+    ]);
+    expect(JSON.stringify(diagnostics)).not.toContain("component:3:00700");
+  });
+
+  it("stops after one failed semantic repair and marks the final rule non-retryable", async () => {
+    const diagnostics: AgentCore.ModelInvocationDiagnostic[] = [];
+    const initialInvoke = vi.fn(async (_input: AgentCore.AgentInput) => ({
+      response: "done",
+      structuredResponse: createStructuredResponse([completeSuggestions()[0]]),
+    }));
+    const repairInvoke = vi.fn(async (_input: AgentCore.AgentInput) => ({
+      response: "done",
+      structuredResponse: createStructuredResponse([{
+        candidateId: "component:unknown", confidence: 0.8, evidence: ["无法定位"],
+      }]),
+    }));
+    vi.spyOn(AgentCore, "createRestrictedDeepAgent")
+      .mockReturnValueOnce({ invoke: initialInvoke })
+      .mockReturnValueOnce({ invoke: repairInvoke });
+    const agent = createVisualComponentSubagent({
+      diagnosticReporter: (event) => { diagnostics.push(event); },
+    });
+
+    await expect(review(agent)).rejects.toThrow("视觉 Subagent 纠正后仍未通过业务校验");
+
+    expect(initialInvoke).toHaveBeenCalledOnce();
+    expect(repairInvoke).toHaveBeenCalledOnce();
+    expect(diagnostics.at(-1)).toMatchObject({
+      stage: "visual-analysis.semantic-validation",
+      attempt: 2,
+      status: "semantic-output-invalid",
+      errorCode: "VISUAL_SUGGESTION_UNKNOWN_CANDIDATE",
+      retryable: false,
+      validationRules: ["suggestions.candidate-known"],
+    });
+    expect(JSON.stringify(diagnostics)).not.toContain("component:unknown");
+  });
+
   it("accepts semantic layout IDs when their source nodes are authoritative", async () => {
     const agent = createAgent(completeSuggestions(), [{
       id: "left-panel",
@@ -219,19 +309,33 @@ function createAgent(
   elements: unknown[] = [],
 ) {
   vi.spyOn(AgentCore, "createRestrictedDeepAgent").mockReturnValue({
-    invoke: async () => ({ response: "done", structuredResponse: {
-      suggestions,
-      additionalCandidates,
-      layout: {
-        summary: "左右布局",
-        regions: regions.map((region) => ({ ...(region as object), direction: "unknown" })),
-        evidence: ["整体图"], warnings: [],
-      },
-      interactions: [],
-      elements,
-    } }),
+    invoke: async () => ({
+      response: "done",
+      structuredResponse: createStructuredResponse(suggestions, regions, additionalCandidates, elements),
+    }),
   });
   return createVisualComponentSubagent({});
+}
+
+/** 创建可按用例覆盖候选、布局和元素集合的完整视觉响应。 */
+function createStructuredResponse(
+  suggestions: unknown[],
+  regions: unknown[] = [],
+  additionalCandidates: unknown[] = [],
+  elements: unknown[] = [],
+) {
+  return {
+    suggestions,
+    additionalCandidates,
+    layout: {
+      summary: "左右布局",
+      regions: regions.map((region) => ({ ...(region as object), direction: "unknown" })),
+      evidence: ["整体图"],
+      warnings: [],
+    },
+    interactions: [],
+    elements,
+  };
 }
 
 /** 返回覆盖全部权威候选的最小视觉建议。 */

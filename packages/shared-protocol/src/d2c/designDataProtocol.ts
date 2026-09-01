@@ -13,6 +13,7 @@ export const designArtifactReferenceSchema = z.object({
 export const getDesignDataIndexInputSchema = z.object({
   taskId: z.string().uuid(),
   artifactId: z.string().uuid(),
+  projectPath: z.string().optional(),
 });
 
 /** 校验读取单个原始设计 Section 的参数。 */

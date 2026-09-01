@@ -64,6 +64,25 @@ describe("communication request handler", () => {
     expect(JSON.stringify(recordFailure.mock.calls)).not.toContain("Bearer secret");
   });
 
+  it("records workspace context for a successful non-snapshot task result", async () => {
+    const recordSuccess = vi.fn(async () => undefined);
+    const handler = new CommunicationRequestHandler({
+      workflowService: { handle: async () => ({ taskId: "task-123", deleted: true }) },
+      requestLogger: createLogger(recordSuccess, vi.fn(async () => undefined)),
+      clock: createClock(2, 7),
+    });
+
+    await handler.handle(createRequest({ taskId: "task-123", projectPath: "/workspace" }));
+
+    expect(recordSuccess).toHaveBeenCalledWith({
+      requestId: "request-1",
+      method: "ui-forge.d2c.initialize",
+      durationMs: 5,
+      taskId: "task-123",
+      projectPath: "/workspace",
+    });
+  });
+
   it("does not turn a successful workflow into a failure when an injected logger rejects", async () => {
     const snapshot = createSnapshot();
     const handler = new CommunicationRequestHandler({
@@ -110,7 +129,9 @@ function createSnapshot(): D2CWorkflowSnapshot {
         projectValidation: null,
         designComponentRecognition: null,
         plan: null,
+        planApproval: null,
       },
+      codeGeneration: { status: "idle" },
     },
   };
 }

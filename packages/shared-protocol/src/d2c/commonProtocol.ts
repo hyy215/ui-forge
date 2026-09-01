@@ -7,6 +7,13 @@ export const d2cWorkflowStatuses = [
   "svg_ready",
   "design_confirmed",
   "analysis_ready",
+  "plan_approved",
+  "patch_ready",
+  "patch_applied",
+  "command_approval_required",
+  "command_approved",
+  "validation_blocked",
+  "delivery_ready",
 ] as const;
 
 /** 校验 Server 通过快照向客户端公开的 D2C 工作流业务状态。 */
@@ -16,11 +23,13 @@ export const d2cWorkflowStatusSchema = z.enum(d2cWorkflowStatuses);
 export const d2cTaskCommandInputSchema = z.object({
   taskId: z.string().uuid(),
   expectedRevision: z.number().int().nonnegative(),
+  projectPath: z.string().optional(),
 });
 
 /** 校验只读取任务快照所需的任务标识。 */
 export const getD2CWorkflowSnapshotInputSchema = z.object({
   taskId: z.string().uuid(),
+  projectPath: z.string().optional(),
 });
 
 /** Server 快照向客户端公开的 D2C 工作流业务状态。 */

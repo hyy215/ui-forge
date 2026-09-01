@@ -60,6 +60,7 @@ export function PlanDetails({ plan }: PlanDetailsProps) {
       </section>
       <section className="plan-section">
         <div className="plan-section-title"><span>4</span><strong>修改步骤与验收条件</strong></div>
+        <p>自动渲染入口：<code>{plan.validationTarget.previewPath}</code></p>
         <ol className="plan-step-list">
           {plan.steps.map((step) => <li key={step.id}>
             <div className="plan-step-content">

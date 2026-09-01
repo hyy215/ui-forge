@@ -13,6 +13,7 @@ const initial = createConversationStreamState({
   projectValidation: null,
   designComponentRecognition: null,
   plan: null,
+  planApproval: null,
 });
 
 describe("conversation stream state", () => {
@@ -115,6 +116,7 @@ describe("conversation stream state", () => {
             risks: [],
           }],
           files: [],
+          validationTarget: { previewPath: "/" },
           contextGaps: ["缺少文件证据"],
           stopConditions: ["验证失败时停止"],
         },

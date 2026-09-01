@@ -1,6 +1,7 @@
 /** 定义主 Plan Agent 可持久化的设计理解、复用决策和文件级审阅方案。 */
 
 import type { DesignUnderstanding } from "../design-understanding/designUnderstanding.js";
+import type { DeliveryValidationTarget } from "../delivery-validation/projectDeliveryValidator.js";
 
 /** 方案中一个有明确来源的组件选择。 */
 export interface PlanningComponent {
@@ -64,6 +65,7 @@ export interface PlanningResult {
   fileImpacts: PlanningFileImpact[];
   steps: PlanningStep[];
   files: string[];
+  validationTarget: DeliveryValidationTarget;
   contextGaps: string[];
   stopConditions: string[];
 }

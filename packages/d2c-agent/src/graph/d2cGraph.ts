@@ -13,6 +13,9 @@ import type { PlanDeepAgent } from "../second-step/planDeepAgent.js";
 import type { SecondStepProgressReporter } from "../second-step/secondStepProgress.js";
 import type { ComponentCatalog } from "../design-components/componentCatalog.js";
 import type { DesignSystemKnowledgeProvider } from "../design-system/designSystemKnowledge.js";
+import type { ProjectCodeContextReader } from "../code-generation/projectCodeContext.js";
+import type { CodeGenerationAgent } from "../code-generation/codeGenerationAgent.js";
+import type { CodeGenerationProgressReporter } from "../code-generation/codeGenerationProgress.js";
 import { createInspectDesignNode, inspectDesignNodeId } from "./nodes/inspect-design/inspectDesignNode.js";
 import { createInspectProjectNode, inspectProjectNodeId } from "./nodes/inspect-project/inspectProjectNode.js";
 import { createPlanDeepAgentNode, planDeepAgentNodeId } from "./nodes/plan/planDeepAgentNode.js";
@@ -32,6 +35,11 @@ import {
   analyzeProjectContextNodeId,
   createAnalyzeProjectContextNode,
 } from "./nodes/analyze-project-context/analyzeProjectContextNode.js";
+import {
+  CodeGenerationBlockedError,
+  createGenerateCodeNode,
+  generateCodeNodeId,
+} from "./nodes/generate-code/generateCodeNode.js";
 
 /** 创建 D2C Graph 所需的节点能力与状态持久化依赖。 */
 export interface D2CGraphDependencies {
@@ -43,6 +51,8 @@ export interface D2CGraphDependencies {
   baseComponentCatalog: ComponentCatalog;
   designSystemKnowledgeProvider?: DesignSystemKnowledgeProvider;
   planDeepAgent: PlanDeepAgent;
+  codeGenerationAgent?: CodeGenerationAgent;
+  projectCodeContextReader?: ProjectCodeContextReader;
   checkpointer?: AgentCore.Checkpointer;
 }
 
@@ -50,8 +60,12 @@ export interface D2CGraphDependencies {
 export interface D2CGraph {
   /** 读取任务线程中的最新权威任务。 */
   getTask(taskId: string): Promise<D2CTask | undefined>;
+  /** 枚举全部任务线程中的最新权威任务。 */
+  listTasks(): Promise<D2CTask[]>;
   /** 保存完整权威任务并丢弃节点临时输出。 */
   saveTask(task: D2CTask): Promise<D2CTask>;
+  /** 永久删除任务线程的全部 Checkpoint 历史。 */
+  deleteTask(taskId: string): Promise<void>;
   /** 从固定路径起点执行设计检查。 */
   inspectDesign(taskId: string, source: DesignSource): Promise<DesignInspection>;
   /** 从设计确认暂停点恢复并执行唯一的第二步 DeepAgent 节点。 */
@@ -64,12 +78,23 @@ export interface D2CGraph {
     componentRecognition?: import("../design-components/designComponentRecognition.js").DesignComponentRecognition;
     plan?: import("../planning/planningResult.js").PlanningResult;
   }>;
+  /** 从已审阅 Plan 暂停点恢复并生成不写入仓库的候选 Patch。 */
+  generateCode(
+    taskId: string,
+    reportProgress?: CodeGenerationProgressReporter,
+    signal?: AbortSignal,
+  ): Promise<{
+    outcome: import("../code-generation/codePatch.js").CodeGenerationOutcome;
+    evolvingPlan?: import("../planning/evolvingPlan.js").EvolvingPlanningResult;
+  }>;
 }
 
 /** 创建一个由所有当前 D2C 节点共享的编译 Graph。 */
 export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
   const progressReporters = new Map<string, SecondStepProgressReporter>();
   const abortSignals = new Map<string, AbortSignal>();
+  const codeProgressReporters = new Map<string, CodeGenerationProgressReporter>();
+  const codeAbortSignals = new Map<string, AbortSignal>();
   const graph = AgentCore.createGraph<D2CGraphState>({
     nodes: [
       createInspectDesignNode(dependencies.designContextResolver),
@@ -98,6 +123,17 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
         (taskId) => progressReporters.get(taskId),
         (taskId) => abortSignals.get(taskId),
       ),
+      createGenerateCodeNode(
+        dependencies.codeGenerationAgent ?? {
+          generate: async () => { throw new Error("当前未配置 Code Agent。"); },
+        },
+        dependencies.projectCodeContextReader ?? {
+          read: async () => { throw new Error("当前未配置目标仓库代码上下文读取器。"); },
+        },
+        dependencies.projectContextAnalyzer,
+        (taskId) => codeProgressReporters.get(taskId),
+        (taskId) => codeAbortSignals.get(taskId),
+      ),
     ],
     edges: [
       { from: AgentCore.graphStart, to: inspectDesignNodeId },
@@ -105,7 +141,8 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
       { from: resolveDesignSystemCatalogNodeId, to: recognizeDesignComponentsNodeId },
       { from: recognizeDesignComponentsNodeId, to: analyzeProjectContextNodeId },
       { from: analyzeProjectContextNodeId, to: planDeepAgentNodeId },
-      { from: planDeepAgentNodeId, to: AgentCore.graphEnd },
+      { from: planDeepAgentNodeId, to: generateCodeNodeId },
+      { from: generateCodeNodeId, to: AgentCore.graphEnd },
     ],
     routes: [{
       from: inspectProjectNodeId,
@@ -114,7 +151,7 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
         ? AgentCore.graphEnd
         : resolveDesignSystemCatalogNodeId,
     }],
-    pauseAfter: [inspectDesignNodeId],
+    pauseAfter: [inspectDesignNodeId, planDeepAgentNodeId],
     checkpointer: dependencies.checkpointer ?? AgentCore.createMemoryCheckpointer(),
   });
 
@@ -123,10 +160,19 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
     async getTask(taskId) {
       return (await graph.getState(taskId))?.task;
     },
+    /** 从通用 Checkpointer 枚举每个线程的最新任务状态。 */
+    async listTasks() {
+      const states = await graph.listStates();
+      return states.flatMap(({ state }) => state.task ? [structuredClone(state.task)] : []);
+    },
     /** 替换权威任务，并在每个命令提交点清空全部临时执行上下文。 */
     async saveTask(task) {
       await graph.setState(task.taskId, createPersistedD2CGraphState(task));
       return structuredClone(task);
+    },
+    /** 永久删除任务线程，不保留可恢复 Checkpoint。 */
+    async deleteTask(taskId) {
+      await graph.deleteState(taskId);
     },
     /** 从 START 执行唯一的设计检查节点。 */
     async inspectDesign(taskId, source) {
@@ -160,6 +206,30 @@ export function createD2CGraph(dependencies: D2CGraphDependencies): D2CGraph {
       } finally {
         progressReporters.delete(taskId);
         abortSignals.delete(taskId);
+      }
+    },
+    /** 从方案暂停点恢复代码节点；阻塞异常保留暂停位置供后续重试。 */
+    async generateCode(taskId, reportProgress, signal) {
+      if (reportProgress) codeProgressReporters.set(taskId, reportProgress);
+      if (signal) codeAbortSignals.set(taskId, signal);
+      try {
+        const result = await graph.resume(taskId);
+        const outcome = result.execution?.codeGeneration;
+        if (!outcome) throw new Error("D2C Graph 代码生成节点未返回结果。");
+        return {
+          outcome,
+          ...(result.execution?.evolvingPlan
+            ? { evolvingPlan: result.execution.evolvingPlan }
+            : {}),
+        };
+      } catch (error: unknown) {
+        if (error instanceof CodeGenerationBlockedError) {
+          return { outcome: structuredClone(error.outcome) };
+        }
+        throw error;
+      } finally {
+        codeProgressReporters.delete(taskId);
+        codeAbortSignals.delete(taskId);
       }
     },
   };

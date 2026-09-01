@@ -8,6 +8,8 @@ import type { D2CTask } from "../d2cTask.js";
 import type { ProjectInspection } from "../project-context/projectInspection.js";
 import type { ProjectContextAnalysis } from "../project-context/projectContextAnalysis.js";
 import type { PlanningResult } from "../planning/planningResult.js";
+import type { EvolvingPlanningResult } from "../planning/evolvingPlan.js";
+import type { CodeGenerationOutcome } from "../code-generation/codePatch.js";
 
 /** 只在一次 Graph 调用或暂停恢复过程中流转的节点上下文。 */
 export interface D2CGraphExecutionState {
@@ -19,6 +21,8 @@ export interface D2CGraphExecutionState {
   projectContextAnalysis?: ProjectContextAnalysis;
   componentRecognition?: DesignComponentRecognition;
   plan?: PlanningResult;
+  evolvingPlan?: EvolvingPlanningResult;
+  codeGeneration?: CodeGenerationOutcome;
 }
 
 /** Graph Checkpoint 中的权威任务与可丢弃执行上下文。 */

@@ -50,6 +50,9 @@ export function buildApp(options: BuildAppOptions = {}) {
     ...(requestLogger?.recordModelInvocation
       ? { modelDiagnosticReporter: (event) => requestLogger.recordModelInvocation!(event) }
       : {}),
+    ...(requestLogger?.recordCommandAudit
+      ? { commandAuditReporter: (event) => requestLogger.recordCommandAudit!(event) }
+      : {}),
   });
   const requestHandler = new CommunicationRequestHandler({
     workflowService: d2cWorkflowService,

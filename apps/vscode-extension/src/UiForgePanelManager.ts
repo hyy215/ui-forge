@@ -18,8 +18,11 @@ export class UiForgePanelManager {
   private panel: vscode.WebviewPanel | undefined;
   private readonly activeStreamControllers = new Map<string, AbortController>();
 
-  /** 保存 Extension 根目录，用于解析构建后的 Webview 静态资源。 */
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  /** 保存 Extension 根目录和任务变更通知，用于刷新原生侧边栏。 */
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly onTasksChanged: () => void = () => undefined,
+  ) {}
 
   /** 打开或聚焦 UiForge 主视图，不主动改变当前 Webview 页面。 */
   async open(): Promise<void> {
@@ -28,7 +31,12 @@ export class UiForgePanelManager {
 
   /** 打开主视图，并直接以任务设置路由初始化 Webview。 */
   async openTaskSetup(): Promise<void> {
-    await this.resolvePanel("#/task-workflow");
+    await this.resolvePanel("#/task-workflow/new");
+  }
+
+  /** 打开主视图并加载指定持久化任务，不自动执行后续步骤。 */
+  async openTask(taskId: string): Promise<void> {
+    await this.resolvePanel(`#/task-workflow/${encodeURIComponent(taskId)}`);
   }
 
   /** 复用现有 Panel，或按指定初始路由创建并加载主视图 Panel。 */
@@ -133,10 +141,10 @@ export class UiForgePanelManager {
       return;
     }
 
-    const forwardedMessage = message.kind === "request"
-      && message.method === d2cWorkflowMethods.initialize
+    const forwardedMessage = (message.kind === "request" || message.kind === "stream-request")
       && projectPath
-      ? { ...message, params: { projectPath } }
+      && requiresWorkspaceContext(message.method)
+      ? { ...message, params: addProjectPath(message.params, projectPath) }
       : message;
 
     if (forwardedMessage.kind === "stream-request") {
@@ -158,6 +166,7 @@ export class UiForgePanelManager {
       if (!response.ok) throw new Error(`Agent Server 返回 ${response.status}。`);
       const responseMessage = communicationResponseMessageSchema.parse(await response.json());
       await webview.postMessage(responseMessage);
+      if (responseMessage.success && changesTaskSummary(message.method)) this.onTasksChanged();
     } catch (error: unknown) {
       if (message.kind === "notification") return;
       const errorMessage = error instanceof Error ? error.message : "Agent Server 通信失败。";
@@ -216,6 +225,7 @@ export class UiForgePanelManager {
       buffer += decoder.decode();
       await forwardLine(buffer);
       if (!finished) throw new Error("Agent Server 流在完成消息前结束。");
+      this.onTasksChanged();
     } catch (error: unknown) {
       if (controller.signal.aborted) return;
       const errorMessage = error instanceof Error ? error.message : "Agent Server 流式通信失败。";
@@ -230,4 +240,30 @@ export class UiForgePanelManager {
       }
     }
   }
+}
+
+/** 判断宿主是否必须为请求补充可信 Workspace 路径。 */
+function requiresWorkspaceContext(method: string): boolean {
+  return Object.values(d2cWorkflowMethods).some((candidate) => candidate === method);
+}
+
+/** 在保留协议参数的同时附加宿主解析的项目路径。 */
+function addProjectPath(params: unknown, projectPath: string): Record<string, unknown> {
+  return params && typeof params === "object" && !Array.isArray(params)
+    ? { ...params, projectPath }
+    : { projectPath };
+}
+
+/** 判断一次普通请求是否会改变侧边栏摘要。 */
+function changesTaskSummary(method: string): boolean {
+  return method === d2cWorkflowMethods.initialize
+    || method === d2cWorkflowMethods.inspectDesign
+    || method === d2cWorkflowMethods.confirmDesign
+    || method === d2cWorkflowMethods.approvePlan
+    || method === d2cWorkflowMethods.approveDeliveryCommands
+    || method === d2cWorkflowMethods.reset
+    || method === d2cWorkflowMethods.renameTask
+    || method === d2cWorkflowMethods.archiveTask
+    || method === d2cWorkflowMethods.restoreTask
+    || method === d2cWorkflowMethods.deleteTask;
 }

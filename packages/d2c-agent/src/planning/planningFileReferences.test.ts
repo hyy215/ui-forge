@@ -153,6 +153,7 @@ function createPlan(consumers: string[]): PlanningResult {
       decision: "validate", dependsOn: [], files: [], evidence: ["测试"], acceptanceCriteria: ["通过"], risks: [],
     }],
     files: [],
+    validationTarget: { previewPath: "/" },
     contextGaps: [],
     stopConditions: ["不得写入"],
   };

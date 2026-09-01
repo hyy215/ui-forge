@@ -36,7 +36,9 @@ export function createTaskWorkflowFixture(): TaskWorkflowViewModel {
       projectValidation: null,
       designComponentRecognition: null,
       plan: null,
+      planApproval: null,
     },
+    codeGeneration: { status: "idle" },
   };
 }
 

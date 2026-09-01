@@ -3,6 +3,7 @@
 import { appendFile, lstat, mkdir, readdir, rm, rmdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { D2CWorkflowSnapshot } from "@ui-forge/shared-protocol";
+import type { D2CAgent } from "@ui-forge/d2c-agent";
 import {
   WorkspaceIdentityResolver,
   type WorkspaceIdentity,
@@ -15,6 +16,7 @@ export interface SuccessfulCommunicationLog {
   durationMs: number;
   snapshot?: D2CWorkflowSnapshot;
   taskId?: string;
+  projectPath?: string;
 }
 
 /** 单次通信日志失败结果所需的安全上下文。 */
@@ -41,6 +43,8 @@ export interface ModelInvocationLog {
     | "turn-failed"
     | "structured-output-invalid"
     | "structured-output-repaired"
+    | "semantic-output-invalid"
+    | "semantic-output-repaired"
     | "succeeded"
     | "failed";
   turn?: number;
@@ -54,6 +58,7 @@ export interface ModelInvocationLog {
   retryable?: boolean;
   validationIssueCount?: number;
   validationIssuePaths?: string[];
+  validationRules?: string[];
 }
 
 /** 通信路由依赖的最小日志端口，便于测试和宿主替换持久化实现。 */
@@ -63,6 +68,7 @@ export interface CommunicationRequestLogger {
   recordSuccess(input: SuccessfulCommunicationLog): Promise<void>;
   recordFailure(input: FailedCommunicationLog): Promise<void>;
   recordModelInvocation?(input: ModelInvocationLog): Promise<void>;
+  recordCommandAudit?(input: D2CAgent.DeliveryCommandAuditEvent): Promise<void>;
 }
 
 /** Workspace JSONL 日志的创建选项。 */
@@ -137,6 +143,7 @@ export class WorkspaceRequestLogger implements CommunicationRequestLogger {
       const timestamp = this.now();
       const projectPath = input.snapshot?.viewModel.setup.projectPath
         ?? (input.taskId ? this.taskWorkspaces.get(input.taskId)?.projectPath : undefined)
+        ?? input.projectPath
         ?? "";
       const identity = input.taskId
         ? this.taskWorkspaces.get(input.taskId)?.identity ?? await this.resolveIdentity(projectPath)
@@ -218,7 +225,60 @@ export class WorkspaceRequestLogger implements CommunicationRequestLogger {
         ...(input.validationIssuePaths && input.validationIssuePaths.length > 0
           ? { validationIssuePaths: input.validationIssuePaths.join(",") }
           : {}),
+        ...(input.validationRules && input.validationRules.length > 0
+          ? { validationRules: input.validationRules.join(",") }
+          : {}),
       });
+    });
+  }
+
+  /** 逐条记录真实命令生命周期，不保存环境变量、认证信息或完整输出。 */
+  async recordCommandAudit(input: D2CAgent.DeliveryCommandAuditEvent): Promise<void> {
+    await this.persistSafely(async () => {
+      const timestamp = this.now();
+      const knownWorkspace = this.taskWorkspaces.get(input.taskId);
+      const identity = knownWorkspace?.identity ?? await this.resolveIdentity(
+        knownWorkspace?.projectPath ?? "",
+      );
+      const commands = "commands" in input
+        ? input.commands
+        : input.command ? [input.command] : [];
+      if (commands.length === 0) {
+        await this.append(identity, input.taskId, timestamp, {
+          timestamp: timestamp.toISOString(),
+          event: `command.${input.type}`,
+          workspaceType: identity.type,
+          workspace: identity.value,
+          taskId: input.taskId,
+          commandPlanHash: input.commandPlanHash,
+          ...(input.type === "blocked" ? { reasonCode: input.reasonCode } : {}),
+        });
+        return;
+      }
+      for (const command of commands) {
+        await this.append(identity, input.taskId, timestamp, {
+          timestamp: timestamp.toISOString(),
+          event: `command.${input.type}`,
+          workspaceType: identity.type,
+          workspace: identity.value,
+          taskId: input.taskId,
+          commandPlanHash: input.commandPlanHash,
+          commandId: command.commandId,
+          purpose: command.purpose,
+          cwd: command.cwd,
+          executable: command.executable,
+          arguments: JSON.stringify(command.arguments),
+          displayCommand: command.displayCommand,
+          networkAccess: command.networkAccess,
+          workspaceScope: command.workspaceScope,
+          timeoutMs: command.timeoutMs,
+          ...(input.type === "completed" ? {
+            exitCode: input.exitCode ?? "null",
+            durationMs: input.durationMs,
+          } : {}),
+          ...(input.type === "blocked" ? { reasonCode: input.reasonCode } : {}),
+        });
+      }
     });
   }
 

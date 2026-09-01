@@ -37,6 +37,7 @@ describe("conversation protocol", () => {
       },
       designComponentRecognition: null,
       plan: null,
+      planApproval: null,
     });
 
     expect(viewModel.plan).toBeNull();
@@ -163,6 +164,7 @@ describe("conversation protocol", () => {
           evidence: ["设计结构"], acceptanceCriteria: ["布局明确"], risks: [],
         }],
         files: ["src/CustomerTable.tsx"],
+        validationTarget: { previewPath: "/" },
         contextGaps: [],
         stopConditions: ["验证失败时停止"],
       },
@@ -201,6 +203,7 @@ describe("conversation protocol", () => {
           decision: "validate", dependsOn: [], files: [], evidence: ["约束"], acceptanceCriteria: ["拒绝冲突"], risks: [],
         }],
         files: [],
+        validationTarget: { previewPath: "/" },
         contextGaps: [],
         stopConditions: ["来源冲突时停止"],
       },

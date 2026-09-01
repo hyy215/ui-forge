@@ -20,6 +20,13 @@ function successfulNegotiationResult() {
       "ordered-stream",
       "stream-cancel",
       "persisted-design-confirmation",
+      "persisted-plan-approval",
+      "reviewable-code-patch",
+      "automatic-controlled-patch-application",
+      "automatic-delivery-validation",
+      "exact-workspace-command-approval",
+      "persistent-workspace-task-list",
+      "permanent-workspace-task-deletion",
     ],
   };
 }
