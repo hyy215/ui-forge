@@ -1,12 +1,18 @@
 /** 创建在外层、内部 Completions 与配置克隆路径上都禁止远程编码表的 OpenAI 兼容模型。 */
 
+import type { CallbackManagerForLLMRun } from "@langchain/core/callbacks/manager";
 import type { BaseMessage, MessageContent } from "@langchain/core/messages";
+import type { ChatGenerationChunk } from "@langchain/core/outputs";
 import {
   ChatOpenAI,
   ChatOpenAICompletions,
   type ChatOpenAIFields,
 } from "@langchain/openai";
 import { countMessageTokensLocally } from "./localTokenCounter.js";
+import {
+  isTransientModelTransportError,
+  ModelStreamRetryExhaustedError,
+} from "./modelTransportFailure.js";
 
 /** 创建完整保留本地 Token 统计能力的 OpenAI 兼容聊天模型。 */
 export function createLocallyTokenizedChatOpenAI(fields: ChatOpenAIFields): ChatOpenAI {
@@ -44,6 +50,35 @@ class LocallyTokenizedChatOpenAI extends ChatOpenAI {
 
 /** 覆盖流式响应结束后由 SDK 内部执行的输入与输出 Token 估算。 */
 class LocallyTokenizedChatOpenAICompletions extends ChatOpenAICompletions {
+  /**
+   * 缓冲一个完整模型轮次；瞬时断流时丢弃不完整 chunk 并重试同一模型请求一次。
+   * 诊断回调仍观察每次网络流量，但 Deep Agent 只消费完整成功的最后一次输出。
+   */
+  override async *_streamResponseChunks(
+    messages: BaseMessage[],
+    options: this["ParsedCallOptions"],
+    runManager?: CallbackManagerForLLMRun,
+  ): AsyncGenerator<ChatGenerationChunk> {
+    const maximumAttempts = 2;
+    for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+      const bufferedChunks: ChatGenerationChunk[] = [];
+      try {
+        for await (const chunk of super._streamResponseChunks(
+          messages,
+          options,
+          runManager,
+        )) {
+          bufferedChunks.push(chunk);
+        }
+        yield* bufferedChunks;
+        return;
+      } catch (error: unknown) {
+        if (options.signal?.aborted || !isTransientModelTransportError(error)) throw error;
+        if (attempt === maximumAttempts) throw new ModelStreamRetryExhaustedError(error);
+      }
+    }
+  }
+
   /** 使用本地编码表统计单段消息内容。 */
   override async getNumTokens(content: MessageContent): Promise<number> {
     return countMessageTokensLocally(content);
