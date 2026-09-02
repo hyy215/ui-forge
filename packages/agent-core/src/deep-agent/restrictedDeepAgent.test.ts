@@ -33,6 +33,7 @@ vi.mock("@langchain/openai", () => ({
 }));
 
 import { RestrictedDeepAgent } from "./restrictedDeepAgent.js";
+import { ModelStreamRetryExhaustedError } from "./modelTransportFailure.js";
 
 describe("RestrictedDeepAgent", () => {
   it("rejects an empty conversation before creating a model runtime", async () => {
@@ -380,53 +381,7 @@ describe("RestrictedDeepAgent", () => {
     );
   });
 
-  it("retries a transient model transport termination once", async () => {
-    const invoke = vi.fn()
-      .mockRejectedValueOnce(new Error("terminated"))
-      .mockResolvedValueOnce({ messages: [{ role: "assistant", content: "done" }] });
-    deepAgentMocks.createDeepAgent.mockReturnValueOnce({ invoke });
-    const agent = new RestrictedDeepAgent({
-      provider: "qwen",
-      model: "test-model",
-      apiKey: "test-key",
-    });
-
-    await expect(agent.invoke({
-      messages: [{ role: "user", content: "analyze" }],
-    })).resolves.toEqual({ response: "done" });
-    expect(invoke).toHaveBeenCalledTimes(2);
-  });
-
-  it("reports safe diagnostics for each transient model attempt", async () => {
-    const invoke = vi.fn()
-      .mockRejectedValueOnce(Object.assign(new Error("terminated"), { code: "UND_ERR_SOCKET" }))
-      .mockResolvedValueOnce({ messages: [{ role: "assistant", content: "done" }] });
-    const diagnostics: unknown[] = [];
-    deepAgentMocks.createDeepAgent.mockReturnValueOnce({ invoke });
-    const agent = new RestrictedDeepAgent({
-      provider: "qwen",
-      model: "test-model",
-      apiKey: "test-key",
-      diagnosticStage: "visual-analysis",
-      diagnosticReporter: (event) => { diagnostics.push(event); },
-    });
-
-    await agent.invoke({
-      messages: [{ role: "user", content: "analyze" }],
-      context: { taskId: "task-1", values: {} },
-    });
-
-    expect(diagnostics).toEqual([
-      expect.objectContaining({ taskId: "task-1", stage: "visual-analysis", attempt: 1, status: "started" }),
-      expect.objectContaining({ attempt: 1, status: "failed", errorName: "Error", errorCode: "UND_ERR_SOCKET", retryable: true }),
-      expect.objectContaining({ attempt: 2, status: "started" }),
-      expect.objectContaining({ attempt: 2, status: "succeeded" }),
-    ]);
-    expect(JSON.stringify(diagnostics)).not.toContain("terminated");
-    expect(JSON.stringify(diagnostics)).not.toContain("analyze");
-  });
-
-  it("reports a clear error after the single transport retry is exhausted", async () => {
+  it("does not replay the whole Deep Agent after a transient model failure", async () => {
     const invoke = vi.fn().mockRejectedValue(new Error("terminated"));
     deepAgentMocks.createDeepAgent.mockReturnValueOnce({ invoke });
     const agent = new RestrictedDeepAgent({
@@ -437,8 +392,52 @@ describe("RestrictedDeepAgent", () => {
 
     await expect(agent.invoke({
       messages: [{ role: "user", content: "analyze" }],
-    })).rejects.toThrow("模型连接中断，自动重试 1 次后仍然失败：terminated");
-    expect(invoke).toHaveBeenCalledTimes(2);
+    })).rejects.toThrow("当前调用无法安全整体重放");
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports safe diagnostics without replaying the whole Deep Agent", async () => {
+    const invoke = vi.fn()
+      .mockRejectedValue(Object.assign(new Error("terminated"), { code: "UND_ERR_SOCKET" }));
+    const diagnostics: unknown[] = [];
+    deepAgentMocks.createDeepAgent.mockReturnValueOnce({ invoke });
+    const agent = new RestrictedDeepAgent({
+      provider: "qwen",
+      model: "test-model",
+      apiKey: "test-key",
+      diagnosticStage: "visual-analysis",
+      diagnosticReporter: (event) => { diagnostics.push(event); },
+    });
+
+    await expect(agent.invoke({
+      messages: [{ role: "user", content: "analyze" }],
+      context: { taskId: "task-1", values: {} },
+    })).rejects.toThrow("当前调用无法安全整体重放");
+
+    expect(diagnostics).toEqual([
+      expect.objectContaining({ taskId: "task-1", stage: "visual-analysis", attempt: 1, status: "started" }),
+      expect.objectContaining({ attempt: 1, status: "failed", errorName: "Error", errorCode: "UND_ERR_SOCKET", retryable: true }),
+    ]);
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(diagnostics)).not.toContain("terminated");
+    expect(JSON.stringify(diagnostics)).not.toContain("analyze");
+  });
+
+  it("preserves the clear error produced after the model stream retry is exhausted", async () => {
+    const invoke = vi.fn().mockRejectedValue(
+      new ModelStreamRetryExhaustedError(new TypeError("terminated")),
+    );
+    deepAgentMocks.createDeepAgent.mockReturnValueOnce({ invoke });
+    const agent = new RestrictedDeepAgent({
+      provider: "qwen",
+      model: "test-model",
+      apiKey: "test-key",
+    });
+
+    await expect(agent.invoke({
+      messages: [{ role: "user", content: "analyze" }],
+    })).rejects.toThrow("模型流式连接中断，自动重试 1 次后仍然失败：terminated");
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 
   it("does not automatically replay an invocation that contains controlled tools", async () => {
@@ -460,7 +459,7 @@ describe("RestrictedDeepAgent", () => {
 
     await expect(agent.invoke({
       messages: [{ role: "user", content: "analyze" }],
-    })).rejects.toThrow("当前调用包含不可重复执行的受控工具");
+    })).rejects.toThrow("当前调用无法安全整体重放");
     expect(invoke).toHaveBeenCalledTimes(1);
   });
 

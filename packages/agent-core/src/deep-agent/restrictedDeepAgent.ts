@@ -31,6 +31,13 @@ import {
   reportDiagnosticSafely,
   type ModelDiagnosticReporter,
 } from "./modelInvocationDiagnostics.js";
+import {
+  isTransientModelTransportError,
+  ModelStreamRetryExhaustedError,
+  readModelTransportErrorCode,
+  readModelTransportErrorMessage,
+  readModelTransportErrorName,
+} from "./modelTransportFailure.js";
 export type {
   ModelDiagnosticReporter,
   ModelInvocationDiagnostic,
@@ -125,13 +132,12 @@ export class RestrictedDeepAgent implements Agent {
         ? { responseFormat: toolStrategy(this.options.responseSchema) }
         : {}),
     });
-    const result = await invokeWithTransientTransportRetry(
+    const result = await invokeWithTransportDiagnostics(
       (callbacks) => agent.invoke(
         { messages: input.messages.map(toLangChainMessage) },
         { ...(input.signal ? { signal: input.signal } : {}), callbacks },
       ),
       input.signal,
-      tools.length === 0 && subagents.length === 0,
       this.options.diagnosticStage ?? "agent-invocation",
       this.options.diagnosticReporter,
       input.context?.taskId,
@@ -307,7 +313,7 @@ async function repairStructuredResponse(
 最终只返回一个符合以下 JSON Schema 的 JSON 对象，不得包含解释或 Markdown 代码块。
 ${JSON.stringify(toJSONSchema(schema))}`,
   });
-  const repairResult = await invokeWithTransientTransportRetry(
+  const repairResult = await invokeWithTransportDiagnostics(
     (callbacks) => repairAgent.invoke({
       messages: [new HumanMessage(JSON.stringify({
         repairKind: error.kind,
@@ -317,7 +323,6 @@ ${JSON.stringify(toJSONSchema(schema))}`,
       }))],
     }, { ...(signal ? { signal } : {}), callbacks }),
     signal,
-    true,
     `${diagnosticStage}.json-repair`,
     diagnosticReporter,
     taskId,
@@ -370,98 +375,59 @@ function unwrapJsonFence(response: string): string {
   return (match?.[1] ?? response).trim();
 }
 
-/** 对明确的模型传输中断最多重试一次，并保留取消与业务校验异常。 */
-async function invokeWithTransientTransportRetry<T>(
+/** 记录整个 Agent 调用结果；单轮模型流重试由模型适配层完成，禁止在此重放工具。 */
+async function invokeWithTransportDiagnostics<T>(
   operation: (callbacks: BaseCallbackHandler[]) => Promise<T>,
   signal: AbortSignal | undefined,
-  retrySafe: boolean,
   stage: string,
   diagnosticReporter: ModelDiagnosticReporter | undefined,
   taskId: string | undefined,
 ): Promise<T> {
-  const maximumAttempts = retrySafe ? 2 : 1;
-  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
-    const startedAt = performance.now();
+  const attempt = 1;
+  const startedAt = performance.now();
+  await reportDiagnosticSafely(diagnosticReporter, {
+    ...(taskId ? { taskId } : {}),
+    stage,
+    attempt,
+    status: "started",
+  });
+  const observer = createModelTurnDiagnosticObserver({
+    ...(taskId ? { taskId } : {}),
+    stage,
+    attempt,
+    ...(diagnosticReporter ? { reporter: diagnosticReporter } : {}),
+  });
+  try {
+    const result = await operation([observer.callback]);
     await reportDiagnosticSafely(diagnosticReporter, {
       ...(taskId ? { taskId } : {}),
       stage,
       attempt,
-      status: "started",
+      status: "succeeded",
+      durationMs: elapsedMilliseconds(startedAt),
     });
-    const observer = createModelTurnDiagnosticObserver({
+    return result;
+  } catch (error: unknown) {
+    const retryable = !signal?.aborted && isTransientModelTransportError(error);
+    const errorCode = readModelTransportErrorCode(error);
+    await reportDiagnosticSafely(diagnosticReporter, {
       ...(taskId ? { taskId } : {}),
       stage,
       attempt,
-      ...(diagnosticReporter ? { reporter: diagnosticReporter } : {}),
+      status: "failed",
+      durationMs: elapsedMilliseconds(startedAt),
+      errorName: readModelTransportErrorName(error),
+      ...(errorCode ? { errorCode } : {}),
+      retryable,
     });
-    try {
-      const result = await operation([observer.callback]);
-      await reportDiagnosticSafely(diagnosticReporter, {
-        ...(taskId ? { taskId } : {}),
-        stage,
-        attempt,
-        status: "succeeded",
-        durationMs: elapsedMilliseconds(startedAt),
-      });
-      return result;
-    } catch (error: unknown) {
-      const retryable = !signal?.aborted && isTransientTransportError(error);
-      const errorCode = readErrorCode(error);
-      await reportDiagnosticSafely(diagnosticReporter, {
-        ...(taskId ? { taskId } : {}),
-        stage,
-        attempt,
-        status: "failed",
-        durationMs: elapsedMilliseconds(startedAt),
-        errorName: readErrorName(error),
-        ...(errorCode ? { errorCode } : {}),
-        retryable,
-      });
-      if (!retryable) throw error;
-      if (!retrySafe) {
-        throw new Error(`模型连接中断；当前调用包含不可重复执行的受控工具，请重试本次分析：${readErrorMessage(error)}`);
-      }
-      if (attempt === maximumAttempts) {
-        throw new Error(`模型连接中断，自动重试 1 次后仍然失败：${readErrorMessage(error)}`);
-      }
-    } finally {
-      observer.dispose();
-    }
+    if (!retryable || error instanceof ModelStreamRetryExhaustedError) throw error;
+    throw new Error(
+      `模型连接中断；当前调用无法安全整体重放，请重试本次分析：${readModelTransportErrorMessage(error)}`,
+      { cause: error },
+    );
+  } finally {
+    observer.dispose();
   }
-  throw new Error("模型调用未返回结果。");
-}
-
-/** 识别 OpenAI 兼容客户端与 Node 网络栈暴露的瞬时断连信号。 */
-function isTransientTransportError(error: unknown, depth = 0): boolean {
-  if (depth > 3 || !isRecord(error)) return false;
-  const name = typeof error.name === "string" ? error.name : "";
-  if (name === "AbortError") return false;
-  const code = typeof error.code === "string" ? error.code.toUpperCase() : "";
-  if (["ECONNRESET", "EPIPE", "ETIMEDOUT", "UND_ERR_SOCKET"].includes(code)) return true;
-  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
-  if (/\bterminated\b|socket hang up|connection reset|other side closed/.test(message)) return true;
-  return isTransientTransportError(error.cause, depth + 1);
-}
-
-/** 把未知传输异常转换为可展示且不泄露请求配置的短消息。 */
-function readErrorMessage(error: unknown): string {
-  return isRecord(error) && typeof error.message === "string" && error.message.trim()
-    ? error.message.trim()
-    : "远端连接已关闭";
-}
-
-/** 从未知异常读取稳定名称，不记录异常正文。 */
-function readErrorName(error: unknown): string {
-  return isRecord(error) && typeof error.name === "string" && error.name.trim()
-    ? error.name.trim()
-    : "UnknownError";
-}
-
-/** 沿 cause 链读取可审计网络错误码。 */
-function readErrorCode(error: unknown, depth = 0): string | undefined {
-  if (depth > 3 || !isRecord(error)) return undefined;
-  if (typeof error.code === "string" && error.code.trim()) return error.code.trim();
-  return readErrorCode(error.cause, depth + 1);
 }
 
 /** 汇总全部 AI 消息的 usage_metadata，并避免重复读取 response_metadata。 */
