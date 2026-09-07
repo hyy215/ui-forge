@@ -29,6 +29,13 @@ export interface FailedCommunicationLog {
 
 /** 模型调用安全诊断日志允许保存的有限字段。 */
 export interface ModelInvocationLog {
+  model?: string;
+  provider?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+  cacheReadTokens?: number;
   taskId?: string;
   stage: string;
   attempt: number;
@@ -199,6 +206,13 @@ export class WorkspaceRequestLogger implements CommunicationRequestLogger {
         workspace: identity.value,
         ...(input.taskId ? { taskId: input.taskId } : {}),
         stage: input.stage,
+        ...(input.model ? { model: input.model } : {}),
+        ...(input.provider ? { provider: input.provider } : {}),
+        ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
+        ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+        ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+        ...(input.reasoningTokens !== undefined ? { reasoningTokens: input.reasoningTokens } : {}),
+        ...(input.cacheReadTokens !== undefined ? { cacheReadTokens: input.cacheReadTokens } : {}),
         attempt: input.attempt,
         status: input.status,
         ...(input.turn !== undefined ? { turn: input.turn } : {}),

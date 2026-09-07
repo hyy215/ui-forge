@@ -75,12 +75,21 @@ export class MasterGoMcpAdapter implements D2CAgent.DesignSourceAdapter {
     this.artifactWriter = options.artifactWriter;
   }
 
-  /** 从 MasterGo MCP 读取目录及全部分段 DSL，并在任一步失败时释放连接。 */
+  /** 独立读取 DSL 时持有一个短生命周期连接，失败时始终释放。 */
   async load(source: MasterGoDesignSource): Promise<RawDesignPayload> {
-    const toolArguments = this.parseReference(source.reference);
-    let client: McpClient | undefined;
+    this.parseReference(source.reference);
+    const client = this.createClient();
     try {
-      client = this.createClient();
+      return await this.readSections(source, client);
+    } finally {
+      await client.close().catch(() => undefined);
+    }
+  }
+
+  /** 在单次检查的共享连接上并发读取已知分段，并按分段序号保存结果。 */
+  private async readSections(source: MasterGoDesignSource, client: McpClient): Promise<RawDesignPayload> {
+    const toolArguments = this.parseReference(source.reference);
+    try {
       const sectionListResult = sectionListSchema.safeParse(
         this.parseToolResult(await client.callTool("getDesignSections", {
           ...toolArguments,
@@ -96,8 +105,11 @@ export class MasterGoMcpAdapter implements D2CAgent.DesignSourceAdapter {
           `MasterGo 设计分段数 ${sectionList.totalSections} 超过读取上限 ${this.maxSections}。`,
         );
       }
-      const sections: Array<Record<string, unknown>> = [];
-      for (let sectionIndex = 0; sectionIndex < sectionList.totalSections; sectionIndex += 1) {
+      const sections: Array<Record<string, unknown>> = new Array(sectionList.totalSections);
+      let nextSection = 0;
+      await Promise.all(Array.from({ length: Math.min(4, sectionList.totalSections) }, async () => {
+      while (nextSection < sectionList.totalSections) {
+        const sectionIndex = nextSection++;
         const sectionResult = recordSchema.safeParse(this.parseToolResult(await client.callTool(
           "getDesignSections",
           { ...toolArguments, sectionIndex, format: "json" },
@@ -105,14 +117,13 @@ export class MasterGoMcpAdapter implements D2CAgent.DesignSourceAdapter {
         if (!sectionResult.success) {
           throw new SafeMasterGoMcpError(`MasterGo MCP 第 ${sectionIndex} 个分段格式无效。`);
         }
-        sections.push(sectionResult.data);
+        sections[sectionIndex] = sectionResult.data;
       }
+      }));
       return { source, sectionList, sections };
     } catch (error: unknown) {
       if (error instanceof SafeMasterGoMcpError) throw error;
       throw new SafeMasterGoMcpError("MasterGo MCP 读取失败。");
-    } finally {
-      await client?.close().catch(() => undefined);
     }
   }
 
@@ -163,11 +174,22 @@ export class MasterGoMcpAdapter implements D2CAgent.DesignSourceAdapter {
 
   /** 读取并标准化 MasterGo 设计，同时返回供工作流审计的实现来源信息。 */
   async inspect(reference: string): Promise<D2CAgent.DesignInspection> {
-    const payload = await this.load({ kind: "mastergo", reference });
+    this.parseReference(reference);
+    const client = this.createClient();
+    try {
+      return await this.inspectWithClient(reference, client);
+    } finally {
+      await client.close().catch(() => undefined);
+    }
+  }
+
+  /** 让 DSL 与全部 SVG 页共享同一个 MCP 进程和握手。 */
+  private async inspectWithClient(reference: string, client: McpClient): Promise<D2CAgent.DesignInspection> {
+    const payload = await this.readSections({ kind: "mastergo", reference }, client);
     let context = await this.normalize(payload);
     const operations = ["getDesignSections"];
     try {
-      const extractedSvgs = await this.extractAllSvgPages(reference);
+      const extractedSvgs = await this.extractAllSvgPages(reference, client);
       const { preview, diagnostics } = createMasterGoHighFidelityPreviewResult(
         payload,
         extractedSvgs,
@@ -218,9 +240,19 @@ export class MasterGoMcpAdapter implements D2CAgent.DesignSourceAdapter {
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
       throw new Error("SVG 每页数量必须是 1 到 100 的整数。");
     }
-    let client: McpClient | undefined;
+    const client = this.createClient();
     try {
-      client = this.createClient();
+      return await this.readSvgPage(client, toolArguments, page, pageSize);
+    } finally {
+      await client.close().catch(() => undefined);
+    }
+  }
+
+  /** 在调用方持有的连接上提取并校验单页 SVG。 */
+  private async readSvgPage(
+    client: McpClient, toolArguments: Record<string, string>, page: number, pageSize: number,
+  ): Promise<MasterGoSvgExtraction> {
+    try {
       const data = this.parseToolResult(await client.callTool("extractSvg", {
         ...toolArguments,
         page,
@@ -240,16 +272,14 @@ export class MasterGoMcpAdapter implements D2CAgent.DesignSourceAdapter {
     } catch (error: unknown) {
       if (error instanceof SafeMasterGoMcpError) throw error;
       throw new SafeMasterGoMcpError("MasterGo SVG 提取失败。");
-    } finally {
-      await client?.close().catch(() => undefined);
     }
   }
 
   /** 分页读取全部官方 SVG 资源，避免只使用首屏图标导致预览缺失。 */
-  private async extractAllSvgPages(reference: string): Promise<MasterGoExtractedSvg[]> {
+  private async extractAllSvgPages(reference: string, client: McpClient): Promise<MasterGoExtractedSvg[]> {
     const extracted: MasterGoExtractedSvg[] = [];
     for (let page = 0; page < MAX_SVG_EXTRACTION_PAGES; page += 1) {
-      const result = await this.extractSvg(reference, { page, pageSize: 100 });
+      const result = await this.readSvgPage(client, this.parseReference(reference), page, 100);
       const parsed = parseMasterGoExtractedSvgPage(result.data);
       extracted.push(...parsed.svgs);
       if (!parsed.hasMore) return extracted;

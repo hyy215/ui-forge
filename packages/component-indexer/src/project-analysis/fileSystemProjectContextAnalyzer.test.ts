@@ -59,12 +59,52 @@ describe("FileSystemProjectContextAnalyzer", () => {
     });
   });
 
+  it("queries supplemental candidates from the same immutable scan without rebuilding TypeScript", async () => {
+    const projectRoot = await createProject();
+    const path = join(projectRoot, "src", "CustomerTable.tsx");
+    await writeFile(path, "export function CustomerTable() { return <table />; }");
+    const analyzer = new FileSystemProjectContextAnalyzer();
+    const updateSnapshot = vi.spyOn(TypeScriptApi.prototype, "updateSnapshot");
+    const analysis = await analyzer.analyze({
+      inspection: { kind: "react_antd", projectRoot, packageJsonPath: join(projectRoot, "package.json") },
+      recognition: { status: "recognized", components: [], warnings: [] },
+    });
+    await writeFile(path, "export function DifferentPage() { return <div />; }");
+    const queried = await analyzer.query({ analysis, recognition: { status: "recognized", warnings: [], components: [{
+      id: "visual:table", name: "CustomerTable", sourceNodeIds: ["1"], instanceCount: 1,
+      evidence: ["视觉发现"], evidenceStrength: "weak",
+    }] } });
+    expect(updateSnapshot).toHaveBeenCalledOnce();
+    expect(queried.matches[0]?.component.name).toBe("CustomerTable");
+    expect(analysis.matches).toEqual([]);
+    await expect(analyzer.query({ analysis, recognition: { status: "recognized", components: [], warnings: [] },
+      signal: AbortSignal.abort() })).rejects.toMatchObject({ name: "AbortError" });
+  });
+
   it("returns initialization context for an empty project without reading files", async () => {
     const projectRoot = await createProject();
     await expect(new FileSystemProjectContextAnalyzer().analyze({
       inspection: { kind: "empty", projectRoot },
       recognition: { status: "recognized", components: [], warnings: [] },
     })).resolves.toEqual({ kind: "empty", files: [], filesComplete: true, matches: [], warnings: [] });
+  });
+
+  it("omits an oversized checkpoint index while preserving initial matches", async () => {
+    const projectRoot = await createProject();
+    const props = Array.from({ length: 1000 }, (_, index) => `field${index}${"x".repeat(300)}: string;`).join("\n");
+    const components = Array.from({ length: 8 }, (_, index) =>
+      `export function Card${index}(props: Props) { return <div />; }`).join("\n");
+    await writeFile(join(projectRoot, "src", "Cards.tsx"), `interface Props { ${props} }\n${components}`);
+    const result = await new FileSystemProjectContextAnalyzer().analyze({
+      inspection: { kind: "react_antd", projectRoot, packageJsonPath: join(projectRoot, "package.json") },
+      recognition: { status: "recognized", warnings: [], components: [{
+        id: "card", name: "Card0", sourceNodeIds: ["1"], instanceCount: 1,
+        evidence: ["设计候选"], evidenceStrength: "explicit",
+      }] },
+    });
+    expect(result.repositoryIndex).toBeUndefined();
+    expect(result.matches.some((match) => match.component.name === "Card0")).toBe(true);
+    expect(result.warnings).toContain("仓库组件索引超过 2 MB 缓存上限，补充候选将重新执行受控扫描。");
   });
 
   it("ignores symbolic-link source entries", async () => {

@@ -12,6 +12,28 @@ function toolResult(value: unknown) {
 }
 
 describe("MasterGoMcpAdapter", () => {
+  it("bounds section concurrency and preserves ordering with one inspection connection", async () => {
+    let active = 0;
+    let peak = 0;
+    const close = vi.fn(async () => undefined);
+    const clientFactory = vi.fn(() => ({ close, callTool: async (name: string, args: Record<string, unknown>) => {
+      if (name === "extractSvg") return toolResult({ svgs: [], hasMore: false });
+      if (args.sectionIndex === undefined) return toolResult({ totalSections: 8, sections: [] });
+      active += 1; peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 8 - Number(args.sectionIndex)));
+      active -= 1;
+      return toolResult({ index: args.sectionIndex });
+    } }));
+    const adapter = new MasterGoMcpAdapter({ clientFactory });
+    const payload = await adapter.load({ kind: "mastergo", reference: "https://mastergo.com/file/123?layer_id=1" });
+    expect(payload.sections.map((section) => section.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(peak).toBe(4);
+    clientFactory.mockClear(); close.mockClear();
+    await adapter.inspect("https://mastergo.com/file/123?layer_id=1");
+    expect(clientFactory).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("normalizes the captured table-filter fixture without a live MCP connection", async () => {
     const fixtureUrl = new URL("../../../fixtures/design-cases/mastergo-table-filter.json", import.meta.url);
     const fixture = rawDesignPayloadSchema.parse(JSON.parse(readFileSync(fixtureUrl, "utf8")));
@@ -104,7 +126,7 @@ describe("MasterGoMcpAdapter", () => {
       pageSize: 100,
       format: "json",
     });
-    expect(close).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it("returns transport provenance through the D2C Agent design port", async () => {

@@ -13,6 +13,7 @@ const maximumFiles = 500;
 const maximumSourceBytes = 512 * 1024;
 const maximumDepth = 12;
 const maximumMatchesPerCandidate = 5;
+const maximumRepositoryIndexBytes = 2 * 1024 * 1024;
 
 interface IndexedSource {
   path: string;
@@ -22,6 +23,18 @@ interface IndexedSource {
 
 /** 使用受限文件系统读取和 TypeScript AST 构建仓库规划证据。 */
 export class FileSystemProjectContextAnalyzer implements D2CAgent.ProjectContextAnalyzer {
+  /** 对既有扫描快照查询补充候选，保持同一规划轮次的文件和组件证据一致。 */
+  async query(input: {
+    analysis: D2CAgent.ProjectContextAnalysis;
+    recognition: D2CAgent.DesignComponentRecognition;
+    signal?: AbortSignal;
+  }): Promise<D2CAgent.ProjectContextAnalysis> {
+    throwIfAborted(input.signal);
+    if (!input.analysis.repositoryIndex) throw new Error("仓库上下文缺少可复用的扫描索引。");
+    return { ...structuredClone(input.analysis),
+      matches: createMatches(input.recognition, input.analysis.repositoryIndex) };
+  }
+
   /** 对空项目返回初始化上下文，对已支持项目生成有限组件检索结果。 */
   async analyze(input: {
     inspection: Exclude<D2CAgent.ProjectInspection, { kind: "unsupported" }>;
@@ -56,14 +69,28 @@ export class FileSystemProjectContextAnalyzer implements D2CAgent.ProjectContext
       ...component,
       consumers: [...(consumers.get(source.path) ?? [])].sort(),
     })));
+    const warnings = scan.truncated ? [`仓库扫描达到 ${maximumFiles} 个文件上限，检索证据可能不完整。`] : [];
+    const retainIndex = fitsRepositoryIndexBudget(components);
+    if (!retainIndex) warnings.push("仓库组件索引超过 2 MB 缓存上限，补充候选将重新执行受控扫描。");
     return {
       kind: "react_antd",
       files: [...scan.allFiles].sort(),
       filesComplete: !scan.truncated,
       matches: createMatches(input.recognition, components),
-      warnings: scan.truncated ? [`仓库扫描达到 ${maximumFiles} 个文件上限，检索证据可能不完整。`] : [],
+      ...(retainIndex ? { repositoryIndex: components } : {}),
+      warnings,
     };
   }
+}
+
+/** 逐项核算序列化体积，超限即停止；不截断索引以免形成不完整的复用证据。 */
+function fitsRepositoryIndexBudget(components: readonly D2CAgent.RepositoryComponentEvidence[]): boolean {
+  let bytes = 2;
+  for (const [index, component] of components.entries()) {
+    bytes += Buffer.byteLength(JSON.stringify(component), "utf8") + (index > 0 ? 1 : 0);
+    if (bytes > maximumRepositoryIndexBytes) return false;
+  }
+  return true;
 }
 
 /** 在交给 TypeScript 编译器前排除符号链接、非普通文件、越界路径和超限源码。 */

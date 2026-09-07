@@ -19,6 +19,7 @@ import {
   MasterGoMcpAdapter,
 } from "@ui-forge/mastergo-adapter";
 import { WorkspaceIdentityResolver } from "../logging/workspaceIdentityResolver.js";
+import { readStageModelConfiguration } from "./stageModelConfiguration.js";
 import { ArtifactCleanupWorker } from "./artifactCleanupWorker.js";
 import { D2CWorkflowService } from "./d2cWorkflowService.js";
 import { SharpDesignVisualEvidenceProvider } from "./sharpDesignVisualEvidenceProvider.js";
@@ -63,7 +64,7 @@ export function createD2CWorkflowServiceFromEnvironment(
     projectContextAnalyzer: new FileSystemProjectContextAnalyzer(),
     componentCatalog: readComponentCatalogFromEnvironment(),
     designSystemKnowledgeProvider,
-    modelOptions: readSecondStepModelOptions(options.modelDiagnosticReporter),
+    modelOptions: readStageModelConfiguration(process.env, options.modelDiagnosticReporter),
     visualEvidenceProvider: new SharpDesignVisualEvidenceProvider(designArtifactStore),
     designArtifactReader: designArtifactStore,
     designArtifactLifecycle: designArtifactStore,
@@ -106,33 +107,6 @@ export function readComponentCatalogFromEnvironment(): D2CAgent.ComponentCatalog
     throw new Error(`无法读取 UI_FORGE_COMPONENT_CATALOG_PATH：${message}`);
   }
   return parseComponentCatalog(parsed);
-}
-
-/** 从标准模型环境变量读取第二步 DeepAgent 配置，并保留缺失项的延迟报错。 */
-function readSecondStepModelOptions(
-  diagnosticReporter?: (event: ModelInvocationLog) => void | Promise<void>,
-): D2CAgent.PlanDeepAgentModelOptions {
-  const provider = process.env.MODEL_PROVIDER?.trim();
-  const model = process.env.MODEL_NAME?.trim();
-  const apiKey = process.env.MODEL_API_KEY?.trim();
-  const baseUrl = process.env.MODEL_BASE_URL?.trim();
-  const structuredOutputMode = readStructuredOutputMode();
-  return {
-    ...(provider ? { provider } : {}),
-    ...(model ? { model } : {}),
-    ...(apiKey ? { apiKey } : {}),
-    ...(baseUrl ? { baseUrl } : {}),
-    structuredOutputMode,
-    ...(diagnosticReporter ? { diagnosticReporter } : {}),
-  };
-}
-
-/** 读取结构化输出协议；默认使用不依赖强制 tool_choice 的 JSON 文本模式。 */
-function readStructuredOutputMode(): "json-text" | "tool" {
-  const configured = process.env.MODEL_STRUCTURED_OUTPUT_MODE?.trim();
-  if (!configured || configured === "json-text") return "json-text";
-  if (configured === "tool") return "tool";
-  throw new Error("MODEL_STRUCTURED_OUTPUT_MODE 必须是 json-text 或 tool。");
 }
 
 /** 将已废弃 Artifact 的保留小时数转换为毫秒，并拒绝无效环境输入。 */

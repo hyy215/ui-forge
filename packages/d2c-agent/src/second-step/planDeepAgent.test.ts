@@ -777,6 +777,81 @@ describe("createPlanDeepAgent", () => {
   });
 });
 
+describe("workflow planning", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("prepares vision and knowledge before one model call and derives redundant summaries", async () => {
+    const review = vi.fn(async () => ({ suggestions: [
+      { candidateId: "component:2", suggestedTypeId: "select", confidence: 0.9, evidence: ["下拉箭头"] },
+    ], designUnderstanding }));
+    const queryComponent = vi.fn(async ({ componentName }: { componentName: string }) => [
+      { toolName: "antd_info", componentName, data: { props: [] } },
+    ]);
+    const invoke = vi.fn(async (input: AgentCore.AgentInput) => {
+      expect(review).toHaveBeenCalledOnce();
+      expect(queryComponent).toHaveBeenCalled();
+      const message = String(input.messages[0]?.content);
+      expect(message).toContain('"knowledge"');
+      expect(message).not.toContain('"repositoryIndex"');
+      return { response: "unused", structuredResponse: createResponse() };
+    });
+    vi.spyOn(AgentCore, "createRestrictedDeepAgent").mockImplementation((options) => {
+      expect(options?.executionMode).toBe("single");
+      expect(options?.toolFactories).toBeUndefined();
+      return { invoke };
+    });
+    const agent = createPlanDeepAgent(undefined, catalog, { structuredOutputMode: "json-schema" }, { review }, {
+      queryComponent, resolveCatalog: async ({ baseCatalog }) => ({ catalog: baseCatalog, warnings: [] }),
+    });
+    const result = await agent.plan({ taskId: "workflow", taskGoal: "只实现当前区域", inspection,
+      projectInspection, recognition, projectContext: { ...projectContext, repositoryIndex: [] } });
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(review).toHaveBeenCalledWith(expect.objectContaining({ taskGoal: "只实现当前区域" }));
+    expect(result.plan.reusableComponents).toEqual([{ typeId: "select", name: "Select", description: "复用 Select" }]);
+    expect(result.plan.newComponents).toHaveLength(1);
+  });
+
+  it("escalates only after business validation rejects the initial plan", async () => {
+    const review = vi.fn(async () => ({ suggestions: [], designUnderstanding }));
+    const invalid = createResponse(); invalid.decisions = [];
+    const main = vi.fn(async () => ({ response: "unused", structuredResponse: invalid }));
+    const escalated = vi.fn(async () => ({ response: "unused", structuredResponse: createResponse() }));
+    vi.spyOn(AgentCore, "createRestrictedDeepAgent").mockImplementation((options) => ({
+      invoke: options?.model === "stronger-model" ? escalated : main,
+    }));
+    const agent = createPlanDeepAgent(undefined, catalog, { structuredOutputMode: "json-schema",
+      escalationModel: { model: "stronger-model", structuredOutputMode: "json-schema" } }, { review });
+    await expect(agent.plan({ taskId: "escalated", taskGoal: "实现", inspection,
+      projectInspection, recognition, projectContext })).resolves.toMatchObject({ plan: { status: "reviewable" } });
+    expect(main).toHaveBeenCalledOnce(); expect(escalated).toHaveBeenCalledOnce();
+    expect(review).toHaveBeenCalledOnce();
+  });
+
+  it("stops unchanged validation failures without repeating vision", async () => {
+    const review = vi.fn(async () => ({ suggestions: [], designUnderstanding }));
+    const invalid = createResponse();
+    invalid.decisions = [];
+    const invoke = vi.fn(async () => ({ response: "unused", structuredResponse: invalid }));
+    vi.spyOn(AgentCore, "createRestrictedDeepAgent").mockReturnValue({ invoke });
+    const agent = createPlanDeepAgent(undefined, catalog, { structuredOutputMode: "json-schema" }, { review });
+    await expect(agent.plan({ taskId: "failed", taskGoal: "实现", inspection,
+      projectInspection, recognition, projectContext })).rejects.toThrow("有界校验");
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(review).toHaveBeenCalledOnce();
+  });
+
+  it("propagates cancellation before planning or evidence reads", async () => {
+    const review = vi.fn(async () => ({ suggestions: [], designUnderstanding }));
+    const invoke = vi.fn();
+    vi.spyOn(AgentCore, "createRestrictedDeepAgent").mockReturnValue({ invoke });
+    const agent = createPlanDeepAgent(undefined, catalog, { structuredOutputMode: "json-schema" }, { review });
+    await expect(agent.plan({ taskId: "cancelled", taskGoal: "实现", inspection,
+      projectInspection, recognition, projectContext, signal: AbortSignal.abort() })).rejects.toMatchObject({ name: "AbortError" });
+    expect(invoke).not.toHaveBeenCalled();
+    expect(review).not.toHaveBeenCalled();
+  });
+});
+
 /** 创建一次模型调用可见的全部任务绑定工具。 */
 function createInvocationTools(
   options: AgentCore.ModelAgentOptions | undefined,

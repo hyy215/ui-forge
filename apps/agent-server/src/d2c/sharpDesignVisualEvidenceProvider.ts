@@ -1,7 +1,7 @@
 /** 在 Agent Server 组合边界把安全设计 SVG 栅格化为 Plan DeepAgent 的 PNG 证据。 */
 
 import type { D2CAgent } from "@ui-forge/d2c-agent";
-import sharp from "sharp";
+import sharp, { type Raw } from "sharp";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_OVERVIEW_WIDTH = 1_600;
@@ -32,17 +32,30 @@ export class SharpDesignVisualEvidenceProvider implements D2CAgent.DesignVisualE
       warnings: ["设计预览不是可供视觉复核使用的安全 SVG。"],
     };
     const images: D2CAgent.DesignVisualImage[] = [];
-    const overview = await renderPng(
-      svg,
-      Math.min(MAX_OVERVIEW_WIDTH, Math.max(1, Math.round(preview?.width ?? MAX_OVERVIEW_WIDTH))),
-    );
+    // 每次证据构建只栅格化一次 SVG，后续整体图和裁剪都从同一像素缓冲区生成。
+    let raster: { data: Buffer; raw: Raw };
+    try {
+      const rendered = await sharp(Buffer.from(svg), { limitInputPixels: 16_000_000 })
+        .flatten({ background: "#ffffff" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      raster = { data: rendered.data, raw: rendered.info };
+    } catch {
+      return { images, ...(structure ? { structure: structuredClone(structure) } : {}),
+        warnings: ["设计预览栅格化失败或超过 1600 万像素上限。"] };
+    }
+    throwIfAborted(signal);
+    const overview = await renderPng(raster, Math.min(MAX_OVERVIEW_WIDTH, raster.raw.width));
     throwIfAborted(signal);
     if (overview) images.push({ label: "整体设计预览", dataUrl: overview });
     else warnings.push("整体设计预览栅格化失败或超过图片大小上限。");
 
     if (!structure) return { images, warnings: [...warnings, "Artifact 缺少候选裁剪所需的结构坐标。"] };
     const nodeBounds = indexNodeBounds(structure.roots);
-    for (const component of recognition.components.slice(0, MAX_CANDIDATE_IMAGES)) {
+    const candidates = [...recognition.components].sort((left, right) =>
+      Number(Boolean(left.typeHint)) - Number(Boolean(right.typeHint)));
+    const renderedBounds = new Set<string>();
+    let candidateImages = 0;
+    for (const component of candidates) {
+      if (candidateImages >= MAX_CANDIDATE_IMAGES) break;
       throwIfAborted(signal);
       const bounds = unionBounds(component.sourceNodeIds.flatMap((nodeId) => {
         const value = nodeBounds.get(nodeId);
@@ -50,13 +63,22 @@ export class SharpDesignVisualEvidenceProvider implements D2CAgent.DesignVisualE
       }));
       if (!bounds) continue;
       const padded = padBounds(bounds, preview?.width, preview?.height);
-      const croppedSvg = replaceSvgViewport(svg, padded);
-      const image = await renderPng(
-        croppedSvg,
-        Math.min(MAX_CANDIDATE_WIDTH, Math.max(1, Math.round(padded.width))),
-      );
+      const scaleX = raster.raw.width / (preview?.width ?? raster.raw.width);
+      const scaleY = raster.raw.height / (preview?.height ?? raster.raw.height);
+      const left = Math.max(0, Math.min(raster.raw.width - 1, Math.floor(padded.x * scaleX)));
+      const top = Math.max(0, Math.min(raster.raw.height - 1, Math.floor(padded.y * scaleY)));
+      const crop = { left, top,
+        width: Math.max(1, Math.min(raster.raw.width - left, Math.ceil(padded.width * scaleX))),
+        height: Math.max(1, Math.min(raster.raw.height - top, Math.ceil(padded.height * scaleY))) };
+      const key = JSON.stringify(crop);
+      if (renderedBounds.has(key)) continue;
+      renderedBounds.add(key);
+      const image = await renderPng(raster, Math.min(MAX_CANDIDATE_WIDTH, crop.width), crop);
       throwIfAborted(signal);
-      if (image) images.push({ candidateId: component.id, label: component.name, dataUrl: image });
+      if (image) {
+        images.push({ candidateId: component.id, label: component.name, dataUrl: image });
+        candidateImages += 1;
+      }
     }
     if (recognition.components.length > MAX_CANDIDATE_IMAGES) {
       warnings.push(`候选局部图超过 ${MAX_CANDIDATE_IMAGES} 张上限，其余候选仅使用整体预览复核。`);
@@ -85,13 +107,13 @@ function decodeSafeSvgDataUrl(value: string): string | undefined {
 }
 
 /** 使用 Sharp 渲染 PNG，并拒绝超出 AgentCore 图片上限的结果。 */
-async function renderPng(svg: string, width: number): Promise<string | undefined> {
+async function renderPng(
+  raster: { data: Buffer; raw: Raw }, width: number,
+  crop?: { left: number; top: number; width: number; height: number },
+): Promise<string | undefined> {
   try {
-    const buffer = await sharp(Buffer.from(svg))
-      .flatten({ background: "#ffffff" })
-      .resize({ width })
-      .png()
-      .toBuffer();
+    const pipeline = sharp(raster.data, { raw: raster.raw });
+    const buffer = await (crop ? pipeline.extract(crop) : pipeline).resize({ width }).png().toBuffer();
     if (buffer.byteLength > MAX_IMAGE_BYTES) return undefined;
     return `data:image/png;base64,${buffer.toString("base64")}`;
   } catch {
@@ -139,15 +161,6 @@ function padBounds(
   const right = Math.min(canvasWidth ?? Number.POSITIVE_INFINITY, bounds.x + bounds.width + padding);
   const bottom = Math.min(canvasHeight ?? Number.POSITIVE_INFINITY, bounds.y + bounds.height + padding);
   return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) };
-}
-
-/** 用候选绝对边界替换根 SVG viewport，使 Sharp 直接渲染局部区域。 */
-function replaceSvgViewport(svg: string, bounds: AbsoluteBounds): string {
-  return svg.replace(/<svg\b([^>]*)>/i, (_match, rawAttributes: string) => {
-    const attributes = rawAttributes
-      .replace(/\s(?:viewBox|width|height)\s*=\s*(?:"[^"]*"|'[^']*')/gi, "");
-    return `<svg${attributes} viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}" width="${bounds.width}" height="${bounds.height}">`;
-  });
 }
 
 /** 在栅格化批次边界响应用户取消。 */

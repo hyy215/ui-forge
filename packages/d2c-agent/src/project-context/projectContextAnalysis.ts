@@ -31,10 +31,18 @@ export interface ProjectContextAnalysis {
   filesComplete: boolean;
   matches: RepositoryComponentMatch[];
   warnings: string[];
+  /** 本轮受控扫描的完整组件摘要，仅供增量检索，不直接发送模型或客户端。 */
+  repositoryIndex?: RepositoryComponentEvidence[];
 }
 
 /** 隔离 D2C Graph 与具体文件系统、AST 和索引实现。 */
 export interface ProjectContextAnalyzer {
+  /** 在同一不可变扫描快照中检索视觉补充候选，不再读取目标仓库。 */
+  query?(input: {
+    analysis: ProjectContextAnalysis;
+    recognition: DesignComponentRecognition;
+    signal?: AbortSignal;
+  }): Promise<ProjectContextAnalysis>;
   /** 根据已通过门禁的项目和设计候选返回有界仓库证据。 */
   analyze(input: {
     inspection: Exclude<ProjectInspection, { kind: "unsupported" }>;

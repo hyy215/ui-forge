@@ -42,6 +42,7 @@ export class StdioMcpClient implements McpClient {
   private readonly requestTimeoutMs: number;
   private nextRequestId = 1;
   private initialized: Promise<void>;
+  private closed = false;
 
   /** 启动指定的固定 MCP 命令，并立即准备初始化握手。 */
   constructor(options: StdioMcpClientOptions) {
@@ -54,14 +55,16 @@ export class StdioMcpClient implements McpClient {
     const lines = createInterface({ input: this.child.stdout });
     lines.on("line", (line) => this.handleLine(line));
     this.child.stderr.resume();
-    this.child.once("error", () => this.rejectAll(new Error("MasterGo MCP 进程启动失败。")));
+    this.child.once("error", () => this.fail(new Error("MasterGo MCP 进程启动失败。")));
+    this.child.stdin.on("error", () => this.fail(new Error("MasterGo MCP 写入连接失败。")));
     this.child.once("exit", (code, signal) => {
-      if (this.pending.size === 0) return;
       const reason = code === 0 && signal === null ? "连接已关闭" : "进程异常退出";
-      this.rejectAll(new Error(`MasterGo MCP ${reason}。`));
+      this.fail(new Error(`MasterGo MCP ${reason}。`));
     });
 
     this.initialized = this.initialize();
+    // 提前关闭或进程启动失败可能发生在调用方开始等待握手之前。
+    void this.initialized.catch(() => undefined);
   }
 
   /** 完成 MCP initialize/initialized 握手。 */
@@ -82,12 +85,14 @@ export class StdioMcpClient implements McpClient {
 
   /** 关闭 stdin 并终止仅由当前客户端创建的 MCP 子进程。 */
   async close(): Promise<void> {
+    this.fail(new Error("MasterGo MCP 连接已关闭。"));
     this.child.stdin.end();
     if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill();
   }
 
   /** 发送带超时和响应关联的 JSON-RPC 请求。 */
   private request(method: string, params: Record<string, unknown>): Promise<unknown> {
+    if (this.closed) return Promise.reject(new Error("MasterGo MCP 连接已关闭。"));
     const id = this.nextRequestId++;
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -95,13 +100,24 @@ export class StdioMcpClient implements McpClient {
         reject(new Error(`MasterGo MCP 请求超时：${method}`));
       }, this.requestTimeoutMs);
       this.pending.set(id, { resolve, reject, timeout });
-      this.write({ jsonrpc: "2.0", id, method, params });
+      try {
+        this.write({ jsonrpc: "2.0", id, method, params });
+      } catch {
+        this.fail(new Error("MasterGo MCP 写入连接失败。"));
+      }
     });
   }
 
   /** 将单条 JSON-RPC 消息写入 stdio 传输。 */
   private write(message: Record<string, unknown>): void {
+    if (this.closed) throw new Error("MasterGo MCP 连接已关闭。");
     this.child.stdin.write(`${JSON.stringify(message)}\n`);
+  }
+
+  /** 进入终止状态并结束所有并发请求，拒绝后续工作继续使用失效传输。 */
+  private fail(error: Error): void {
+    this.closed = true;
+    this.rejectAll(error);
   }
 
   /** 校验并分派 MCP Server 的单行 JSON-RPC 响应。 */

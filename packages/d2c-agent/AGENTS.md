@@ -32,7 +32,7 @@ src/
 - `D2CService` 是业务入口，负责命令校验、乐观并发和 Artifact 生命周期协调；它不等同于 Graph。
 - `D2CAgent` 公共 Facade 只暴露 `createService`；Provider Resolver 由 Service 内部装配，不向宿主泄漏实现零件。
 - D2C Graph 只负责节点拓扑与状态转换。每个 Service 只创建一个共享 Graph，不为不同命令或任务重复编译 Graph；任务 UUID 作为 `thread_id` 隔离 Checkpoint。
-- 当前 Graph 在设计确认暂停点后按固定顺序执行项目检查、版本化设计系统目录解析、组件候选提取、受控仓库上下文分析和 Plan DeepAgent；仅对不支持的项目使用声明目标集合的条件路由提前结束，不使用 action 分发节点或伪条件路由。可演进 Plan 和 Review 契约保持独立，反馈修订尚未接入 Graph。
+- 当前 Graph 在设计确认暂停点后按固定顺序执行项目检查、版本化设计系统目录解析、组件候选提取、受控仓库上下文分析和规划节点；节点内部允许确定性调度视觉证据、索引查询和官方组件知识，再执行无工具结构化规划；旧配置保留受限 DeepAgent 兼容路径。仅对不支持的项目使用声明目标集合的条件路由提前结束，不使用 action 分发节点或伪条件路由。可演进 Plan 和 Review 契约保持独立，反馈修订尚未接入 Graph。
 - 本包只依赖 `agent-core` 的公开 Agent、Graph 与 Checkpointer 契约，不直接导入 LangGraph 第三方内部 API。
 - 本包不依赖 MasterGo/Figma/Ant Design 的具体实现、MCP、环境变量、HTTP、VS Code、Webview、Storage 实现或 `shared-protocol`；版本化设计系统知识通过领域端口注入。
 - 依赖通过工厂参数显式注入；当前不引入 Inversify 等 DI 容器。

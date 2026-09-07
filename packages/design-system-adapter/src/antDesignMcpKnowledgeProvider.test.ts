@@ -47,6 +47,38 @@ describe("AntDesignMcpKnowledgeProvider", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  it("caches successful knowledge by workspace, version, root component and section", async () => {
+    const callTool = vi.fn(async () => ({ props: ["value"] }));
+    const createConnection = vi.fn(async () => ({ callTool, close: async () => undefined }));
+    const provider = new AntDesignMcpKnowledgeProvider({ createConnection });
+    const request = { inspection, componentName: "Tree", sections: ["info" as const] };
+    const first = await provider.queryComponent(request);
+    (first[0]!.data as { props: string[] }).props.push("mutated");
+    expect(await provider.queryComponent({ ...request, componentName: "Tree.DirectoryTree" }))
+      .toMatchObject([{ data: { props: ["value"] } }]);
+    expect(callTool).toHaveBeenCalledOnce();
+    await provider.queryComponent({ ...request, inspection: { ...inspection, antdVersion: "^5.0.0" } });
+    await provider.queryComponent({ ...request, inspection: { ...inspection, projectRoot: "/other" } });
+    expect(callTool).toHaveBeenCalledTimes(3);
+    expect(createConnection).toHaveBeenCalledTimes(3);
+    await expect(provider.queryComponent({ ...request, signal: AbortSignal.abort() }))
+      .rejects.toMatchObject({ name: "AbortError" });
+    await provider.dispose();
+  });
+
+  it("does not cache failed queries and expires successful knowledge", async () => {
+    const callTool = vi.fn().mockRejectedValueOnce(new Error("failed")).mockResolvedValue({ props: [] });
+    const provider = new AntDesignMcpKnowledgeProvider({ createConnection: async () => ({ callTool, close: async () => undefined }) });
+    const request = { inspection, componentName: "Tree", sections: ["info" as const] };
+    await expect(provider.queryComponent(request)).rejects.toThrow("failed");
+    await provider.queryComponent(request);
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 61_000);
+    try { await provider.queryComponent(request); } finally { clock.mockRestore(); }
+    expect(callTool).toHaveBeenCalledTimes(3);
+    await provider.dispose();
+  });
+
   it("returns the static catalog with an explicit warning when MCP startup fails", async () => {
     const provider = new AntDesignMcpKnowledgeProvider({
       createConnection: async () => { throw new Error("stdio closed"); },

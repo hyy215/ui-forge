@@ -167,10 +167,17 @@ export interface PlanDeepAgent {
 }
 
 /** 允许组合入口配置的模型参数，不开放能力注入选项。 */
-export type PlanDeepAgentModelOptions = Omit<
+type StageModelOptions = Omit<
   AgentCore.ModelAgentOptions,
   "responseSchema" | "repairSchemaInvalidResponse" | "invocationSubagentFactories" | "staticSubagents" | "systemPrompt" | "toolFactories"
 >;
+
+/** 组合入口可分别配置规划与视觉模型，领域不识别供应商型号。 */
+export type PlanDeepAgentModelOptions = StageModelOptions & {
+  visualModel?: StageModelOptions;
+  /** 仅在方案业务门禁拒绝后使用的更强模型，仍受总修正轮次约束。 */
+  escalationModel?: StageModelOptions;
+};
 
 /** 创建具有唯一视觉委派入口的主 Plan Agent。 */
 export function createPlanDeepAgent(
@@ -178,12 +185,18 @@ export function createPlanDeepAgent(
   _baseCatalog: ComponentCatalog,
   modelOptions: PlanDeepAgentModelOptions = {},
   visualSubagent: VisualComponentSubagent = createVisualComponentSubagent({
-    ...modelOptions,
+    ...(modelOptions.visualModel ?? modelOptions),
     diagnosticStage: "visual-analysis",
   }),
   designSystemKnowledgeProvider?: DesignSystemKnowledgeProvider,
   projectContextAnalyzer?: ProjectContextAnalyzer,
 ): PlanDeepAgent {
+  if (modelOptions.executionMode === "single" || modelOptions.structuredOutputMode === "json-schema") {
+    return new WorkflowPlanDeepAgent(
+      modelOptions, _baseCatalog, visualSubagent, visualEvidenceProvider,
+      designSystemKnowledgeProvider, projectContextAnalyzer,
+    );
+  }
   const agent = AgentCore.createRestrictedDeepAgent({
     ...modelOptions,
     diagnosticStage: "plan-generation",
@@ -199,6 +212,139 @@ export function createPlanDeepAgent(
     ],
   });
   return new DefaultPlanDeepAgent(agent, _baseCatalog);
+}
+
+const compactPlanResponseSchema = planAgentResponseSchema.extend({
+  plan: planAgentResponseSchema.shape.plan.omit({ files: true, reusableComponents: true, newComponents: true }),
+});
+
+/** 固定执行视觉和知识准备，再以单次结构化调用规划；业务修正最多三轮。 */
+class WorkflowPlanDeepAgent implements PlanDeepAgent {
+  private readonly agent: AgentCore.Agent;
+  private readonly escalationAgent: AgentCore.Agent | undefined;
+
+  /** 注入只读证据端口和阶段模型，工具调度由工作流持有。 */
+  constructor(
+    modelOptions: PlanDeepAgentModelOptions,
+    private readonly baseCatalog: ComponentCatalog,
+    private readonly visualSubagent: VisualComponentSubagent,
+    private readonly visualEvidenceProvider: DesignVisualEvidenceProvider | undefined,
+    private readonly knowledgeProvider: DesignSystemKnowledgeProvider | undefined,
+    private readonly projectAnalyzer: ProjectContextAnalyzer | undefined,
+  ) {
+    const instructions = planAgentPrompt.split("\n").filter((line) => ![
+      "必须先调用", "视觉复核后", "inspect_antd_component", "拿到视觉结果后", "plan.files、",
+    ].some((prefix) => line.startsWith(prefix))).join("\n");
+    const createPlanner = (options: StageModelOptions) => AgentCore.createRestrictedDeepAgent({
+      ...options,
+      executionMode: "single",
+      responseSchema: compactPlanResponseSchema,
+      diagnosticStage: "plan-generation",
+      systemPrompt: `${instructions}
+视觉理解与已查询知识由工作流提供，不再调用任何工具。只输出 Schema 定义的方案。
+files、reusableComponents、newComponents 由程序根据文件影响和复用决策生成，无需重复输出。
+仅使用 knowledge 中 ok=true 的查询作为官方复用证据；不将缺失文档视为已验证 API。`,
+    });
+    this.agent = createPlanner(modelOptions);
+    this.escalationAgent = modelOptions.escalationModel ? createPlanner(modelOptions.escalationModel) : undefined;
+  }
+
+  /** 复用同一次证据采集结果完成规划和有界修正，不重复视觉分析或仓库扫描。 */
+  async plan(input: PlanDeepAgentInput): Promise<PlanDeepAgentResult> {
+    throwIfAborted(input.signal);
+    if (input.projectInspection.kind === "unsupported") throw new Error("不支持的项目不能生成方案。");
+    const startedAt = performance.now();
+    const context: PlanInvocationContext = {
+      input: { ...input, catalog: structuredClone(input.catalog ?? this.baseCatalog),
+        designSystemWarnings: [...(input.designSystemWarnings ?? [])] },
+      collector: { queriedCatalogComponentIds: new Set(), designSystemQuerySequence: 0 },
+    };
+    await input.reportProgress?.({ type: "planning-start" });
+    const review = await runVisualReview(context, this.visualSubagent, context.input.catalog, this.visualEvidenceProvider);
+    context.collector.visualResult = review.result;
+    context.collector.visualWarnings = review.warnings;
+    await supplementVisualCandidateProjectContext(context, review.result, this.projectAnalyzer);
+    const query = createDesignSystemKnowledgeToolFactory(this.knowledgeProvider)
+      .create({ taskId: input.taskId, values: { planInvocation: context } })[0];
+    const knowledge = new Map<string, unknown>();
+    const prefetch = async (ids: readonly string[]): Promise<void> => {
+      const pending = [...new Set(ids)].filter((id) => !knowledge.has(id)
+        && context.input.catalog.components.some((entry) => entry.id === id && entry.implementation?.packageName === "antd"));
+      // 限制每批组件数和并发度；超限部分保留为缺失证据，不能伪装已查询。
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(3, pending.length) }, async () => {
+        while (next < Math.min(24, pending.length)) {
+          throwIfAborted(input.signal);
+          const id = pending[next++];
+          if (!id || !query) continue;
+          knowledge.set(id, await query.execute({ catalogComponentId: id, sections: ["info", "semantic", "token"] }));
+        }
+      }));
+    };
+    await prefetch([
+      ...input.recognition.components.flatMap((candidate) => candidate.typeHint ? [candidate.typeHint.typeId] : []),
+      ...review.result.suggestions.flatMap((candidate) => candidate.suggestedTypeId ? [candidate.suggestedTypeId] : []),
+      ...(review.result.additionalCandidates ?? []).flatMap((candidate) => candidate.suggestedTypeId ? [candidate.suggestedTypeId] : []),
+    ]);
+    let previous: unknown;
+    let errors: string[] = [];
+    let previousErrors = "";
+    const usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+    let hasUsage = false;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      throwIfAborted(input.signal);
+      const planner = attempt > 0 ? this.escalationAgent ?? this.agent : this.agent;
+      const result = await planner.invoke({
+        messages: [{ role: "user", content: JSON.stringify({
+          context: JSON.parse(createPlanningMessage(context.input, context.input.catalog)),
+          visual: review.result.designUnderstanding,
+          suggestions: review.result.suggestions,
+          additionalCandidates: review.result.additionalCandidates ?? [],
+          knowledge: [...knowledge.values()],
+          ...(previous ? { previousSubmission: previous, validationErrors: errors } : {}),
+        }) }],
+        context: { taskId: input.taskId, values: {} },
+        ...(input.signal ? { signal: input.signal } : {}),
+      });
+      if (result.usage) {
+        hasUsage = true;
+        usage.inputTokens += result.usage.inputTokens;
+        usage.outputTokens += result.usage.outputTokens;
+        usage.totalTokens += result.usage.totalTokens;
+      }
+      const parsed = compactPlanResponseSchema.parse(result.structuredResponse);
+      previous = parsed;
+      const reusableIds = [...new Set(parsed.plan.componentDecisions.flatMap((decision) =>
+        decision.source === "catalog" && decision.catalogComponentId ? [decision.catalogComponentId] : []))];
+      const response: PlanAgentResponse = { ...parsed, plan: {
+        ...parsed.plan,
+        files: [...new Set(parsed.plan.fileImpacts.map((impact) => impact.path))],
+        reusableComponents: reusableIds.flatMap((id) => {
+          const entry = context.input.catalog.components.find((component) => component.id === id);
+          return entry ? [{ typeId: id, name: entry.name, description: `复用 ${entry.name}` }] : [];
+        }),
+        newComponents: parsed.plan.componentDecisions.filter((decision) => decision.source === "new")
+          .map((decision) => ({ typeId: decision.candidateId, name: decision.candidateId, description: decision.reason })),
+      } };
+      try {
+        const submission = createValidatedSubmission(context.input, context.input.catalog, response,
+          review.result, review.warnings, this.knowledgeProvider ? context.collector.queriedCatalogComponentIds : undefined);
+        await input.reportProgress?.({ type: "planning-complete", recognition: structuredClone(submission.componentRecognition),
+          plan: structuredClone(submission.plan), durationMs: elapsedMilliseconds(startedAt),
+          ...(hasUsage ? { tokenUsage: usage } : {}) });
+        return submission;
+      } catch (error: unknown) {
+        if (!(error instanceof PlanSubmissionValidationError)) throw error;
+        errors = error.errors;
+      }
+      const before = knowledge.size;
+      await prefetch(reusableIds);
+      const signature = [...errors].sort().join("\n");
+      if (signature === previousErrors && knowledge.size === before) break;
+      previousErrors = signature;
+    }
+    throw new Error(`规划未通过有界校验：${errors.join("；")}`);
+  }
 }
 
 /** 准备受控证据、调用主 Agent 并验证其最终输出。 */
@@ -322,15 +468,16 @@ async function supplementVisualCandidateProjectContext(
   }
   const effectiveRecognition = createEffectiveRecognition(context.input.recognition, visualResult);
   const additionalIds = new Set(additionalCandidates.map((candidate) => candidate.id));
-  const supplemental = await analyzer.analyze({
-    inspection: structuredClone(context.input.projectInspection),
-    recognition: {
-      status: effectiveRecognition.status,
-      components: effectiveRecognition.components.filter((component) => additionalIds.has(component.id)),
-      warnings: [...effectiveRecognition.warnings],
-    },
-    ...(context.input.signal ? { signal: context.input.signal } : {}),
-  });
+  const recognition = {
+    status: effectiveRecognition.status,
+    components: effectiveRecognition.components.filter((component) => additionalIds.has(component.id)),
+    warnings: [...effectiveRecognition.warnings],
+  };
+  const supplemental = analyzer.query && context.input.projectContext.repositoryIndex
+    ? await analyzer.query({ analysis: context.input.projectContext, recognition,
+      ...(context.input.signal ? { signal: context.input.signal } : {}) })
+    : await analyzer.analyze({ inspection: structuredClone(context.input.projectInspection), recognition,
+      ...(context.input.signal ? { signal: context.input.signal } : {}) });
   context.input.projectContext = mergeProjectContextAnalysis(
     context.input.projectContext,
     supplemental,
@@ -352,6 +499,7 @@ function mergeProjectContextAnalysis(
   }
   return {
     kind: current.kind,
+    ...(current.repositoryIndex ? { repositoryIndex: current.repositoryIndex } : {}),
     files: [...new Set([...current.files, ...supplemental.files])].sort(),
     filesComplete: current.filesComplete && supplemental.filesComplete,
     matches: [...matches.values()],
@@ -406,6 +554,9 @@ function createDesignSystemKnowledgeToolFactory(
               sections,
               ...(context.input.signal ? { signal: context.input.signal } : {}),
             });
+            if (!records.some((record) => record.toolName === "antd_info")) {
+              throw new Error("官方组件查询没有返回 info 证据。");
+            }
             context.collector.queriedCatalogComponentIds.add(entry.id);
             await context.input.reportProgress?.({
               type: "design-system-query-complete",
@@ -704,6 +855,7 @@ async function runVisualReview(
     : { images: [], warnings: ["当前未配置设计图片证据，视觉 Subagent 将明确降级。"] };
   const result = await visualSubagent.review({
     taskId: context.input.taskId,
+    taskGoal: context.input.taskGoal,
     recognition: context.input.recognition,
     catalog,
     images: visualEvidence.images,
@@ -738,7 +890,11 @@ function createPlanningMessage(input: NormalizedPlanDeepAgentInput, catalog: Com
     },
     candidates: input.recognition.components,
     catalog: catalog.components,
-    projectContext: input.projectContext,
+    projectContext: {
+      kind: input.projectContext.kind, files: input.projectContext.files,
+      filesComplete: input.projectContext.filesComplete,
+      matches: input.projectContext.matches, warnings: input.projectContext.warnings,
+    },
     designSystemWarnings: input.designSystemWarnings,
     constraints: ["方案只供审阅", "不得生成或执行 Patch", "只能引用受控仓库证据和安全的新建相对路径"],
   });

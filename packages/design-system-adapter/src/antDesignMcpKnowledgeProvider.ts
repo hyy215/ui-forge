@@ -52,6 +52,8 @@ export interface AntDesignMcpKnowledgeProviderOptions {
 
 /** 使用本地官方 CLI，并按目标项目目录复用只读 MCP 连接。 */
 export class AntDesignMcpKnowledgeProvider {
+  private readonly knowledgeCache = new Map<string, { data: unknown; expiresAt: number; bytes: number }>();
+  private cacheBytes = 0;
   private readonly connections = new Map<string, Promise<AntDesignMcpConnection>>();
   private readonly createConnection: (projectRoot: string) => Promise<AntDesignMcpConnection>;
 
@@ -72,6 +74,7 @@ export class AntDesignMcpKnowledgeProvider {
         "antd_list",
         {},
         input.signal,
+        input.inspection.antdVersion,
       ));
       return {
         catalog: {
@@ -98,11 +101,19 @@ export class AntDesignMcpKnowledgeProvider {
     const uniqueSections = [...new Set(input.sections)];
     return Promise.all(uniqueSections.map(async (section) => {
       const toolName = toolNameForSection(section);
+      if (input.signal?.aborted) throw new DOMException("Ant Design MCP 查询已取消。", "AbortError");
+      const component = rootComponentName(input.componentName);
+      const key = JSON.stringify([input.inspection.projectRoot, input.inspection.antdVersion ?? null, component, section]);
+      const cached = this.knowledgeCache.get(key);
+      if (cached && cached.expiresAt > Date.now()) {
+        return { toolName, componentName: input.componentName, data: structuredClone(cached.data) };
+      }
       const rawData = await this.callTool(input.inspection.projectRoot, toolName, {
-        component: rootComponentName(input.componentName),
-        ...(section === "info" ? { detail: true } : {}),
-      }, input.signal);
+        component, ...(section === "info" ? { detail: true } : {}),
+      }, input.signal, input.inspection.antdVersion);
+      if (input.signal?.aborted) throw new DOMException("Ant Design MCP 查询已取消。", "AbortError");
       const data = sanitizeKnowledgeData(section, rawData);
+      this.cacheKnowledge(key, data);
       return { toolName, componentName: input.componentName, data };
     }));
   }
@@ -111,7 +122,24 @@ export class AntDesignMcpKnowledgeProvider {
   async dispose(): Promise<void> {
     const connections = [...this.connections.values()];
     this.connections.clear();
+    this.knowledgeCache.clear();
+    this.cacheBytes = 0;
     await Promise.allSettled(connections.map(async (connection) => (await connection).close()));
+  }
+
+  /** 只缓存已裁剪的成功结果，按大小和条目数淘汰，并限制一分钟有效期。 */
+  private cacheKnowledge(key: string, data: unknown): void {
+    const bytes = Buffer.byteLength(JSON.stringify(data) ?? "null", "utf8");
+    const previous = this.knowledgeCache.get(key);
+    if (previous) { this.cacheBytes -= previous.bytes; this.knowledgeCache.delete(key); }
+    this.knowledgeCache.set(key, { data: structuredClone(data), expiresAt: Date.now() + 60_000, bytes });
+    this.cacheBytes += bytes;
+    while (this.knowledgeCache.size > 128 || this.cacheBytes > 4 * 1024 * 1024) {
+      const oldest = this.knowledgeCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.cacheBytes -= this.knowledgeCache.get(oldest)?.bytes ?? 0;
+      this.knowledgeCache.delete(oldest);
+    }
   }
 
   /** 获取任务目录绑定的连接并调用一个固定名称的 MCP 工具。 */
@@ -120,25 +148,27 @@ export class AntDesignMcpKnowledgeProvider {
     name: string,
     argumentsValue: Record<string, unknown>,
     signal?: AbortSignal,
+    version?: string,
   ): Promise<unknown> {
     if (signal?.aborted) throw new DOMException("Ant Design MCP 查询已取消。", "AbortError");
-    const connection = await this.getConnection(projectRoot);
+    const connection = await this.getConnection(projectRoot, version);
     return signal
       ? connection.callTool(name, argumentsValue, signal)
       : connection.callTool(name, argumentsValue);
   }
 
   /** 延迟创建连接，并在启动失败时清除缓存以允许后续重试。 */
-  private async getConnection(projectRoot: string): Promise<AntDesignMcpConnection> {
-    let pending = this.connections.get(projectRoot);
+  private async getConnection(projectRoot: string, version?: string): Promise<AntDesignMcpConnection> {
+    const key = JSON.stringify([projectRoot, version ?? null]);
+    let pending = this.connections.get(key);
     if (!pending) {
       pending = this.createConnection(projectRoot);
-      this.connections.set(projectRoot, pending);
+      this.connections.set(key, pending);
     }
     try {
       return await pending;
     } catch (error: unknown) {
-      if (this.connections.get(projectRoot) === pending) this.connections.delete(projectRoot);
+      if (this.connections.get(key) === pending) this.connections.delete(key);
       throw error;
     }
   }

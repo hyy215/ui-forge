@@ -6,6 +6,13 @@ const defaultProgressIntervalMs = 30_000;
 
 /** 描述一次模型尝试允许写入安全日志的运行指标。 */
 export interface ModelInvocationDiagnostic {
+  model?: string;
+  provider?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+  cacheReadTokens?: number;
   taskId?: string;
   stage: string;
   attempt: number;
@@ -121,13 +128,14 @@ export function createModelTurnDiagnosticObserver(
         chunkCount: state.chunkCount,
       });
     },
-    handleLLMEnd: async (_output, runId) => {
+    handleLLMEnd: async (output, runId) => {
       const state = takeTurn(turns, runId);
       if (!state || disposed) return;
       const now = performance.now();
       await reportDiagnosticSafely(options.reporter, {
         ...base,
         status: "turn-completed",
+        ...readReportedUsage(output),
         turn: state.turn,
         durationMs: elapsedMilliseconds(state.startedAt, now),
         chunkCount: state.chunkCount,
@@ -192,4 +200,30 @@ export function elapsedMilliseconds(startedAt: number, endedAt = performance.now
 /** 从未知异常中提取不含错误消息的类型名称。 */
 function readErrorName(error: unknown): string {
   return error instanceof Error && error.name ? error.name : "Error";
+}
+
+/** 只读取模型消息中供应商报告的用量，不使用 SDK 的 estimatedTokenUsage。 */
+function readReportedUsage(output: unknown): Partial<ModelInvocationDiagnostic> {
+  if (!record(output) || !Array.isArray(output.generations)) return {};
+  const first = output.generations[0];
+  const generation = Array.isArray(first) ? first[0] : undefined;
+  const message = record(generation) ? generation.message : undefined;
+  const usage = record(message) && record(message.usage_metadata) ? message.usage_metadata : undefined;
+  if (!usage) return {};
+  const inputDetails = record(usage.input_token_details) ? usage.input_token_details : {};
+  const outputDetails = record(usage.output_token_details) ? usage.output_token_details : {};
+  const result: Partial<ModelInvocationDiagnostic> = {};
+  for (const [key, value] of [
+    ["inputTokens", usage.input_tokens], ["outputTokens", usage.output_tokens],
+    ["totalTokens", usage.total_tokens], ["reasoningTokens", outputDetails.reasoning],
+    ["cacheReadTokens", inputDetails.cache_read],
+  ] as const) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) result[key] = value;
+  }
+  return result;
+}
+
+/** 将未知回调数据收窄为记录，避免依赖供应商完整响应结构。 */
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

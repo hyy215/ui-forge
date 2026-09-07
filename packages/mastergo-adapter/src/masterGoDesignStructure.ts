@@ -113,8 +113,7 @@ function readNodeText(value: unknown): string | undefined {
   if (!Array.isArray(value)) return undefined;
   const text = value.flatMap((segment) => {
     if (!isRecord(segment)) return [];
-    const content = readString(segment.text);
-    return content ? [content] : [];
+    return typeof segment.text === "string" ? [segment.text] : [];
   }).join("").trim();
   return text || undefined;
 }
