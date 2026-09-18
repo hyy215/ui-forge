@@ -1,0 +1,733 @@
+/** 会话、原生工具详情、审批与新建设计输入的自适应样式。 */
+.setup {
+  max-width: 800px;
+  margin: 48px auto 60px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.setup h1 {
+  font-size: 32px;
+  letter-spacing: -1px;
+  margin: 14px 0;
+}
+.description {
+  color: #758094;
+  line-height: 1.8;
+}
+.setupForm {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.setupForm > label {
+  font-weight: 600;
+  margin-top: 8px;
+}
+.optional {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.acceptanceOption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.designInputs {
+  border: 0;
+  margin: 14px 0 4px;
+  padding: 0;
+  min-width: 0;
+}
+.designInputs legend {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.designInputs legend span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.designGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.designSource {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafbfc;
+  padding: 18px;
+}
+.designSource > label:first-child,
+.sourceTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+.designSource p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.6;
+}
+.uploadLabel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px dashed #bdc7d6;
+  border-radius: 7px;
+  color: #4b5b73;
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.uploadLabel:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.uploadLabel:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.uploadLabel input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: inherit;
+  width: 100%;
+  height: 100%;
+}
+.formFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.7;
+}
+.attachments {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px;
+  max-width: 100%;
+  font-size: 12px;
+  background: white;
+}
+.attachment img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.attachment span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.session {
+  height: calc(100dvh - 94px);
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  max-width: 880px;
+  margin: auto;
+  padding-bottom: 12px;
+  position: relative;
+}
+.sessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 0 16px;
+  flex-shrink: 0;
+}
+.sessionHeader > div {
+  min-width: 0;
+}
+.sessionHeader h1 {
+  font-size: 17px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sessionHeader p {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 6px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sessionHeader .executionHint {
+  max-width: 640px;
+  margin-top: 8px;
+  white-space: normal;
+  line-height: 1.5;
+}
+.timeline {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px 10px 24px 0;
+  scrollbar-width: thin;
+}
+.turn {
+  display: flow-root;
+}
+.agentMessage {
+  padding: 18px 0;
+  overflow-wrap: anywhere;
+}
+.messageAuthor {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #7e899a;
+  margin-bottom: 8px;
+}
+.userMessage {
+  margin: 14px 0 18px 12%;
+  padding: 14px 18px;
+  background: #e9edf4;
+  border-radius: 16px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.userMessage p {
+  margin: 0;
+  line-height: 1.8;
+}
+.imageBadge {
+  display: inline-flex;
+  padding: 5px 9px;
+  background: white;
+  border-radius: 6px;
+  font-size: 12px;
+  margin: 8px 6px 0 0;
+}
+.markdown {
+  font-size: 14px;
+  line-height: 1.85;
+  color: #2e394d;
+}
+.markdown a {
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fileLinkError {
+  display: block;
+  color: #b03a36;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.markdown p {
+  white-space: pre-wrap;
+  margin: 8px 0 14px;
+}
+.markdown h3 {
+  font-size: 16px;
+  margin: 20px 0 10px;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 22px;
+}
+.markdown code {
+  font-size: 12px;
+  background: #e9edf2;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.markdown pre,
+.toolItem pre,
+.request pre,
+.activities pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: auto;
+  max-width: 100%;
+  font: 12px/1.75 var(--vscode-editor-font-family, monospace);
+  background: #eef1f5;
+  padding: 14px;
+  border-radius: 8px;
+  max-height: 360px;
+}
+.markdown pre code {
+  padding: 0;
+  background: none;
+}
+.toolItem {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  margin: 4px 0;
+  font-size: 12px;
+  min-width: 0;
+}
+.toolItem[open] {
+  border-color: var(--line);
+  background: #fbfcfd;
+}
+.toolItem > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  min-width: 0;
+  border-radius: 9px;
+}
+.toolItem > summary::-webkit-details-marker {
+  display: none;
+}
+.toolItem > summary:hover {
+  background: #edf0f5;
+}
+.toolIcon {
+  font-family: monospace;
+  font-size: 14px;
+  min-width: 18px;
+  color: #8995a6;
+}
+.toolItem[data-status="completed"] .toolIcon {
+  color: #397b60;
+}
+.toolItem[data-status="failed"] .toolIcon,
+.toolError {
+  color: #b03a36;
+}
+.toolLabel {
+  white-space: nowrap;
+  color: #536074;
+}
+.toolSummary {
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+  max-width: min(52vw, 460px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toolStatus {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.chevron {
+  margin-left: auto;
+  color: #99a3b2;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.toolItem[open] > summary > .chevron {
+  transform: rotate(90deg);
+}
+.toolBody {
+  padding: 2px 14px 14px;
+  min-width: 0;
+}
+.toolBody > pre {
+  margin: 8px 0;
+}
+.toolBody .commandPreview,
+.request .commandPreview {
+  background: #edf0f5;
+  color: #243044;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.toolMeta {
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.valueFields {
+  margin: 10px 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.valueFields > div {
+  display: grid;
+  grid-template-columns: minmax(65px, 110px) minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+.valueFields > div:last-child {
+  border-bottom: 0;
+}
+.valueFields dt {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.valueFields dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 280px;
+  overflow: auto;
+}
+.fileChanges > details {
+  border-top: 1px solid var(--line);
+}
+.fileChanges > details > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+.filePath {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.addCount {
+  color: #288253;
+  font: 11px monospace;
+  white-space: nowrap;
+}
+.removeCount {
+  color: #b44943;
+  font: 11px monospace;
+  white-space: nowrap;
+}
+.diff {
+  padding: 0 8px 10px;
+  min-width: 0;
+}
+.diff pre {
+  white-space: pre;
+  overflow-wrap: normal;
+  background: #f7f9fb;
+  padding: 8px 0;
+  margin: 8px 0;
+}
+.diff code {
+  display: block;
+  min-width: max-content;
+  background: none;
+  padding: 0;
+}
+.diff span {
+  display: block;
+  padding: 0 12px;
+  line-height: 1.65;
+}
+.diffAdded {
+  background: #e5f4e9;
+  color: #215f36;
+}
+.diffRemoved {
+  background: #fbe9e8;
+  color: #a03633;
+}
+.diffHeading {
+  background: #e8effb;
+  color: #546f9a;
+}
+.planSteps {
+  list-style: none;
+  padding: 0;
+  line-height: 1.7;
+}
+.planSteps li {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0;
+}
+.planSteps li[data-status="completed"] {
+  color: #768278;
+}
+.planSteps li[data-status="inProgress"] {
+  font-weight: 600;
+}
+.childActivity {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 2px solid #e0e5ed;
+}
+.rawDetails {
+  margin: 8px 0;
+  color: var(--muted);
+}
+.rawDetails > summary {
+  cursor: pointer;
+}
+.request {
+  background: #fff;
+  border: 1px solid #d9e0eb;
+  border-radius: 14px;
+  padding: 22px;
+  margin: 20px 0;
+  box-shadow: 0 5px 20px #213b5b05;
+  overflow-wrap: anywhere;
+}
+.requestHeading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.requestDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #b88b32;
+}
+.requestReason {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #536074;
+  white-space: pre-wrap;
+  margin: 12px 0;
+}
+.requestActions {
+  margin-top: 14px;
+}
+.approvalChoice {
+  max-width: 240px;
+}
+.approvalChoice p {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.requestDetails {
+  min-width: 0;
+}
+.requestTechnical {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.requestTechnical > summary {
+  cursor: pointer;
+}
+.requestTechnical pre {
+  font-size: 11px;
+  max-height: 260px;
+}
+.permissionScope {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f4f6f9;
+}
+.permissionScope > strong {
+  display: block;
+  margin-bottom: 6px;
+}
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0;
+}
+.question label {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.questionOptions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rawReply {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+.elicitationForm {
+  min-width: 0;
+}
+.activities {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 20px 0;
+}
+.activities summary {
+  cursor: pointer;
+  margin: 8px 0;
+}
+.turnComplete {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  margin: 24px 0;
+}
+.composer {
+  background: white;
+  border: 1px solid #dfe4ed;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 4px 20px #20345405;
+  flex-shrink: 0;
+}
+.composer textarea {
+  padding: 2px;
+  resize: none;
+}
+.composerAttachments {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-height: 130px;
+  overflow: auto;
+  margin: 4px 0 10px;
+}
+.composerTools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.composerTools .uploadLabel {
+  min-height: 28px;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+.composerTools .hint {
+  font-size: 10px;
+}
+.composerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+.composerFooter > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.latest {
+  text-align: center;
+  margin: -8px 0 8px;
+}
+.emptySession {
+  padding: 48px;
+  text-align: center;
+  color: var(--muted);
+}
+@media (max-width: 650px) {
+  .setup {
+    margin: 30px auto;
+  }
+  .setup h1 {
+    font-size: 27px;
+  }
+  .setupForm {
+    padding: 18px;
+  }
+  .designGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .designSource {
+    padding: 14px;
+  }
+  .designInputs legend span {
+    display: block;
+    margin: 6px 0 0;
+  }
+  .session {
+    height: calc(100dvh - 78px);
+  }
+  .sessionHeader {
+    padding: 18px 0 14px;
+  }
+  .sessionHeader h1 {
+    font-size: 15px;
+  }
+  .userMessage {
+    margin-left: 5%;
+  }
+  .request {
+    padding: 14px;
+  }
+  .composerFooter {
+    align-items: flex-end;
+  }
+  .composerFooter > span {
+    max-width: 95px;
+    font-size: 10px;
+  }
+  .toolItem > summary {
+    gap: 6px;
+    padding: 9px 4px;
+  }
+  .toolLabel {
+    font-size: 11px;
+  }
+  .toolBody {
+    padding: 0 8px 10px;
+  }
+  .markdown {
+    font-size: 13px;
+  }
+  .fileChanges > details > summary {
+    flex-wrap: wrap;
+  }
+  .filePath {
+    flex-basis: 100%;
+  }
+  .valueFields > div {
+    grid-template-columns: minmax(55px, 80px) minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

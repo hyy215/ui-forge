@@ -6,7 +6,12 @@
     "types": ["node", "vscode"]
   },
   "references": [
-    { "path": "../../packages/shared-protocol" }
+    {
+      "path": "../../packages/shared-protocol"
+    },
+    {
+      "path": "../../packages/client-core"
+    }
   ],
   "include": ["src"]
 }

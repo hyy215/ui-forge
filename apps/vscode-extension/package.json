@@ -8,13 +8,28 @@
   "engines": {
     "vscode": "^1.105.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "dependencies": {
-    "@ui-forge/shared-protocol": "0.1.0"
+    "@ui-forge/shared-protocol": "0.1.0",
+    "@ui-forge/client-core": "0.1.0"
   },
   "contributes": {
+    "configuration": {
+      "title": "ui-forge",
+      "properties": {
+        "ui-forge.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:4310",
+          "scope": "machine",
+          "format": "uri",
+          "markdownDescription": "Agent Server 的本机 HTTP 地址，例如 `http://127.0.0.1:4310`。端口须与后端一致，修改后重新加载窗口生效。后端需单独启动。"
+        }
+      }
+    },
     "commands": [
       {
         "command": "ui-forge.open",
@@ -24,6 +39,29 @@
         "command": "ui-forge.createTask",
         "title": "创建任务",
         "icon": "$(add)"
+      },
+      {
+        "command": "ui-forge.refreshHistory",
+        "title": "刷新历史任务",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "ui-forge.loadMoreTasks",
+        "title": "加载更多任务"
+      },
+      {
+        "command": "ui-forge.openHistoryTask",
+        "title": "打开历史任务"
+      },
+      {
+        "command": "ui-forge.continueTask",
+        "title": "继续执行",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ui-forge.openSettings",
+        "title": "ui-forge: 规则配置",
+        "icon": "$(settings-gear)"
       }
     ],
     "viewsContainers": {
@@ -49,6 +87,23 @@
           "command": "ui-forge.createTask",
           "when": "view == ui-forge.sidebar",
           "group": "navigation"
+        },
+        {
+          "command": "ui-forge.refreshHistory",
+          "when": "view == ui-forge.sidebar",
+          "group": "navigation"
+        },
+        {
+          "command": "ui-forge.openSettings",
+          "when": "view == ui-forge.sidebar",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "ui-forge.continueTask",
+          "when": "view == ui-forge.sidebar && viewItem == historyTask",
+          "group": "inline"
         }
       ]
     }

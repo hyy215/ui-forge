@@ -1,13 +1,7 @@
 /** 作为 Agent Server 唯一公共入口，封装 Fastify 应用、监听和关闭生命周期。 */
 
-import type {
-  FastifyInstance,
-  FastifyListenOptions,
-} from "fastify";
-import {
-  buildApp,
-  type BuildAppOptions,
-} from "./http/buildApp.js";
+import type { FastifyInstance, FastifyListenOptions } from "fastify";
+import { buildApp, type BuildAppOptions } from "./http/buildApp.js";
 import { normalizeLoopbackHost } from "./runtime/serverHostPolicy.js";
 
 /** 提供可嵌入、可测试且不暴露内部目录聚合入口的 Agent Server Facade。 */

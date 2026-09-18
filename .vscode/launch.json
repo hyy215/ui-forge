@@ -5,21 +5,13 @@
       "name": "Server: Agent Server",
       "type": "node",
       "request": "launch",
-      "runtimeArgs": [
-        "--import",
-        "tsx"
-      ],
+      "runtimeArgs": ["--import", "tsx"],
       "program": "${workspaceFolder}/apps/agent-server/src/main.ts",
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
-      "env": {
-        "DATABASE_URL": ""
-      },
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "preLaunchTask": "build:packages"
     },
     {
@@ -44,12 +36,8 @@
       "name": "VS Code: Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/apps/vscode-extension"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/apps/vscode-extension/dist/**/*.js"
-      ],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/apps/vscode-extension"],
+      "outFiles": ["${workspaceFolder}/apps/vscode-extension/dist/**/*.js"],
       "env": {
         "UI_FORGE_SERVER_URL": "http://127.0.0.1:4310"
       },
@@ -60,27 +48,17 @@
   "compounds": [
     {
       "name": "ui-forge: Server + Web",
-      "configurations": [
-        "Server: Agent Server",
-        "Web: Agent Server"
-      ],
+      "configurations": ["Server: Agent Server", "Web: Agent Server"],
       "stopAll": true
     },
     {
       "name": "ui-forge: Server + VS Code",
-      "configurations": [
-        "Server: Agent Server",
-        "VS Code: Extension"
-      ],
+      "configurations": ["Server: Agent Server", "VS Code: Extension"],
       "stopAll": true
     },
     {
       "name": "ui-forge: Full Stack",
-      "configurations": [
-        "Server: Agent Server",
-        "Web: Agent Server",
-        "VS Code: Extension"
-      ],
+      "configurations": ["Server: Agent Server", "Web: Agent Server", "VS Code: Extension"],
       "stopAll": true
     }
   ]

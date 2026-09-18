@@ -15,15 +15,18 @@ describe("communication protocol negotiation", () => {
         "request-response",
         "ordered-stream",
         "stream-cancel",
-        "persisted-design-confirmation",
+        "codex-native-sessions",
+        "instruction-files",
       ],
     });
   });
 
   it("rejects an unknown capability claimed by the server", () => {
-    expect(negotiateCommunicationProtocolResultSchema.safeParse({
-      protocolVersion: currentCommunicationProtocolVersion,
-      capabilities: ["request-response", "future-capability"],
-    }).success).toBe(false);
+    expect(
+      negotiateCommunicationProtocolResultSchema.safeParse({
+        protocolVersion: currentCommunicationProtocolVersion,
+        capabilities: ["request-response", "future-capability"],
+      }).success,
+    ).toBe(false);
   });
 });

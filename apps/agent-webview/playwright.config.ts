@@ -9,13 +9,10 @@ export default defineConfig({
   retries: 0,
   timeout: 30_000,
   expect: { timeout: 10_000 },
-  reporter: [
-    ["list"],
-    ["html", { open: "never" }],
-  ],
+  reporter: [["list"], ["html", { open: "never" }]],
   outputDir: "./test-results",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: "http://127.0.0.1:4175",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     video: "retain-on-failure",
@@ -29,11 +26,15 @@ export default defineConfig({
       name: "narrow-chromium",
       use: { browserName: "chromium", viewport: { width: 390, height: 844 } },
     },
+    {
+      name: "compact-chromium",
+      use: { browserName: "chromium", viewport: { width: 320, height: 720 } },
+    },
   ],
   webServer: {
-    command: "npm run dev -w @ui-forge/agent-webview -- --host 127.0.0.1 --port 4173 --strictPort",
-    url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
+    command: "npm run dev -w @ui-forge/agent-webview -- --host 127.0.0.1 --port 4175 --strictPort",
+    url: "http://127.0.0.1:4175",
+    reuseExistingServer: false,
     timeout: 30_000,
   },
 });

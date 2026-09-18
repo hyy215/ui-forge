@@ -2,15 +2,19 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"]
   },
   "references": [
-    { "path": "../../packages/shared-protocol" },
-    { "path": "../../packages/component-indexer" },
-    { "path": "../../packages/d2c-agent" },
-    { "path": "../../packages/d2c-storage" },
-    { "path": "../../packages/design-system-adapter" },
-    { "path": "../../packages/mastergo-adapter" }
+    {
+      "path": "../../packages/shared-protocol"
+    },
+    {
+      "path": "../../packages/codex-client"
+    },
+    {
+      "path": "../../packages/client-core"
+    }
   ],
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]

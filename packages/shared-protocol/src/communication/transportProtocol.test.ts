@@ -38,11 +38,9 @@ describe("communication transport protocol", () => {
   });
 
   it("validates correlated stream requests, events, heartbeats and completion", () => {
-    const request = createCommunicationStreamRequestMessage(
-      "webview-stream-1",
-      "example.stream",
-      { taskId: "task-1" },
-    );
+    const request = createCommunicationStreamRequestMessage("webview-stream-1", "example.stream", {
+      taskId: "task-1",
+    });
     const event = communicationStreamMessageSchema.parse(
       createCommunicationStreamEventMessage(request.requestId, 1, { type: "progress" }),
     );
@@ -57,8 +55,9 @@ describe("communication transport protocol", () => {
     expect(event).toMatchObject({ requestId: request.requestId, seq: 1 });
     expect(heartbeat).toMatchObject({ kind: "stream-heartbeat", seq: 2 });
     expect(complete).toMatchObject({ requestId: request.requestId, seq: 3 });
-    expect(cancelCommunicationStreamInputSchema.parse({ requestId: request.requestId }))
-      .toEqual({ requestId: request.requestId });
+    expect(cancelCommunicationStreamInputSchema.parse({ requestId: request.requestId })).toEqual({
+      requestId: request.requestId,
+    });
   });
 
   it("rejects a stream message without a positive sequence", () => {

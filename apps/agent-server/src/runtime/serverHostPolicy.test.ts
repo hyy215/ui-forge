@@ -13,13 +13,10 @@ describe("Agent Server host policy", () => {
     expect(normalizeLoopbackHost("[0:0:0:0:0:0:0:1]")).toBe("::1");
   });
 
-  it.each([
-    "0.0.0.0",
-    "192.168.1.10",
-    "::",
-    "server.example.com",
-    "127.0.0.1.example.com",
-  ])("rejects the non-loopback host %s", (host) => {
-    expect(() => normalizeLoopbackHost(host)).toThrow("只允许监听本机 loopback");
-  });
+  it.each(["0.0.0.0", "192.168.1.10", "::", "server.example.com", "127.0.0.1.example.com"])(
+    "rejects the non-loopback host %s",
+    (host) => {
+      expect(() => normalizeLoopbackHost(host)).toThrow("只允许监听本机 loopback");
+    },
+  );
 });

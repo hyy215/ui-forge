@@ -32,7 +32,10 @@ export function registerCommunicationRoute(
     }
 
     const message = messageResult.data;
-    if (message.kind === "request" && message.method === communicationTransportMethods.negotiateProtocol) {
+    if (
+      message.kind === "request" &&
+      message.method === communicationTransportMethods.negotiateProtocol
+    ) {
       try {
         const input = negotiateCommunicationProtocolInputSchema.parse(message.params);
         if (input.protocolVersion !== currentCommunicationProtocolVersion) {
@@ -41,8 +44,11 @@ export function registerCommunicationRoute(
           );
         }
         const supported = new Set<string>(communicationCapabilities);
-        const missing = input.requiredCapabilities.filter((capability) => !supported.has(capability));
-        if (missing.length > 0) throw new Error(`Agent Server 缺少必需通信能力：${missing.join("、")}。`);
+        const missing = input.requiredCapabilities.filter(
+          (capability) => !supported.has(capability),
+        );
+        if (missing.length > 0)
+          throw new Error(`Agent Server 缺少必需通信能力：${missing.join("、")}。`);
         return createSuccessfulCommunicationResponseMessage(message.requestId, {
           protocolVersion: currentCommunicationProtocolVersion,
           capabilities: [...communicationCapabilities],
@@ -62,16 +68,33 @@ export function registerCommunicationRoute(
       const handleDisconnect = () => controller.abort();
       request.raw.once("aborted", handleDisconnect);
       reply.raw.once("close", handleDisconnect);
-      const stream = Readable.from(toNdjson(
-        streamRequestHandler.handle(message, controller.signal),
-      ));
+      const stream = Readable.from(
+        toNdjson(streamRequestHandler.handle(message, controller.signal)),
+      );
       stream.once("close", () => {
         request.raw.removeListener("aborted", handleDisconnect);
         reply.raw.removeListener("close", handleDisconnect);
       });
       return reply.send(stream);
     }
-    return requestHandler.handle(message);
+    const result = await requestHandler.handle(message);
+    const taskId =
+      message.params &&
+      typeof message.params === "object" &&
+      "taskId" in message.params &&
+      typeof message.params.taskId === "string"
+        ? message.params.taskId.slice(0, 200)
+        : undefined;
+    request.log.info(
+      {
+        operation: message.method.slice(0, 160),
+        requestId: message.requestId,
+        taskId,
+        success: result.success,
+      },
+      "ui-forge request",
+    );
+    return result;
   });
 }
 

@@ -12,20 +12,27 @@
     "packages/*"
   ],
   "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "build": "npm run build:packages && npm run build:apps",
-    "build:packages": "npm run build -w @ui-forge/shared-protocol && npm run build -w @ui-forge/agent-core && npm run build -w @ui-forge/d2c-agent && npm run build -w @ui-forge/d2c-storage && npm run build -w @ui-forge/mastergo-adapter && npm run build -w @ui-forge/design-system-adapter && npm run build -w @ui-forge/component-indexer && npm run build -w @ui-forge/tools && npm run build -w @ui-forge/visual-evaluator && npm run build -w @ui-forge/eval-runner",
-    "build:apps": "npm run build -w @ui-forge/agent-server && npm run build -w @ui-forge/agent-webview && npm run build -w @ui-forge/vscode-extension",
-    "check": "npm run build:packages && npm run typecheck --workspaces --if-present && npm run test",
+    "build:packages": "npm run build -w @ui-forge/shared-protocol && npm run build -w @ui-forge/client-core && npm run build -w @ui-forge/codex-client",
+    "build:apps": "npm run build -w @ui-forge/agent-server && npm run build -w @ui-forge/agent-webview && npm run build -w @ui-forge/vscode-extension && npm run build -w @ui-forge/agent-cli",
+    "package:vsix": "node apps/vscode-extension/scripts/package-vsix.mjs",
+    "check": "npm run build:packages && npm run build -w @ui-forge/agent-server && npm run typecheck --workspaces --if-present && npm run test",
+    "verify": "npm run check && npm run build:apps",
     "dev:server": "npm run dev -w @ui-forge/agent-server",
     "dev:webview": "npm run dev -w @ui-forge/agent-webview",
     "dev:webview:server": "npm run dev:server -w @ui-forge/agent-webview",
     "test": "vitest run",
     "test:e2e": "playwright test --config apps/agent-webview/playwright.config.ts",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ui-forge": "node apps/agent-cli/dist/main.js"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
     "@types/node": "26.2.0",
+    "esbuild": "0.28.2",
+    "prettier": "3.8.1",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
   }

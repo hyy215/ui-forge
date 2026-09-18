@@ -13,14 +13,28 @@ export function normalizeLoopbackHost(hostInput: string | undefined): string {
   throw new Error("Agent Server 当前只允许监听本机 loopback 地址。");
 }
 
+/** HTTP Host 和 Origin 复用监听端的回环范围；拒绝非 HTTP 地址及嵌入的凭据。 */
+export function isLoopbackHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return false;
+    normalizeLoopbackHost(url.hostname);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** 判断 IPv6 字面量是否为压缩或完整形式的唯一 loopback 地址。 */
 function isIpv6Loopback(host: string): boolean {
   if (host === "::1") return true;
   if (isIP(host) !== 6) return false;
   const parts = host.split(":");
-  return parts.length === 8
-    && parts.slice(0, 7).every((part) => /^0{1,4}$/.test(part))
-    && /^0{0,3}1$/.test(parts[7] ?? "");
+  return (
+    parts.length === 8 &&
+    parts.slice(0, 7).every((part) => /^0{1,4}$/.test(part)) &&
+    /^0{0,3}1$/.test(parts[7] ?? "")
+  );
 }
 
 /** 移除 Fastify 配置中可能出现的 IPv6 方括号。 */

@@ -1,4 +1,4 @@
 interface:
-  display_name: "提交与 PR 交付门禁"
-  short_description: "冻结快照并完成有界审核，通过门禁后提交并按仓库规则交付 Draft PR"
-  default_prompt: "使用 $commit 冻结待提交快照、完成有界审核，并在全部质量门禁通过后按仓库规则提交和交付 Draft PR。"
+  display_name: "提交与 Draft PR"
+  short_description: "检查本次变更，推送前整理为一个 commit，经确认后交付 Draft PR 并查看 GitHub CI"
+  default_prompt: "使用 $commit 检查本次变更并整理为一个 commit，准备好提交和 PR 说明，在推送前让我确认，默认创建 Draft PR 并报告 GitHub CI 结果。"

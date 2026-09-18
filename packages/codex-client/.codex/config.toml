@@ -1,0 +1,41 @@
+# prepareD2C 通过 Codex 读取此包级配置，并为目标工作区解析路径。
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+
+[agents.d2c_design_analyst]
+description = "分析指定设计的布局、交互、尺寸、排版和资源。"
+config_file = "agents/d2c_design_analyst.toml"
+
+[agents.d2c_patch_author]
+description = "在明确分配的文件范围内实现设计与修复。"
+config_file = "agents/d2c_patch_author.toml"
+
+[agents.d2c_browser_renderer]
+description = "验证交互、视口和真实浏览器截图。"
+config_file = "agents/d2c_browser_renderer.toml"
+
+[agents.d2c_reviewer]
+description = "在不修改文件的前提下审查变更的正确性和可维护性。"
+config_file = "agents/d2c_reviewer.toml"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@0.0.78", "--browser", "chrome", "--headless", "--isolated", "--caps", "vision,devtools", "--console-level", "warning"]
+startup_timeout_sec = 120
+tool_timeout_sec = 120
+enabled_tools = [
+  "browser_navigate", "browser_navigate_back", "browser_tabs", "browser_close", "browser_resize",
+  "browser_snapshot", "browser_find", "browser_take_screenshot", "browser_console_messages",
+  "browser_network_requests", "browser_network_request", "browser_wait_for", "browser_mouse_wheel",
+  "browser_click", "browser_type", "browser_fill_form", "browser_select_option", "browser_hover",
+  "browser_press_key", "browser_evaluate",
+]
+
+# MasterGo 凭据由辅助脚本从仓库根目录的 .env 加载。
+[mcp_servers.mastergo]
+url = "https://mastergo.com/mcp/xf/sse"
+http_headers_helper = "node \"$(git rev-parse --show-toplevel)/packages/codex-client/scripts/mastergo-headers.mjs\""
+startup_timeout_sec = 120
+tool_timeout_sec = 180
+enabled_tools = ["mcp__getDsl", "mcp__getPageLayers", "mcp__extractSvg", "mcp__getComponentLink", "mcp__getMeta", "mcp__getDesignTexts", "mcp__getDesignSvgs"]

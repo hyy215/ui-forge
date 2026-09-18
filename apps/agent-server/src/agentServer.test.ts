@@ -14,7 +14,8 @@ describe("AgentServer", () => {
     const server = new AgentServer();
     servers.push(server);
 
-    await expect(server.listen({ host: "0.0.0.0", port: 0 }))
-      .rejects.toThrow("只允许监听本机 loopback");
+    await expect(server.listen({ host: "0.0.0.0", port: 0 })).rejects.toThrow(
+      "只允许监听本机 loopback",
+    );
   });
 });

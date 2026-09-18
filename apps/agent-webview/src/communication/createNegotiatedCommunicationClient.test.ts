@@ -1,26 +1,19 @@
 /** 验证第一方客户端只协商一次、阻断不兼容调用并允许失败后重试。 */
 
 import {
+  communicationCapabilities,
   communicationTransportMethods,
   currentCommunicationProtocolVersion,
 } from "@ui-forge/shared-protocol";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import type {
-  CommunicationClient,
-  CommunicationRequest,
-} from "./clientContract";
+import type { CommunicationClient, CommunicationRequest } from "./clientContract";
 import { createNegotiatedCommunicationClient } from "./createNegotiatedCommunicationClient";
 
 function successfulNegotiationResult() {
   return {
     protocolVersion: currentCommunicationProtocolVersion,
-    capabilities: [
-      "request-response",
-      "ordered-stream",
-      "stream-cancel",
-      "persisted-design-confirmation",
-    ],
+    capabilities: [...communicationCapabilities],
   };
 }
 
@@ -51,10 +44,34 @@ describe("negotiated communication client", () => {
       onEvent: () => undefined,
     });
 
-    expect(requestedMethods.filter((method) => (
-      method === communicationTransportMethods.negotiateProtocol
-    ))).toHaveLength(1);
+    expect(
+      requestedMethods.filter(
+        (method) => method === communicationTransportMethods.negotiateProtocol,
+      ),
+    ).toHaveLength(1);
     expect(stream).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a server without native sessions before sending input", async () => {
+    const methods: string[] = [];
+    const underlying: CommunicationClient = {
+      notify: vi.fn(),
+      stream: vi.fn(),
+      async request<TResult>(input: CommunicationRequest<TResult>): Promise<TResult> {
+        methods.push(input.method);
+        return input.responseSchema.parse({
+          protocolVersion: currentCommunicationProtocolVersion,
+          capabilities: communicationCapabilities.filter(
+            (capability) => capability !== "codex-native-sessions",
+          ),
+        });
+      },
+    };
+    const client = createNegotiatedCommunicationClient(underlying);
+    await expect(
+      client.request({ method: "ui-forge.session.send", responseSchema: z.unknown() }),
+    ).rejects.toThrow("codex-native-sessions");
+    expect(methods).toEqual([communicationTransportMethods.negotiateProtocol]);
   });
 
   it("does not issue a business request when negotiation fails and retries next time", async () => {

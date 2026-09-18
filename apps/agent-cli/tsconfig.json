@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../../packages/shared-protocol"
+    },
+    {
+      "path": "../../packages/codex-client"
+    },
+    {
+      "path": "../agent-server"
+    },
+    {
+      "path": "../../packages/client-core"
+    }
+  ]
+}

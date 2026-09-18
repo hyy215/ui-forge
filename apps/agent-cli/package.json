@@ -1,0 +1,21 @@
+{
+  "name": "@ui-forge/agent-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ui-forge": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ui-forge/agent-server": "0.1.0",
+    "@ui-forge/codex-client": "0.1.0",
+    "@ui-forge/shared-protocol": "0.1.0",
+    "commander": "14.0.3",
+    "zod": "4.4.3",
+    "@ui-forge/client-core": "0.1.0"
+  }
+}
