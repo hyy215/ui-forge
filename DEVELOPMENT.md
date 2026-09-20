@@ -57,6 +57,8 @@ npm run typecheck -w @ui-forge/vscode-extension
 npm run test -- apps/vscode-extension/src
 ```
 
+TypeScript 检查使用 `tsc -b` 按 Project References 构建依赖；单独检查 CLI 等工作区时也不依赖已有的 `dist`。为供下游项目读取声明文件，检查会按需写入构建产物和增量缓存，不是纯 `--noEmit`。
+
 页面交互修改运行对应 E2E，首次需准备测试浏览器：
 
 ```bash

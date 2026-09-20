@@ -7,8 +7,8 @@
     "ui-forge": "dist/main.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsc -b tsconfig.json",
+    "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
     "@ui-forge/agent-server": "0.1.0",
