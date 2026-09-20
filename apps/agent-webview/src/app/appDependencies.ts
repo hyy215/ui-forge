@@ -1,14 +1,29 @@
-/** 定义并组装 Webview 应用层使用的环境相关基础依赖。 */
+/** 注入环境无关传输与宿主明确提供的工作区，不在功能组件读取 VS Code API。 */
 import type { CommunicationClient } from "../communication/clientContract";
+import { z } from "zod";
+import { isVsCodeRuntime } from "../communication/vscode/createVsCodeCommunicationClient";
 
-/** Webview 当前启用功能所依赖的应用级能力集合。 */
+/** 应用唯一的环境相关依赖。 */
 export interface AppDependencies {
   communicationClient: CommunicationClient;
+  workspacePath?: string;
+  fixture?: boolean;
+  host?: "vscode" | "browser";
 }
-
-/** 注入由当前宿主环境选定的统一通信客户端。 */
+/** 使用 Extension 注入的展示上下文；真正的工作区边界仍由宿主检查。 */
 export function createAppDependencies(
   communicationClient: CommunicationClient,
+  fixture = false,
 ): AppDependencies {
-  return { communicationClient };
+  const context = z
+    .object({ projectPath: z.string().optional() })
+    .safeParse(Reflect.get(window, "uiForgeHost"));
+  return {
+    communicationClient,
+    fixture,
+    host: isVsCodeRuntime() ? "vscode" : "browser",
+    ...(context.success && context.data.projectPath
+      ? { workspacePath: context.data.projectPath }
+      : {}),
+  };
 }

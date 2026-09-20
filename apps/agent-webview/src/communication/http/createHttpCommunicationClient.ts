@@ -1,11 +1,11 @@
 /** 实现浏览器环境下经过协议校验、支持超时和取消的 HTTP 通信客户端。 */
 import {
   communicationResponseMessageSchema,
-  communicationStreamMessageSchema,
   createCommunicationNotificationMessage,
   createCommunicationRequestMessage,
   createCommunicationStreamRequestMessage,
 } from "@ui-forge/shared-protocol";
+import { readCommunicationStream } from "@ui-forge/client-core";
 import type { CommunicationClient } from "../clientContract";
 
 /** HTTP 通信客户端的运行参数。 */
@@ -40,10 +40,16 @@ export function createHttpCommunicationClient(
       requestSequence += 1;
       const requestId = `web-${requestSequence}`;
       const timeoutController = new AbortController();
-      const timeout = window.setTimeout(() => timeoutController.abort(), timeoutMs);
+      let timedOut = false;
+      let cancelledByCaller = false;
+      const timeout = window.setTimeout(() => {
+        timedOut = true;
+        timeoutController.abort();
+      }, timeoutMs);
 
       /** 将调用方取消信号转发给当前 HTTP 请求。 */
       function handleAbort() {
+        cancelledByCaller = true;
         timeoutController.abort();
       }
 
@@ -72,7 +78,12 @@ export function createHttpCommunicationClient(
           throw new Error(`通信响应格式无效：${responseResult.error.message}`);
         }
         return responseResult.data;
+      } catch (error: unknown) {
+        if (timedOut) throw new Error(`通信请求超时：${method}`);
+        if (cancelledByCaller) throw new DOMException("通信请求已取消。", "AbortError");
+        throw error;
       } finally {
+        timeoutController.abort();
         window.clearTimeout(timeout);
         signal?.removeEventListener("abort", handleAbort);
       }
@@ -81,12 +92,19 @@ export function createHttpCommunicationClient(
       requestSequence += 1;
       const requestId = `web-stream-${requestSequence}`;
       const timeoutController = new AbortController();
-      const timeout = timeoutMs > 0
-        ? window.setTimeout(() => timeoutController.abort(), timeoutMs)
-        : undefined;
+      let timedOut = false;
+      let cancelledByCaller = false;
+      const timeout =
+        timeoutMs > 0
+          ? window.setTimeout(() => {
+              timedOut = true;
+              timeoutController.abort();
+            }, timeoutMs)
+          : undefined;
 
       /** 将调用方取消信号转发给当前 HTTP 流。 */
       function handleAbort() {
+        cancelledByCaller = true;
         timeoutController.abort();
       }
 
@@ -101,50 +119,20 @@ export function createHttpCommunicationClient(
           throw new Error(`HTTP 流式通信失败：${response.status} ${response.statusText}`);
         }
         if (!response.body) throw new Error("HTTP 流式通信没有响应体。");
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let lastSeq = 0;
-        let finished = false;
-
-        /** 解析并消费一行与当前请求关联的有序流消息。 */
-        async function consumeLine(line: string): Promise<void> {
-          if (!line.trim()) return;
-          const messageResult = communicationStreamMessageSchema.safeParse(JSON.parse(line));
-          if (!messageResult.success || messageResult.data.requestId !== requestId) {
-            throw new Error("HTTP 流式通信消息格式或关联标识无效。");
-          }
-          const message = messageResult.data;
-          if (message.seq !== lastSeq + 1) throw new Error("HTTP 流式通信事件顺序无效。");
-          lastSeq = message.seq;
-          if (message.kind === "stream-heartbeat") return;
+        for await (const message of readCommunicationStream(
+          response.body,
+          requestId,
+          timeoutController.signal,
+        )) {
           if (message.kind === "stream-error") throw new Error(message.error.message);
-          if (message.kind === "stream-complete") {
-            finished = true;
-            return;
-          }
-          const eventResult = eventSchema.safeParse(message.event);
-          if (!eventResult.success) {
-            throw new Error(`流式领域事件格式无效：${eventResult.error.message}`);
-          }
-          await onEvent(eventResult.data);
+          if (message.kind === "stream-event") await onEvent(eventSchema.parse(message.event));
         }
-
-        for (;;) {
-          const chunk = await reader.read();
-          if (chunk.done) break;
-          buffer += decoder.decode(chunk.value, { stream: true });
-          let newline = buffer.indexOf("\n");
-          while (newline >= 0) {
-            await consumeLine(buffer.slice(0, newline));
-            buffer = buffer.slice(newline + 1);
-            newline = buffer.indexOf("\n");
-          }
-        }
-        buffer += decoder.decode();
-        await consumeLine(buffer);
-        if (!finished) throw new Error("HTTP 流式通信在完成消息前结束。");
+      } catch (error: unknown) {
+        if (timedOut) throw new Error(`流式通信请求超时：${method}`);
+        if (cancelledByCaller) throw new DOMException("流式通信请求已取消。", "AbortError");
+        throw error;
       } finally {
+        timeoutController.abort();
         if (timeout !== undefined) window.clearTimeout(timeout);
         signal?.removeEventListener("abort", handleAbort);
       }

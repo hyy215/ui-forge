@@ -12,10 +12,11 @@ export default defineConfig(({ mode }) => {
       {
         name: "ui-forge-development-entry",
         apply: "serve",
-        transformIndexHtml: (html) => html.replace(
-          "/src/main.tsx",
-          isServerDevelopment ? "/development/server.tsx" : "/fixtures/dev.tsx",
-        ),
+        transformIndexHtml: (html) =>
+          html.replace(
+            "/src/main.tsx",
+            isServerDevelopment ? "/src/main.tsx" : "/fixtures/dev.tsx",
+          ),
       },
     ],
     base: "./",

@@ -1,92 +1,140 @@
 # ui-forge
 
-集成于 VS Code、面向 React + TypeScript 中后台项目的 D2C 智能体实验项目。
+ui-forge 是面向 React + TypeScript 中后台项目的设计转代码工具，提供 VS Code 插件和 CLI，首版聚焦单个页面或页面区域。输入设计链接、图片和需求，由 Codex 完成实现、审查及验证。
 
-当前版本跑通设计读取和仓库证据驱动的审阅型规划：用户在单一对话视图中输入 Design URL，系统读取并缓存 MasterGo 设计上下文，从官方矢量与布局数据确定性合成安全 SVG 预览。用户检查右侧预览并在对话中精确回复“确认设计”后，Graph 首先确定性检查目标项目；不支持的项目立即结束，空目录进入初始化规划，React + Ant Design 项目继续生成组件候选并受控扫描源码。主 Plan Agent 通过受控工具委派独立视觉 Subagent 读取含文本的结构摘要、高细节整体 PNG 和候选局部图，形成组件、布局层级、可见元素、静态状态和交互理解；高置信度视觉遗漏项可提升为补充组件候选，并对这些候选补做受控仓库检索。主 Agent 再结合仓库组件、样式引用和反向依赖证据，通过受控方案提交工具生成复用决策、文件影响及原子实施步骤。提交门禁检查视觉覆盖、未解决交互、组件职责和文件生命周期。反馈修订、Patch、执行验证和交付仍属于后续能力，当前方案不能触发文件写入。
+- 支持 MasterGo 设计链接和 PNG / JPEG / WebP 图片；Figma 专用接入尚未配置，可先提供导出的参考图。
+- 任务中可补充文字或图片、回答问题、处理审批和停止本轮；页面与 CLI 共用任务和历史。
+- 设计要求与工程规范可在配置页编辑；可按任务启用严格像素验收。
+- 查看真实的工具输出、文件变更、截图及验收结果。本轮结束不等于验收通过。
 
-## 当前工作流
+## 准备后端
 
-```mermaid
-flowchart LR
-    A[输入 Design URL] --> B[读取并标准化设计上下文]
-    B --> P[直接提取官方矢量并合成高还原预览]
-    P --> C[缓存大型设计 Artifact]
-    C --> D[右侧默认展开安全 SVG 预览]
-    D --> E[用户精确回复确认设计]
-    E --> G[确定性检查目标项目]
-    G -->|空目录| H[记录后续初始化项目步骤]
-    G -->|React + Ant Design| I[通过项目支持校验]
-    G -->|其他项目| J[终止并提示不支持]
-    H --> A[通过官方 Ant Design MCP 解析版本化组件目录]
-    I --> A
-    A --> K[生成平台无关组件候选]
-    K --> R[受控扫描仓库组件与依赖]
-    R --> L[主 Plan Agent 委派视觉 Subagent]
-    L --> M[理解组件、布局、可见元素与静态状态]
-    M --> O[提升高置信度遗漏组件候选]
-    O --> S{存在视觉补充候选}
-    S -->|是| T[受控增量检索补充候选]
-    S -->|否| Q[查询候选组件 API、语义结构、Token 与示例]
-    T --> Q
-    Q --> N[受控提交并校验复用决策、文件影响与原子步骤]
-```
+VS Code 插件通过本机 Agent Server 执行任务。安装 `.vsix` 后仍需单独启动后端；CLI 可自动启动后端。以下命令均在 **ui-forge 仓库根目录**执行，生成代码的目标项目是另一个已存在的目录。
 
-## 包边界
-
-- `packages/agent-core`：领域无关的 Agent、受限 Deep Agent 与 LangGraph 封装。
-- `packages/d2c-agent`：D2C 任务、设计与项目检查领域端口、平台无关候选证据、视觉 Subagent、主 Plan Agent、Graph 和对外 D2C Service。
-- `packages/d2c-storage`：设计 Artifact 文件存储；不保存任务状态。
-- `packages/mastergo-adapter`：实时 MasterGo MCP、脱敏 Fixture，以及 MasterGo DSL 到平台无关节点结构的适配。
-- `packages/design-system-adapter`：Design Token、Ant Design 主题适配，以及官方 CLI stdio MCP 的版本化组件知识 Adapter。
-- `packages/component-indexer`：目标项目的受控检查，以及基于 TypeScript AST 的组件、样式引用、消费者和检索证据提取。
-- `packages/shared-protocol`：Server 与客户端之间的快照、命令和有序事件流 Schema。
-- `apps/agent-server`：协议分发、快照投影与依赖装配。
-- `apps/agent-webview`：在单一对话视图中完成 Design URL 输入、设计读取状态、右侧 SVG 检查、确定性口令确认、项目校验和方案审阅。
-- `apps/vscode-extension`：VS Code Activity Bar 入口、任务面板承载与 Agent Server 通信转发。
-
-D2C Service 是对外业务入口，负责命令、revision 和 Artifact 生命周期；D2C Graph 只负责节点拓扑与状态转换。每个 Service 复用同一个编译 Graph，不为不同任务或命令重复创建 Graph。
-
-`packages/d2c-agent/src/planning` 已提供独立但尚未接入当前 Graph 的可演进 Plan 领域基础：人工确认的布局、组件和交互字段可以锁定，后续代码阶段只能通过版本化 `PlanDelta` 调整未锁字段和执行细节；受影响步骤的旧 Patch 绑定会失效，锁冲突必须返回人工决定。该基础不会让当前审阅页面产生 Patch 或执行代码。
-
-## 安全约束
-
-- Agent Server 仅允许监听 localhost、IPv4 loopback 或 IPv6 loopback；当前版本不支持局域网或公网部署，`UI_FORGE_HOST` 配置为非回环地址时启动会直接失败。
-- MasterGo 输出视为不可信输入；SVG 预览拒绝脚本、事件处理器、`foreignObject`、样式表和外部资源。
-- 目标项目检查只读取根目录最小工程证据，不向模型开放任意 Shell 或文件系统访问；对客户端裁剪绝对路径和原始清单。
-- 原始设计数据保存在独立 Artifact 中，Checkpoint 只持有轻量引用；未绑定、已放弃或被替代的 Artifact 会按配置回收。
-- 候选提取节点只消费受限的平台无关节点证据，不向模型发送原始设计 JSON；视觉 Subagent 仅接收压缩候选、含有限文本的结构摘要、受控整体 PNG 和候选裁剪图，结构超限或图片不可用时明确降级。静态稿交互只能标记为推断或未解决，未解决交互不能进入实施步骤。
-- 仓库分析只读取任务绑定目录中的有限普通文件，忽略依赖、构建目录和符号链接；模型只能引用扫描到的既有文件或安全的新建相对路径。当前不渲染仓库组件，因此不会把结构匹配宣称为像素级一致。
-- 主 Plan Agent 不设固定运行时限；对话栏展示各阶段耗时、Ant Design MCP 查询和模型返回的 Token 用量，用户可随时终止当前分析，取消信号会贯穿目录查询、仓库分析、视觉证据和模型调用。Tool 提示、视觉建议、官方组件知识、最终类型和选择原因分别保留，最终语义由主 Agent 决策。
-- Ant Design MCP 使用本地安装的官方 CLI 和打包元数据，不在运行时调用 `npx`；目标项目目录用于自动识别 antd 版本，更新检查和自动问题上报保持关闭。目录查询失败时显式降级，缺少官方查询证据时不得声称复用 Ant Design 组件。
-- 组件语义不复用 MasterGo 的 `COMPONENT`/`INSTANCE` 节点角色。人工目录提供业务别名和子组件映射，并与官方 MCP 清单合并；目录别名只作为提示，不声明符合某种 MasterGo 标准画法。
-
-## 本地运行
+需要 Node.js 22+、已安装并登录的 Codex CLI，以及用于浏览器验证的 Google Chrome。当前接入协议对应 Codex **0.153.4**；其他版本需检查兼容性。启用严格像素验收或图片切片时，另需 Python 3 和 Pillow。
 
 ```bash
-npm install
-npm run check
+npm ci
 npm run build
-npm run dev:server
-npm run dev:webview
 ```
 
-在 VS Code 的“运行和调试”中启动 `ui-forge: Server + VS Code`，然后从 Activity Bar 打开 ui-forge；可通过视图标题栏中的“创建任务”按钮进入任务设置页面。
+首次配置时复制 `.env.example` 为 `.env`；已有 `.env` 时保留原配置。按需填写：
 
-复制 `.env.example` 为 `.env`。实时 MasterGo 读取需要 `MG_MCP_TOKEN`；模型配置使用 `MODEL_PROVIDER`、`MODEL_NAME`、`MODEL_API_KEY` 和可选的 `MODEL_BASE_URL`。结构化响应默认采用兼容 thinking mode 的 `MODEL_STRUCTURED_OUTPUT_MODE=json-text`，明确支持强制工具选择的模型可改为 `tool`。`UI_FORGE_COMPONENT_CATALOG_PATH` 可指向由 Server 启动者管理并通过 Schema 校验的人工组件目录 JSON；运行时会将其与目标版本的官方 Ant Design MCP 清单合并。`DATABASE_URL` 用于持久化 LangGraph Checkpoint；原始设计 Artifact 默认写入 `.ui-forge/artifacts`。
+| 配置项                 | 用途                                           |
+| ---------------------- | ---------------------------------------------- |
+| `UI_FORGE_CODEX_PATH`  | Codex 可执行文件的绝对路径；留空时自动查找     |
+| `UI_FORGE_CODEX_MODEL` | 新任务使用的模型；留空时默认 `gpt-6-astra`     |
+| `MG_MCP_TOKEN`         | 读取 MasterGo 设计需要的令牌；图片任务无需填写 |
+| `UI_FORGE_PORT`        | 本机后端端口，默认 `4310`                      |
 
-无需在线 MasterGo 的本地联调可设置：
+默认从 `PATH` 查找 Codex；macOS 也会检查 Codex / ChatGPT 应用和常见安装目录。执行以下检查，将目标目录替换为真实路径：
 
-```dotenv
-UI_FORGE_DESIGN_PROVIDER=mastergo-fixture
+```bash
+npm run ui-forge -- doctor
+npm run check -w @ui-forge/codex-client -- --target /absolute/path/to/target-project
 ```
 
-界面可以填写普通 MasterGo 引用，也可以使用固定引用 `table-filter`。Fixture 只读取仓库明确登记的脱敏样本，不把客户端输入解释为本地路径。
+`doctor` 检查版本和登录；未登录时运行 `codex login`。第二条命令检查 D2C 配置和 Skill，成功时显示 `packageConfig: "loaded"` 和 `skill: "ui-forge-d2c"`，同时报告 Python/Pillow 是否可用；它不验证 MCP 的网络连接或设计访问权限。首次使用 Playwright MCP 时，可能需要联网下载固定版本。
 
-## 后续占位方向
+如果提示项目配置未受信任，先确认本仓库内容可信，再在 Codex 用户配置 `~/.codex/config.toml` 中为 **ui-forge 仓库的绝对路径**设置以下内容；已有同名配置时修改原条目。自定义 `CODEX_HOME` 时使用该目录下的 `config.toml`。保存后重新检查。项目配置仅在受信任后加载，详见 [Codex 项目信任配置](https://learn.chatgpt.com/docs/config-file/config-reference)。
 
-- 更完整的 Design Token 语义匹配与仓库组件渲染比较
-- 用户反馈驱动的方案修订
-- 可审批 Patch 与受控写入
-- 构建、页面渲染和视觉验证
+```toml
+[projects."/absolute/path/to/ui-forge"]
+trust_level = "trusted"
+```
 
-这些能力在真正实现前不会以静态方案或演示数据伪装为可用结果。
+## 使用 VS Code 插件
+
+需要 VS Code 1.105 或更高版本。安装包为 `.vsix`；从源码生成安装包见 [打包说明](DEVELOPMENT.md#生成-vsix-安装包)。
+
+1. 在扩展面板的更多菜单中选择 **Install from VSIX…**，安装 `ui-forge-<版本>.vsix`。
+2. 在 ui-forge 仓库终端启动后端，并保持该终端运行：
+
+   ```bash
+   npm run ui-forge -- serve
+   ```
+
+3. 打开 VS Code 用户设置，搜索 `ui-forge.serverUrl`。默认是 `http://127.0.0.1:4310`；更改后端端口时同步修改，随后重新加载 VS Code 窗口。
+4. 在安装插件的窗口中打开并信任**要生成代码的目标项目**。点击活动栏的 ui-forge 图标，再点击 **+** 新建任务。
+5. 添加设计链接或图片，填写需求；需要逐像素比较时勾选“严格像素验收”，然后点击“开始执行任务”。
+
+后端地址只支持本机 HTTP 服务。用户设置示例：
+
+```json
+{
+  "ui-forge.serverUrl": "http://127.0.0.1:4310"
+}
+```
+
+插件的目标目录绑定当前窗口打开的工作区。历史任务可直接查看；继续修改时，需打开该任务对应的项目。
+
+## 使用 CLI
+
+目标目录须已存在，可使用已有 React 项目或空目录。将下列路径替换为实际路径：
+
+```bash
+npm run ui-forge -- run --target /absolute/path/to/target-project --image /absolute/path/to/design.png -- "实现这个页面，支持搜索和重置"
+npm run ui-forge -- run --target /absolute/path/to/target-project --design-url "<MasterGo URL>" -- "实现这个页面"
+```
+
+严格像素验收可直接写入任务需求，同时提供原始参考图：
+
+```bash
+npm run ui-forge -- run --target /absolute/path/to/target-project --image /absolute/path/to/design.png -- "实现这个页面。启用严格像素验收。"
+```
+
+`run` 自动连接或启动本机服务。任务中直接输入文字补充需求；使用 `/approve`、`/reject` 处理命令或文件审批，其他请求按提示使用 `/reply`。`/stop` 停止本轮，Ctrl-C 只断开 CLI。
+
+```bash
+npm run ui-forge -- list
+npm run ui-forge -- status TASK_ID
+npm run ui-forge -- resume TASK_ID
+```
+
+将 `TASK_ID` 替换为列表中的任务标识。`status` 只查看状态；`resume` 连接原任务，**任务空闲时会发送继续执行请求**。脚本运行需加 `--json`，详细输入输出和回复格式见 [CLI 使用说明](apps/agent-cli/README.md)。
+
+## 配置规则与验收
+
+点击侧边栏的“规则配置”，在独立页面编辑并保存：
+
+| 文件         | 可配置内容                                   |
+| ------------ | -------------------------------------------- |
+| `design.md`  | 布局、组件、交互、视觉还原及严格像素验收要求 |
+| `project.md` | 工程结构、编码规范、检查和交付要求           |
+
+支持 `⌘ / Ctrl + S` 保存。保存后供页面与 CLI 的**新任务**共用，已有会话保留原规则；保存失败时会显示错误并保留编辑内容。
+
+严格像素验收默认关闭。启用后比较原始设计参考图和真实浏览器截图，输出差异图和验收结果。可在 `design.md` 的“严格像素验收”章节中修改颜色通道容差、差异像素占比和最大连通差异区域占比。需要有效的原始参考图和 Python/Pillow；缺少条件或未通过时会说明原因。
+
+图片支持 PNG、JPEG、WebP，每条消息最多 4 张，每张不超过 5 MiB。开始任务后也可通过选图、粘贴或拖入图片补充需求。
+
+## 查看结果与处理问题
+
+在任务消息中查看文件变更、运行输出和验证结论，点击截图、报告或源码链接打开结果。最终源码写入目标项目；临时截图和报告默认保存在 ui-forge 仓库的 `.ui-forge/runtime/tmp/` 下，可通过 `UI_FORGE_RUNTIME_DIR` 调整运行目录。
+
+遇到审批时，根据页面或 CLI 展示的操作范围选择允许、拒绝或取消。设计与工程规则不改变执行权限。关闭页面或断开 CLI 不会停止后台任务；停止 Agent Server 会结束其 Codex 进程。
+
+| 问题                   | 处理方式                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| 插件无法连接后端       | 确认 `serve` 正在运行，`ui-forge.serverUrl` 的端口与 `UI_FORGE_PORT` 一致；修改后重新加载窗口 |
+| 无法创建或继续任务     | 在当前 VS Code 窗口打开并信任目标项目；历史任务需与当前工作区一致                             |
+| Codex 无法启动或未登录 | 检查 `UI_FORGE_CODEX_PATH`，运行 `doctor`，按提示登录；修改环境配置后重启后端                 |
+| D2C 配置不可用         | 按“准备后端”完成 Codex 项目信任，并重新运行配置检查                                           |
+| MasterGo 读取失败      | 检查后端 `.env` 中的 `MG_MCP_TOKEN`、设计链接和账号对该设计的访问权限                         |
+| 严格像素验收无法执行   | 检查原始参考图及 Python/Pillow；不要将任务结束视为验收通过                                    |
+
+## 开发与技术栈
+
+项目使用 React、TypeScript、Ant Design、Vite、Fastify 和 Zod。主要目录：
+
+```text
+apps/vscode-extension/  VS Code 插件与本机服务连接
+apps/agent-webview/     任务页面与规则编辑器
+apps/agent-cli/         命令行入口
+apps/agent-server/      本机 Codex 进程托管与消息转发
+packages/codex-client/  Codex 配置、规则与原生协议适配
+packages/client-core/   跨入口通信流消费与会话展示归并
+packages/shared-protocol/  客户端与服务通信 Schema
+```
+
+源码调试、浏览器入口、VSIX 打包和验证方式见 [开发说明](DEVELOPMENT.md)。Codex 接入细节见 [codex-client](packages/codex-client/README.md)。

@@ -1,0 +1,201 @@
+/** 独立配置页面将剩余视口交给编辑区，窄屏下保留可见的文件选择与保存操作。 */
+.page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 16px 0;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.heading h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+.description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+.files {
+  display: flex;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #eaeef4;
+  flex-shrink: 0;
+}
+.files button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 140px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #617087;
+  cursor: pointer;
+  text-align: left;
+}
+.files button strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.files button > span {
+  font-size: 11px;
+}
+.files button[aria-pressed="true"] {
+  background: white;
+  border-color: var(--line);
+  color: var(--accent);
+  box-shadow: 0 1px 3px #2430440a;
+}
+.editors {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.editor {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.editor[hidden] {
+  display: none;
+}
+.fileHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+}
+.fileHeader > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.fileHeader > .unsaved {
+  color: #9c6816;
+}
+.path {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  margin: -4px 0 0;
+  flex-shrink: 0;
+}
+.textarea {
+  flex: 1;
+  min-height: 240px;
+  width: 100%;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: 14px/1.8 var(--vscode-editor-font-family, "SFMono-Regular", Consolas, monospace);
+  color: #243044;
+  background: #fbfcfe;
+  resize: none;
+  tab-size: 2;
+  outline: none;
+}
+.textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px #315bea14;
+}
+.textarea:disabled {
+  opacity: 0.6;
+}
+.textarea[readonly] {
+  color: var(--muted);
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.editorInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.loading {
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .page {
+    margin: 16px 0;
+    gap: 14px;
+  }
+  .heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .heading h1 {
+    font-size: 20px;
+  }
+  .description {
+    font-size: 12px;
+  }
+  .files button {
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 16px;
+  }
+  .editor {
+    padding: 12px;
+    gap: 10px;
+  }
+  .textarea {
+    padding: 12px;
+    font-size: 14px;
+  }
+  .footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .editorInfo {
+    justify-content: space-between;
+    font-size: 11px;
+  }
+  .actions {
+    justify-content: flex-end;
+  }
+}

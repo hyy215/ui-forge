@@ -1,233 +1,234 @@
-/** 管理编辑器主区域中的 UiForge Webview Panel 及其宿主通信。 */
-import { randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
+/** 承载 Webview 并转发真实会话消息，关闭页面只清理传输订阅。 */
+import { randomBytes, randomUUID } from "node:crypto";
+import { access, readFile } from "node:fs/promises";
+import * as vscode from "vscode";
 import {
-  cancelCommunicationStreamInputSchema,
   communicationInboundMessageSchema,
   communicationResponseMessageSchema,
-  communicationStreamMessageSchema,
   communicationTransportMethods,
+  cancelCommunicationStreamInputSchema,
+  createCommunicationRequestMessage,
   createFailedCommunicationResponseMessage,
   createCommunicationStreamErrorMessage,
-  d2cWorkflowMethods,
+  sessionMethods,
+  sessionFileMethods,
+  sessionFileInputSchema,
+  sessionFileSchema,
+  type CommunicationInboundMessage,
 } from "@ui-forge/shared-protocol";
-import * as vscode from "vscode";
+import { readCommunicationStream } from "@ui-forge/client-core";
+import { authorizeHostRequest } from "./hostRequestPolicy.js";
 
-/** 创建、复用并驱动编辑器主区域中的 UiForge Webview。 */
+/** 每个页面独立持有订阅，避免不同 Webview 使用相同请求标识时相互取消。 */
+interface PanelState {
+  panel: vscode.WebviewPanel;
+  streams: Map<string, AbortController>;
+}
+
+/** 管理页面资源、严格关联的转发和当前工作区授权。 */
 export class UiForgePanelManager {
-  private panel: vscode.WebviewPanel | undefined;
-  private readonly activeStreamControllers = new Map<string, AbortController>();
-
-  /** 保存 Extension 根目录，用于解析构建后的 Webview 静态资源。 */
-  constructor(private readonly extensionUri: vscode.Uri) {}
-
-  /** 打开或聚焦 UiForge 主视图，不主动改变当前 Webview 页面。 */
-  async open(): Promise<void> {
-    await this.resolvePanel();
-  }
-
-  /** 打开主视图，并直接以任务设置路由初始化 Webview。 */
-  async openTaskSetup(): Promise<void> {
-    await this.resolvePanel("#/task-workflow");
-  }
-
-  /** 复用现有 Panel，或按指定初始路由创建并加载主视图 Panel。 */
-  private async resolvePanel(initialHash?: string): Promise<vscode.WebviewPanel> {
-    const webviewRoot = vscode.Uri.joinPath(
-      this.extensionUri,
-      "..",
-      "agent-webview",
-      "dist",
-    );
-    if (this.panel) {
-      this.panel.reveal(vscode.ViewColumn.One);
-      if (initialHash) {
-        this.panel.webview.html = await this.loadWebviewHtml(
-          this.panel.webview,
-          webviewRoot,
-          initialHash,
-        );
-      }
-      return this.panel;
+  private readonly panels = new Map<"conversation" | "settings", PanelState>();
+  /** 绑定已构建页面位置、当前窗口固定的通信端点及历史刷新回调。 */
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly endpoint: string,
+    private readonly historyChanged?: () => void,
+  ) {}
+  /** 停用扩展只断开浏览器消息流。 */
+  dispose(): void {
+    for (const state of this.panels.values()) {
+      this.cancelStreams(state);
+      state.panel.dispose();
     }
-
-    const panel = vscode.window.createWebviewPanel(
-      "ui-forge.agent",
-      "ui-forge",
-      vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [webviewRoot],
-      },
-    );
-    this.panel = panel;
-    panel.onDidDispose(() => {
-      for (const controller of this.activeStreamControllers.values()) controller.abort();
-      this.activeStreamControllers.clear();
-      this.panel = undefined;
-    });
-
-    const serverEndpoint = `${process.env.UI_FORGE_SERVER_URL ?? "http://127.0.0.1:4310"}/api/communication`;
-    panel.webview.onDidReceiveMessage((message: unknown) => this.forwardCommunicationInput(
-      panel.webview,
-      serverEndpoint,
-      vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
-      message,
-    ));
-    panel.webview.html = await this.loadWebviewHtml(panel.webview, webviewRoot, initialHash);
-    return panel;
+    this.panels.clear();
   }
-
-  /** 校验 Webview 输入，并将合法通信消息转发给 Agent Server。 */
-  private async forwardCommunicationInput(
-    webview: vscode.Webview,
-    serverEndpoint: string,
-    projectPath: string | undefined,
-    input: unknown,
-  ): Promise<void> {
-    const messageResult = communicationInboundMessageSchema.safeParse(input);
-    if (!messageResult.success) return;
-    await this.forwardCommunicationMessage(webview, serverEndpoint, projectPath, messageResult.data);
+  /** 打开已有面板或首页。 */
+  async open(): Promise<void> {
+    await this.openPanel();
   }
-
-  /** 读取 Webview HTML，并注入资源地址、CSP 和可选的初始 hash 路由。 */
-  private async loadWebviewHtml(
-    webview: vscode.Webview,
-    webviewRoot: vscode.Uri,
-    initialHash?: string,
-  ): Promise<string> {
+  /** 打开或聚焦独立配置面板，保留对话和配置中尚未保存的输入。 */
+  async openSettings(): Promise<void> {
+    await this.openPanel("#/settings");
+  }
+  /** 创建任务入口不在导航时执行模型。 */
+  async openTaskSetup(): Promise<void> {
+    await this.openPanel("#/tasks");
+  }
+  /** 原任务继续入口只打开会话，用户从同一输入框继续。 */
+  async openHistoryTask(taskId: string, _continueRequested = false): Promise<void> {
+    if (!taskId || taskId.length > 200) throw new Error("任务标识无效。");
+    await this.openPanel(`#/tasks?taskId=${encodeURIComponent(taskId)}`);
+  }
+  /** 配置与对话使用独立标签页；只有显式切换任务才重建对话页面。 */
+  private async openPanel(hash?: string): Promise<void> {
+    let root = vscode.Uri.joinPath(this.extensionUri, "webview");
     try {
-      const indexUri = vscode.Uri.joinPath(webviewRoot, "index.html");
-      const html = await readFile(indexUri.fsPath, "utf8");
-      const baseUri = webview.asWebviewUri(webviewRoot).toString();
+      await access(vscode.Uri.joinPath(root, "index.html").fsPath);
+    } catch {
+      root = vscode.Uri.joinPath(this.extensionUri, "..", "agent-webview", "dist");
+    }
+    const kind = hash === "#/settings" ? "settings" : "conversation";
+    let state = this.panels.get(kind);
+    if (!state) {
+      const panel = vscode.window.createWebviewPanel(
+        kind === "settings" ? "ui-forge.settings" : "ui-forge.agent",
+        kind === "settings" ? "ui-forge · 规则配置" : "ui-forge",
+        vscode.ViewColumn.One,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true,
+          localResourceRoots: [root],
+          enableCommandUris: ["ui-forge.openSettings", "ui-forge.open"],
+        },
+      );
+      const created: PanelState = { panel, streams: new Map() };
+      state = created;
+      this.panels.set(kind, created);
+      panel.onDidDispose(() => {
+        this.cancelStreams(created);
+        if (this.panels.get(kind) === created) this.panels.delete(kind);
+      });
+      panel.webview.onDidReceiveMessage((input: unknown) => {
+        const parsed = communicationInboundMessageSchema.safeParse(input);
+        if (parsed.success) void this.forward(created, parsed.data);
+      });
+    } else {
+      state.panel.reveal(vscode.ViewColumn.One);
+      if (!hash || kind === "settings") return;
+      this.cancelStreams(state);
+    }
+    const webview = state.panel.webview;
+    try {
       const nonce = randomBytes(16).toString("base64");
-      const initialRouteScript = initialHash
-        ? `<script nonce="${nonce}">window.location.hash=${JSON.stringify(initialHash)};</script>`
-        : "";
-
-      return html
-        .replace("<head>", `<head><base href="${baseUri}/">`)
+      const html = await readFile(vscode.Uri.joinPath(root, "index.html").fsPath, "utf8");
+      const context = JSON.stringify({
+        projectPath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+      }).replaceAll("<", "\\u003c");
+      const route = JSON.stringify(hash ?? "#/").replaceAll("<", "\\u003c");
+      webview.html = html
+        .replace("<head>", `<head><base href="${webview.asWebviewUri(root)}/">`)
         .replace(
-          "<meta charset=\"UTF-8\" />",
-          `<meta charset="UTF-8" /><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data: https:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}'; font-src ${webview.cspSource};">${initialRouteScript}`,
+          '<meta charset="UTF-8" />',
+          `<meta charset="UTF-8" /><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data: https:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}'; font-src ${webview.cspSource};"><script nonce="${nonce}">window.uiForgeHost=${context};window.location.hash=${route};</script>`,
         );
     } catch {
-      return "<!doctype html><html><body><p>Webview 尚未构建，请先在仓库根目录运行 npm run build。</p></body></html>";
+      webview.html =
+        "<!doctype html><html><body><p>Webview 尚未构建，请运行 npm run build。</p></body></html>";
     }
   }
-
-  /** 将已校验消息补入宿主上下文并转发给 Agent Server。 */
-  private async forwardCommunicationMessage(
-    webview: vscode.Webview,
-    serverEndpoint: string,
-    projectPath: string | undefined,
-    message: ReturnType<typeof communicationInboundMessageSchema.parse>,
-  ): Promise<void> {
-    if (message.kind === "notification"
-      && message.method === communicationTransportMethods.cancelStream) {
-      const inputResult = cancelCommunicationStreamInputSchema.safeParse(message.params);
-      if (!inputResult.success) return;
-      this.activeStreamControllers.get(inputResult.data.requestId)?.abort();
-      this.activeStreamControllers.delete(inputResult.data.requestId);
-      return;
-    }
-
-    const forwardedMessage = message.kind === "request"
-      && message.method === d2cWorkflowMethods.initialize
-      && projectPath
-      ? { ...message, params: { projectPath } }
-      : message;
-
-    if (forwardedMessage.kind === "stream-request") {
-      await this.forwardStreamCommunicationMessage(
-        webview,
-        serverEndpoint,
-        forwardedMessage,
-      );
-      return;
-    }
-
-    try {
-      const response = await fetch(serverEndpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(forwardedMessage),
-      });
-      if (message.kind === "notification") return;
-      if (!response.ok) throw new Error(`Agent Server 返回 ${response.status}。`);
-      const responseMessage = communicationResponseMessageSchema.parse(await response.json());
-      await webview.postMessage(responseMessage);
-    } catch (error: unknown) {
-      if (message.kind === "notification") return;
-      const errorMessage = error instanceof Error ? error.message : "Agent Server 通信失败。";
-      await webview.postMessage(createFailedCommunicationResponseMessage(message.requestId, errorMessage));
-    }
+  /** 在关闭或导航时终止网络订阅，不向 Server 发送 turn/interrupt。 */
+  private cancelStreams(state: PanelState): void {
+    for (const controller of state.streams.values()) controller.abort();
+    state.streams.clear();
   }
-
-  /** 转发 NDJSON 流，并在每条信封通过关联与顺序校验后立即发送到 Webview。 */
-  private async forwardStreamCommunicationMessage(
-    webview: vscode.Webview,
-    serverEndpoint: string,
-    message: Extract<ReturnType<typeof communicationInboundMessageSchema.parse>, { kind: "stream-request" }>,
+  /** 向固定端点发出有界请求。 */
+  private async readTask(taskId: string): Promise<unknown> {
+    const requestId = randomUUID();
+    const response = await fetch(this.endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(
+        createCommunicationRequestMessage(requestId, sessionMethods.read, { taskId }),
+      ),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = communicationResponseMessageSchema.parse(await response.json());
+    if (result.requestId !== requestId) throw new Error("会话响应身份无效。");
+    if (!result.success) throw new Error(result.error.message);
+    return result.data;
+  }
+  /** 校验请求、授权并逐条转发原生消息信封。 */
+  private async forward(
+    { panel: { webview }, streams }: PanelState,
+    original: CommunicationInboundMessage,
   ): Promise<void> {
-    let lastSeq = 0;
+    if (original.kind === "notification") {
+      if (original.method === communicationTransportMethods.cancelStream) {
+        const input = cancelCommunicationStreamInputSchema.safeParse(original.params);
+        if (input.success) streams.get(input.data.requestId)?.abort();
+      }
+      return;
+    }
     const controller = new AbortController();
-    this.activeStreamControllers.get(message.requestId)?.abort();
-    this.activeStreamControllers.set(message.requestId, controller);
+    let seq = 0;
     try {
-      const response = await fetch(serverEndpoint, {
+      const projectPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (original.method === sessionFileMethods.open)
+        sessionFileInputSchema.parse(original.params);
+      const message =
+        original.kind === "request"
+          ? await authorizeHostRequest(
+              original,
+              { trusted: vscode.workspace.isTrusted, ...(projectPath ? { projectPath } : {}) },
+              (taskId) => this.readTask(taskId),
+            )
+          : original;
+      if (message.kind === "stream-request") {
+        streams.get(message.requestId)?.abort();
+        streams.set(message.requestId, controller);
+      }
+      const response = await fetch(this.endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(message),
-        signal: controller.signal,
+        signal:
+          message.kind === "stream-request" ? controller.signal : AbortSignal.timeout(180_000),
       });
-      if (!response.ok) throw new Error(`Agent Server 返回 ${response.status}。`);
-      if (!response.body) throw new Error("Agent Server 没有返回流式响应体。");
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finished = false;
-
-      /** 校验并转发单行流信封。 */
-      const forwardLine = async (line: string): Promise<void> => {
-        if (!line.trim()) return;
-        const streamMessage = communicationStreamMessageSchema.parse(JSON.parse(line));
-        if (streamMessage.requestId !== message.requestId) {
-          throw new Error("Agent Server 流关联标识不匹配。");
+      if (!response.ok) throw new Error(`Agent Server HTTP ${response.status}`);
+      if (message.kind === "request") {
+        const result = communicationResponseMessageSchema.parse(await response.json());
+        if (result.requestId !== message.requestId) throw new Error("响应标识无效。");
+        if (result.success && message.method === sessionFileMethods.open) {
+          const file = sessionFileSchema.parse(result.data);
+          await vscode.commands.executeCommand("vscode.open", vscode.Uri.file(file.path), {
+            preview: true,
+            ...(file.line
+              ? {
+                  selection: new vscode.Range(
+                    file.line - 1,
+                    (file.column ?? 1) - 1,
+                    file.line - 1,
+                    (file.column ?? 1) - 1,
+                  ),
+                }
+              : {}),
+          });
         }
-        if (streamMessage.seq !== lastSeq + 1) {
-          throw new Error("Agent Server 流事件顺序无效。");
-        }
-        lastSeq = streamMessage.seq;
-        finished = streamMessage.kind === "stream-complete"
-          || streamMessage.kind === "stream-error";
-        await webview.postMessage(streamMessage);
-      };
-
-      for await (const chunk of response.body) {
-        buffer += decoder.decode(chunk, { stream: true });
-        let newline = buffer.indexOf("\n");
-        while (newline >= 0) {
-          await forwardLine(buffer.slice(0, newline));
-          buffer = buffer.slice(newline + 1);
-          newline = buffer.indexOf("\n");
-        }
+        await webview.postMessage(result);
+        if (
+          result.success &&
+          [sessionMethods.create, sessionMethods.send].some((method) => method === message.method)
+        )
+          this.historyChanged?.();
+        return;
       }
-      buffer += decoder.decode();
-      await forwardLine(buffer);
-      if (!finished) throw new Error("Agent Server 流在完成消息前结束。");
-    } catch (error: unknown) {
-      if (controller.signal.aborted) return;
-      const errorMessage = error instanceof Error ? error.message : "Agent Server 流式通信失败。";
-      await webview.postMessage(createCommunicationStreamErrorMessage(
+      if (!response.body) throw new Error("会话没有响应流。");
+      for await (const event of readCommunicationStream(
+        response.body,
         message.requestId,
-        lastSeq + 1,
-        errorMessage,
-      ));
-    } finally {
-      if (this.activeStreamControllers.get(message.requestId) === controller) {
-        this.activeStreamControllers.delete(message.requestId);
+        controller.signal,
+      )) {
+        seq = event.seq;
+        await webview.postMessage(event);
       }
+    } catch (error) {
+      if (!controller.signal.aborted)
+        await webview.postMessage(
+          original.kind === "stream-request"
+            ? createCommunicationStreamErrorMessage(
+                original.requestId,
+                seq + 1,
+                error instanceof Error ? error.message : "通信失败",
+              )
+            : createFailedCommunicationResponseMessage(
+                original.requestId,
+                error instanceof Error ? error.message : "通信失败",
+              ),
+        );
+    } finally {
+      if (streams.get(original.requestId) === controller) streams.delete(original.requestId);
+      controller.abort();
     }
   }
 }

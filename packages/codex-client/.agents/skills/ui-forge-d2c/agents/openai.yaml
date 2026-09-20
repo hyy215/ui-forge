@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Forge D2C"
+  short_description: "根据设计与交互要求构建并验证可维护的 React 页面"
+  default_prompt: "使用 $ui-forge-d2c 实现此设计和项目要求，然后在真实浏览器中验证并运行相关工程检查。"

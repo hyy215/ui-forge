@@ -1,97 +1,73 @@
-/** 组装 Agent Server 的 Fastify 实例、健康检查和统一通信路由。 */
-
+/** 装配本地服务锁、Codex 会话、规则文件和通信路由。 */
 import Fastify from "fastify";
-import { resolve } from "node:path";
-import { createD2CWorkflowServiceFromEnvironment } from "../d2c/createD2CWorkflowService.js";
-import type { D2CWorkflowService } from "../d2c/d2cWorkflowService.js";
-import {
-  WorkspaceRequestLogger,
-  type CommunicationRequestLogger,
-} from "../logging/workspaceRequestLogger.js";
+import { resolveRuntimeDirectory } from "../runtime/runtimeDirectory.js";
 import { ServerInstanceLock } from "../runtime/serverInstanceLock.js";
+import { SessionService } from "../sessions/sessionService.js";
+import { InstructionService } from "../instructions/instructionService.js";
 import { CommunicationRequestHandler } from "./communicationRequestHandler.js";
 import { CommunicationStreamRequestHandler } from "./communicationStreamRequestHandler.js";
 import { registerCommunicationRoute } from "./registerCommunicationRoute.js";
 import { registerHealthRoute } from "./registerHealthRoute.js";
+import { SessionFileService } from "../files/sessionFileService.js";
+import { registerSessionFileRoute } from "./registerSessionFileRoute.js";
+import { isLoopbackHttpUrl } from "../runtime/serverHostPolicy.js";
 
-/** Server 生命周期使用的最小单实例所有权端口。 */
+/** 可注入的单实例生命周期端口。 */
 export interface AgentServerInstanceLock {
+  /** 取得当前运行目录所有权。 */
   acquire(): Promise<void>;
+  /** 释放本实例持有的锁。 */
   release(): Promise<void>;
 }
-
-/** 创建 Agent Server 时允许注入的运行时依赖。 */
+/** 嵌入和测试可替换服务依赖。 */
 export interface BuildAppOptions {
-  d2cWorkflowService?: D2CWorkflowService;
-  requestLogger?: CommunicationRequestLogger | false;
+  sessionService?: SessionService;
+  instructionService?: InstructionService;
   instanceLock?: AgentServerInstanceLock | false;
-  logRootDirectory?: string;
+  runtimeDirectory?: string;
 }
-
-/** 创建包含健康检查和统一通信端点的 Fastify 应用。 */
+/** 创建服务，取得锁后才读取索引；关闭时先回收进程再释放锁。 */
 export function buildApp(options: BuildAppOptions = {}) {
-  const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
-  const requestLogger = options.requestLogger === false
-    ? undefined
-    : options.requestLogger ?? (process.env.NODE_ENV === "test" ? undefined : new WorkspaceRequestLogger({
-      rootDirectory: options.logRootDirectory
-        ?? process.env.UI_FORGE_LOG_DIR
-        ?? resolve(process.cwd(), ".ui-forge", "logs"),
-      retentionMs: readLogRetentionMs(),
-      onError: () => app.log.warn("Workspace request log could not be persisted."),
-    }));
-  const instanceLock = options.instanceLock === false
-    ? undefined
-    : options.instanceLock ?? (process.env.NODE_ENV === "test" ? undefined : new ServerInstanceLock(
-      process.env.UI_FORGE_RUNTIME_DIR
-        ?? resolve(process.cwd(), ".ui-forge", "runtime"),
-    ));
-  const d2cWorkflowService = options.d2cWorkflowService ?? createD2CWorkflowServiceFromEnvironment({
-    ...(requestLogger?.recordModelInvocation
-      ? { modelDiagnosticReporter: (event) => requestLogger.recordModelInvocation!(event) }
-      : {}),
-  });
-  const requestHandler = new CommunicationRequestHandler({
-    workflowService: d2cWorkflowService,
-    ...(requestLogger ? { requestLogger } : {}),
-  });
-  const streamRequestHandler = new CommunicationStreamRequestHandler({
-    workflowService: d2cWorkflowService,
-    ...(requestLogger ? { requestLogger } : {}),
-  });
-
+  const app = Fastify({ bodyLimit: 32 * 1024 * 1024, logger: process.env.NODE_ENV !== "test" });
+  const directory =
+    options.runtimeDirectory ?? resolveRuntimeDirectory(process.env.UI_FORGE_RUNTIME_DIR);
+  const lock =
+    options.instanceLock === false
+      ? undefined
+      : (options.instanceLock ?? new ServerInstanceLock(directory));
+  const sessions = options.sessionService ?? new SessionService({ directory });
+  const instructions = options.instructionService ?? new InstructionService();
+  const files = new SessionFileService(sessions.index, directory);
   app.addHook("onReady", async () => {
-    await instanceLock?.acquire();
+    await lock?.acquire();
     try {
-      await d2cWorkflowService.initialize();
-      await requestLogger?.initialize?.();
-    } catch (error: unknown) {
-      await instanceLock?.release();
+      await sessions.initialize();
+    } catch (error) {
+      await sessions.close();
+      await lock?.release();
       throw error;
     }
   });
+  app.addHook("preClose", async () => {
+    await sessions.close();
+  });
   app.addHook("onClose", async () => {
-    try {
-      await requestLogger?.dispose?.();
-      await d2cWorkflowService.dispose();
-    } finally {
-      await instanceLock?.release();
+    await lock?.release();
+  });
+  app.addHook("onRequest", async (request, reply) => {
+    if (
+      !isLoopbackHttpUrl(`http://${request.headers.host ?? "localhost"}`) ||
+      (request.headers.origin && !isLoopbackHttpUrl(request.headers.origin))
+    ) {
+      return reply.code(403).send({ message: "仅允许本机客户端访问。" });
     }
   });
-
   registerHealthRoute(app);
-  registerCommunicationRoute(app, requestHandler, streamRequestHandler);
-
+  registerCommunicationRoute(
+    app,
+    new CommunicationRequestHandler(sessions, instructions, files),
+    new CommunicationStreamRequestHandler(sessions),
+  );
+  registerSessionFileRoute(app, files);
   return app;
-}
-
-/** 将日志保留天数配置转换为毫秒，并拒绝无效环境输入。 */
-function readLogRetentionMs(): number {
-  const configured = process.env.UI_FORGE_LOG_RETENTION_DAYS?.trim();
-  if (!configured) return 90 * 24 * 60 * 60_000;
-  const days = Number(configured);
-  if (!Number.isFinite(days) || days < 0) {
-    throw new Error("UI_FORGE_LOG_RETENTION_DAYS 必须是非负数值。");
-  }
-  return days * 24 * 60 * 60_000;
 }

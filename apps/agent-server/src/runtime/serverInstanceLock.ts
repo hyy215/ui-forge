@@ -1,14 +1,16 @@
-/** 通过原子目录替换限制同一运行目录只能启动一个 Agent Server。 */
+/** 原子创建锁目录，以实例专属记录安全接管失效锁，限制同一运行目录的 Server 数量。 */
 
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { z } from "zod";
 
-interface ServerLockOwner {
-  pid: number;
-  instanceId: string;
-  createdAt: string;
-}
+const ownerSchema = z.object({
+  pid: z.number().int().positive(),
+  instanceId: z.string().min(1),
+  createdAt: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+});
+type ServerLockOwner = z.infer<typeof ownerSchema>;
 
 /** 配置单实例锁名称、时间源和可测试进程探测器。 */
 export interface ServerInstanceLockOptions {
@@ -47,13 +49,17 @@ export class ServerInstanceLock {
       `.agent-server-lock.${owner.instanceId}.candidate`,
     );
     await mkdir(candidateDirectory, { mode: 0o700 });
-    await writeFile(join(candidateDirectory, "owner.json"), JSON.stringify(owner), {
-      encoding: "utf8",
-      flag: "wx",
-      mode: 0o600,
-    });
     let acquired = false;
     try {
+      await writeFile(
+        join(candidateDirectory, `owner.${owner.instanceId}.json`),
+        JSON.stringify(owner),
+        {
+          encoding: "utf8",
+          flag: "wx",
+          mode: 0o600,
+        },
+      );
       for (;;) {
         try {
           await rename(candidateDirectory, this.lockDirectory);
@@ -61,24 +67,16 @@ export class ServerInstanceLock {
           this.owner = owner;
           return;
         } catch (error: unknown) {
-          if (!await pathExists(this.lockDirectory)) throw error;
+          if (!hasCode(error, "EEXIST", "ENOTEMPTY", "EPERM")) throw error;
           const existing = await readLockOwner(this.lockDirectory);
-          if (!existing || this.isProcessRunning(existing.pid)) {
-            throw new Error(
-              `Agent Server 已由进程 ${existing?.pid ?? "unknown"} 占用运行目录。`,
-            );
-          }
-          const staleDirectory = join(
-            this.rootDirectory,
-            `.agent-server-lock.${existing.instanceId}.stale.${randomUUID()}`,
-          );
-          try {
-            await rename(this.lockDirectory, staleDirectory);
-          } catch {
-            // 另一个启动者已先处理旧锁，重新竞争完整锁目录。
+          if (!existing) {
+            // 接管者可能已移走所有者记录；只删除空壳，不触碰后来者的文件。
+            await removeEmptyDirectory(this.lockDirectory);
             continue;
           }
-          await rm(staleDirectory, { recursive: true, force: true });
+          if (this.isProcessRunning(existing.owner.pid))
+            throw new Error(`Agent Server 已由进程 ${existing.owner.pid} 占用运行目录。`);
+          await this.removeOwner(existing.filename);
         }
       }
     } finally {
@@ -92,42 +90,66 @@ export class ServerInstanceLock {
   async release(): Promise<void> {
     const owner = this.owner;
     if (!owner) return;
-    this.owner = undefined;
-    const current = await readLockOwner(this.lockDirectory);
-    if (current?.instanceId !== owner.instanceId) return;
-    await rm(this.lockDirectory, { recursive: true, force: true });
+    await this.removeOwner(`owner.${owner.instanceId}.json`);
+    if (this.owner === owner) this.owner = undefined;
   }
-}
 
-/** 读取并校验原子锁目录中的所有者记录。 */
-async function readLockOwner(lockDirectory: string): Promise<ServerLockOwner | undefined> {
-  try {
-    const value: unknown = JSON.parse(await readFile(join(lockDirectory, "owner.json"), "utf8"));
-    if (!value || typeof value !== "object") return undefined;
-    const candidate = value as Partial<ServerLockOwner>;
-    if (!Number.isInteger(candidate.pid) || (candidate.pid ?? 0) <= 0) return undefined;
-    if (typeof candidate.instanceId !== "string" || !candidate.instanceId) return undefined;
-    if (typeof candidate.createdAt !== "string" || !Number.isFinite(Date.parse(candidate.createdAt))) {
-      return undefined;
+  /** 原子移走具备实例身份的记录；旧读取不能移走后来者的锁目录。 */
+  private async removeOwner(filename: string): Promise<void> {
+    const retired = join(this.rootDirectory, `.agent-server-lock.${randomUUID()}.retired`);
+    try {
+      await rename(join(this.lockDirectory, filename), retired);
+    } catch (error) {
+      if (hasCode(error, "ENOENT")) return;
+      throw error;
     }
-    return {
-      pid: candidate.pid!,
-      instanceId: candidate.instanceId,
-      createdAt: candidate.createdAt,
-    };
-  } catch {
-    return undefined;
+    try {
+      await removeEmptyDirectory(this.lockDirectory);
+    } finally {
+      await rm(retired, { force: true });
+    }
   }
 }
 
-/** 判断指定路径当前是否存在。 */
-async function pathExists(path: string): Promise<boolean> {
+/** 兼容旧版 owner.json；新记录以实例 ID 命名，损坏记录明确拒绝接管。 */
+async function readLockOwner(
+  lockDirectory: string,
+): Promise<{ owner: ServerLockOwner; filename: string } | undefined> {
   try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
+    const files = await readdir(lockDirectory);
+    if (!files.length) return undefined;
+    const filename = files[0]!;
+    if (files.length !== 1 || !/^owner(?:\.[\w-]+)?\.json$/.test(filename))
+      throw new Error("运行目录锁包含未知文件，无法安全接管。");
+    const owner = ownerSchema.parse(
+      JSON.parse(await readFile(join(lockDirectory, filename), "utf8")),
+    );
+    if (filename !== "owner.json" && filename !== `owner.${owner.instanceId}.json`)
+      throw new Error("运行目录锁身份不一致，无法安全接管。");
+    return { owner, filename };
+  } catch (error) {
+    if (hasCode(error, "ENOENT")) return undefined;
+    throw error;
   }
+}
+
+/** 后来者的锁包含所有者文件，rmdir 无法删除它。 */
+async function removeEmptyDirectory(path: string): Promise<void> {
+  try {
+    await rmdir(path);
+  } catch (error) {
+    if (!hasCode(error, "ENOENT", "ENOTEMPTY", "EEXIST")) throw error;
+  }
+}
+
+/** 仅将明确的文件系统竞争结果视为可恢复情况。 */
+function hasCode(error: unknown, ...codes: string[]): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    codes.includes(error.code)
+  );
 }
 
 /** 使用操作系统 PID 探测当前主机上的进程是否仍然存活。 */

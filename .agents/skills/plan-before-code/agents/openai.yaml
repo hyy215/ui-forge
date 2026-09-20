@@ -1,4 +1,4 @@
 interface:
-  display_name: "代码修改前置计划"
-  short_description: "代码修改前先提交实施计划，并在用户明确确认后再执行"
-  default_prompt: "使用 $plan-before-code 为代码修改先制定计划，等待我确认后再实施。"
+  display_name: "按影响范围制定计划"
+  short_description: "局部修改简短说明后执行，架构、协议、权限和任务生命周期调整先确认计划"
+  default_prompt: "使用 $plan-before-code 判断本次修改影响：明确且局部的修改说明后实施，需要确认的调整先提交计划。"

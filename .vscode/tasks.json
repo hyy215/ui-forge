@@ -32,11 +32,7 @@
     {
       "label": "build:vscode-debug",
       "dependsOrder": "sequence",
-      "dependsOn": [
-        "build:packages",
-        "build:webview",
-        "build:extension"
-      ],
+      "dependsOn": ["build:packages", "build:webview", "build:extension"],
       "problemMatcher": []
     },
     {

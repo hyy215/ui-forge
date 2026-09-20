@@ -19,35 +19,41 @@ export function createNegotiatedCommunicationClient(
   client: CommunicationClient,
   options: NegotiatedCommunicationClientOptions = {},
 ): CommunicationClient {
-  const requiredCapabilities = options.requiredCapabilities
-    ?? firstPartyRequiredCommunicationCapabilities;
+  const requiredCapabilities =
+    options.requiredCapabilities ?? firstPartyRequiredCommunicationCapabilities;
   let negotiation: Promise<void> | undefined;
 
   function ensureNegotiated(): Promise<void> {
     if (negotiation) return negotiation;
     let current!: Promise<void>;
-    current = client.request({
-      method: communicationTransportMethods.negotiateProtocol,
-      params: createCommunicationProtocolNegotiationInput(requiredCapabilities),
-      responseSchema: negotiateCommunicationProtocolResultSchema,
-    }).then((result) => {
-      if (result.protocolVersion !== currentCommunicationProtocolVersion) {
-        throw new Error("Agent Server 返回了不兼容的通信协议版本。");
-      }
-      const supported = new Set<string>(result.capabilities);
-      const missing = requiredCapabilities.filter((capability) => !supported.has(capability));
-      if (missing.length > 0) throw new Error(`Agent Server 缺少必需通信能力：${missing.join("、")}。`);
-    }).catch((error: unknown) => {
-      if (negotiation === current) negotiation = undefined;
-      throw error;
-    });
+    current = client
+      .request({
+        method: communicationTransportMethods.negotiateProtocol,
+        params: createCommunicationProtocolNegotiationInput(requiredCapabilities),
+        responseSchema: negotiateCommunicationProtocolResultSchema,
+      })
+      .then((result) => {
+        if (result.protocolVersion !== currentCommunicationProtocolVersion) {
+          throw new Error("Agent Server 返回了不兼容的通信协议版本。");
+        }
+        const supported = new Set<string>(result.capabilities);
+        const missing = requiredCapabilities.filter((capability) => !supported.has(capability));
+        if (missing.length > 0)
+          throw new Error(`Agent Server 缺少必需通信能力：${missing.join("、")}。`);
+      })
+      .catch((error: unknown) => {
+        if (negotiation === current) negotiation = undefined;
+        throw error;
+      });
     negotiation = current;
     return current;
   }
 
   return {
     notify(notification) {
-      void ensureNegotiated().then(() => client.notify(notification)).catch(() => undefined);
+      void ensureNegotiated()
+        .then(() => client.notify(notification))
+        .catch(() => undefined);
     },
     async request(request) {
       await ensureNegotiated();

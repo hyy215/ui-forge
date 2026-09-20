@@ -103,13 +103,17 @@ export const communicationStreamMessageSchema = z.discriminatedUnion("kind", [
 ]);
 
 /** 单向通知消息的已校验类型。 */
-export type CommunicationNotificationMessage = z.infer<typeof communicationNotificationMessageSchema>;
+export type CommunicationNotificationMessage = z.infer<
+  typeof communicationNotificationMessageSchema
+>;
 
 /** 双向请求消息的已校验类型。 */
 export type CommunicationRequestMessage = z.infer<typeof communicationRequestMessageSchema>;
 
 /** 流式调用请求消息的已校验类型。 */
-export type CommunicationStreamRequestMessage = z.infer<typeof communicationStreamRequestMessageSchema>;
+export type CommunicationStreamRequestMessage = z.infer<
+  typeof communicationStreamRequestMessageSchema
+>;
 
 /** 接收端允许处理的通知与请求消息。 */
 export type CommunicationInboundMessage = z.infer<typeof communicationInboundMessageSchema>;

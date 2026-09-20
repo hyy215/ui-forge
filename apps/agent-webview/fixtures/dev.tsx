@@ -1,8 +1,7 @@
-/** 注入隔离的 Fixture 通信客户端，启动仅供本地开发的 Webview 入口。 */
+/** 显式开发演示入口，模拟消息仅在 Vite 开发模式启用。 */
 import "antd/dist/reset.css";
+import "../src/styles.css";
 import { createAppDependencies } from "../src/app/appDependencies";
 import { renderApp } from "../src/app/renderApp";
-import "../src/styles.css";
-import { fixtureCommunicationClient } from "./fixtureCommunicationClient";
-
-renderApp(createAppDependencies(fixtureCommunicationClient));
+import { createFixtureClient } from "./nativeSessionFixture";
+renderApp(createAppDependencies(createFixtureClient(), true));

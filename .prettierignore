@@ -1,0 +1,20 @@
+# Keep local data and build output out of formatting.
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.ui-forge/
+.vscode-test/
+references/
+docs/
+**/private-runs/
+
+# Generated files are maintained by their generators.
+package-lock.json
+packages/codex-client/src/generated/
+
+# Agent skills and configuration are maintained separately.
+.agents/
+.codex/
