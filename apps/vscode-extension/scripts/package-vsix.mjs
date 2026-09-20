@@ -30,10 +30,8 @@ if (!prepareOnly) {
       "缺少 VSIX 打包工具，请先安装 @vscode/vsce，并确保 vsce 在 PATH 中；本脚本不会自动安装。",
     );
 }
-run("npm", ["run", "build", "-w", "@ui-forge/shared-protocol"], repositoryRoot);
-run("npm", ["run", "build", "-w", "@ui-forge/client-core"], repositoryRoot);
-run("npm", ["run", "build", "-w", "@ui-forge/agent-webview"], repositoryRoot);
 run("npm", ["run", "typecheck", "-w", "@ui-forge/vscode-extension"], repositoryRoot);
+run("npm", ["run", "build", "-w", "@ui-forge/agent-webview"], repositoryRoot);
 
 const temporaryRoot = join(repositoryRoot, ".ui-forge", "packaging");
 await mkdir(temporaryRoot, { recursive: true });

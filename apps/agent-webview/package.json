@@ -7,7 +7,7 @@
     "build": "vite build",
     "dev": "vite",
     "dev:server": "vite --mode server",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -b tsconfig.json"
   },
   "dependencies": {
     "@ui-forge/shared-protocol": "0.1.0",
