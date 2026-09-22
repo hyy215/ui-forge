@@ -17,6 +17,8 @@ describe("communication protocol negotiation", () => {
         "stream-cancel",
         "codex-native-sessions",
         "instruction-files",
+        "task-diagnostics",
+        "design-source-selection",
       ],
     });
   });

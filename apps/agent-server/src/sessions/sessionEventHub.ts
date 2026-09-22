@@ -4,6 +4,7 @@ import {
   nativeTurnSchema,
   sessionSnapshotSchema,
   type SessionEvent,
+  type DesignBinding,
 } from "@ui-forge/shared-protocol";
 import { eventThreadId, SessionEventQueue, toSessionEvent } from "./sessionEvents.js";
 import { SessionViewCache } from "./sessionViewCache.js";
@@ -15,7 +16,10 @@ export class SessionEventHub {
   private readonly parents = new Map<string, { parentId: string; cwd: string }>();
 
   /** 通过导航索引校验任务，并定位连接级事件应通知的订阅。 */
-  constructor(private readonly projectPath: (taskId: string) => string) {}
+  constructor(
+    private readonly projectPath: (taskId: string) => string,
+    private readonly binding: (taskId: string) => DesignBinding | undefined = () => undefined,
+  ) {}
 
   /** 以新建或恢复返回的原生历史建立展示副本。 */
   seed(thread: unknown): void {
@@ -47,6 +51,7 @@ export class SessionEventHub {
       const snapshot = sessionSnapshotSchema.parse({
         thread: view.snapshot.thread,
         pendingRequests,
+        ...(this.binding(taskId) ? { designBinding: this.binding(taskId) } : {}),
       });
       yield { type: "snapshot", snapshot };
       for (const notification of view.activities) {
@@ -95,7 +100,7 @@ export class SessionEventHub {
     return id !== undefined && this.rootTask(id) === taskId;
   }
   /** 记录原生父子关联，只广播所属连接的消息。 */
-  onEvent(cwd: string, native: CodexEvent): void {
+  onEvent(cwd: string, native: CodexEvent, affectedTasks?: ReadonlySet<string>): void {
     if (native.type === "notification" && native.notification.method === "thread/started") {
       const thread = native.notification.params.thread;
       if (thread.parentThreadId)
@@ -125,10 +130,19 @@ export class SessionEventHub {
     }
     if (event.type === "request") return;
     if (event.type === "close") {
-      this.views.removeWorkspace(cwd);
-      for (const [id, parent] of this.parents) if (parent.cwd === cwd) this.parents.delete(id);
+      if (affectedTasks) {
+        this.views.removeTasks(affectedTasks);
+        const children = [...this.parents.keys()].filter((id) =>
+          affectedTasks.has(this.rootTask(id)),
+        );
+        for (const id of children) this.parents.delete(id);
+      } else {
+        this.views.removeWorkspace(cwd);
+        for (const [id, parent] of this.parents) if (parent.cwd === cwd) this.parents.delete(id);
+      }
     }
     for (const id of this.listeners.keys())
-      if (this.projectPath(id) === cwd) this.publish(id, event);
+      if (this.projectPath(id) === cwd && (!affectedTasks || affectedTasks.has(id)))
+        this.publish(id, event);
   }
 }

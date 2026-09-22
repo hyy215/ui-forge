@@ -1,4 +1,4 @@
-/** 向页面提供经 Schema 校验的会话和规则文件操作，隔离宿主传输。 */
+/** 向页面提供经 Schema 校验的会话、规则与只读诊断操作，隔离宿主传输。 */
 import {
   sessionMethods,
   instructionMethods,
@@ -8,6 +8,12 @@ import {
   taskHistoryPageSchema,
   sessionEventSchema,
   instructionDocumentSchema,
+  diagnosticMethods,
+  taskDiagnosticsSchema,
+  designMethods,
+  designSourceSchema,
+  designConnectionCheckSchema,
+  type DesignSource,
   type CreateSessionInput,
   type SendSessionInput,
   type SessionEvent,
@@ -15,10 +21,25 @@ import {
   type InstructionDocument,
 } from "@ui-forge/shared-protocol";
 import type { CommunicationClient } from "../communication/clientContract";
+import { continuationPrompt } from "@ui-forge/client-core";
 
 /** 构造页面共享数据源；长操作超时不隐式重试或停止任务。 */
 export function createSessionDataSource(client: CommunicationClient) {
   return {
+    /** 只读验证所选来源，不创建或恢复会话；调用方可取消过期检查。 */
+    checkDesignConnection: (source: DesignSource, signal?: AbortSignal) => {
+      const requestedSource = designSourceSchema.parse(source);
+      return client.request({
+        method: designMethods.check,
+        params: { source: requestedSource },
+        responseSchema: designConnectionCheckSchema.refine(
+          (report) => JSON.stringify(report.source) === JSON.stringify(requestedSource),
+          { message: "连接检查结果不属于当前设计来源。" },
+        ),
+        timeoutMs: 120_000,
+        ...(signal ? { signal } : {}),
+      });
+    },
     create: (input: CreateSessionInput) =>
       client.request({
         method: sessionMethods.create,
@@ -33,6 +54,17 @@ export function createSessionDataSource(client: CommunicationClient) {
         responseSchema: sessionSnapshotSchema,
         timeoutMs: 120_000,
       }),
+    /** 按需读取独立诊断报告，不恢复会话、不发送消息，也不隐式重试。 */
+    readDiagnostics: (taskId: string, signal?: AbortSignal) =>
+      client.request({
+        method: diagnosticMethods.read,
+        params: { taskId },
+        responseSchema: taskDiagnosticsSchema.refine((report) => report.taskId === taskId, {
+          message: "诊断报告不属于当前任务。",
+        }),
+        timeoutMs: 120_000,
+        ...(signal ? { signal } : {}),
+      }),
     list: (offset = 0) =>
       client.request({
         method: sessionMethods.list,
@@ -43,6 +75,14 @@ export function createSessionDataSource(client: CommunicationClient) {
       client.request({
         method: sessionMethods.send,
         params: { taskId, text, images },
+        responseSchema: sessionOperationResultSchema,
+        timeoutMs: 120_000,
+      }),
+    /** 复用空闲时发送能力；其他入口已启动轮次时不重复提交继续请求。 */
+    continue: (taskId: string) =>
+      client.request({
+        method: sessionMethods.send,
+        params: { taskId, text: continuationPrompt, startOnlyIfIdle: true },
         responseSchema: sessionOperationResultSchema,
         timeoutMs: 120_000,
       }),

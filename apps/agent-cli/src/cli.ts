@@ -3,6 +3,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Command, CommanderError } from "commander";
 import { registerDoctorCommand } from "./commands/doctor.js";
+import { registerDiagnosticsCommand } from "./commands/diagnostics.js";
+import { registerDesignCheckCommand } from "./commands/designCheck.js";
 import { registerListCommand } from "./commands/list.js";
 import { registerResumeCommand } from "./commands/resume.js";
 import { registerRunCommand } from "./commands/run.js";
@@ -37,6 +39,8 @@ function createProgram(): Command {
   registerRunCommand(program);
   registerListCommand(program);
   registerStatusCommand(program);
+  registerDiagnosticsCommand(program);
+  registerDesignCheckCommand(program);
   registerResumeCommand(program);
   return program;
 }

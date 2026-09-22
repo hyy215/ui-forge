@@ -1,4 +1,4 @@
-/** 按目标目录复用 Codex 进程，服务关闭时统一回收；客户端断开不影响连接。 */
+/** 按目标目录和设计接入范围复用 Codex 进程，服务关闭时统一回收。 */
 import { CodexClient, type CodexClientOptions, type CodexEvent } from "@ui-forge/codex-client";
 import { computerUseDisabledConfig, disableDesktopMcp } from "./computerUsePolicy.js";
 
@@ -30,7 +30,7 @@ export class CodexConnections {
   private closed = false;
   /** 事件接收方按任务路由，测试可替换原生进程。 */
   constructor(
-    private readonly onEvent: (cwd: string, event: CodexEvent) => void,
+    private readonly onEvent: (cwd: string, event: CodexEvent, loaded: ReadonlySet<string>) => void,
     private readonly factory: CodexConnectionFactory = (cwd, configOverrides) =>
       new CodexClient({
         cwd,
@@ -39,21 +39,22 @@ export class CodexConnections {
       }),
   ) {}
   /** 首次使用时创建连接；原生进程异常退出后允许重新连接。 */
-  async get(cwd: string): Promise<WorkspaceConnection> {
+  async get(cwd: string, scope = "magic"): Promise<WorkspaceConnection> {
     if (this.closed) throw new Error("Agent Server 已关闭。");
-    let connection = this.connections.get(cwd);
+    const key = JSON.stringify([cwd, scope]);
+    let connection = this.connections.get(key);
     if (!connection) {
-      connection = this.prepare(cwd);
-      this.connections.set(cwd, connection);
+      connection = this.prepare(cwd, key);
+      this.connections.set(key, connection);
       const pending = connection;
       void pending.catch(() => {
-        if (this.connections.get(cwd) === pending) this.connections.delete(cwd);
+        if (this.connections.get(key) === pending) this.connections.delete(key);
       });
     }
     return connection;
   }
   /** 先只读发现配置，再用完整禁用参数启动实际连接；探测进程不创建线程或启动 MCP。 */
-  private async prepare(cwd: string): Promise<WorkspaceConnection> {
+  private async prepare(cwd: string, key: string): Promise<WorkspaceConnection> {
     let client = this.factory(cwd, computerUseDisabledConfig);
     try {
       const desktopMcp = await disableDesktopMcp(client, cwd);
@@ -63,11 +64,12 @@ export class CodexConnections {
         client = this.factory(cwd, { ...computerUseDisabledConfig, ...desktopMcp });
       }
       if (this.closed) throw new Error("Agent Server 已关闭。");
+      const loaded = new Set<string>();
       client.subscribe((event) => {
-        if (event.type === "close") this.connections.delete(cwd);
-        this.onEvent(cwd, event);
+        if (event.type === "close") this.connections.delete(key);
+        this.onEvent(cwd, event, loaded);
       });
-      return { client, loaded: new Set(), loading: new Map() };
+      return { client, loaded, loading: new Map() };
     } catch (error) {
       await client.close();
       throw error;

@@ -11,7 +11,13 @@ import type {
   ServerNotification,
   ServerRequest,
 } from "./generated/native.js";
-import { approval, startResponse, thread, turn } from "./testing/payloads.js";
+import {
+  approval,
+  capacityFailureScenario,
+  startResponse,
+  thread,
+  turn,
+} from "./testing/payloads.js";
 
 const clients: CodexClient[] = [];
 const directories: string[] = [];
@@ -230,6 +236,101 @@ describe("native Codex connection", () => {
       client.request("thread/read", { threadId: thread.id, includeTurns: true }),
     ).rejects.toMatchObject({ ...error, name: "CodexRpcError" });
     expect(new CodexRpcError(error)).toBeInstanceOf(Error);
+  });
+
+  it("forwards native capacity retries and failure without replaying work before an explicit continuation", async () => {
+    const scenario = capacityFailureScenario;
+    const activeThread = {
+      ...thread,
+      status: { type: "active", activeFlags: [] },
+      turns: [scenario.activeTurn],
+    } satisfies NativeMethods["thread/read"]["result"]["thread"];
+    const failedThread = {
+      ...thread,
+      turns: [scenario.failedTurn],
+    } satisfies NativeMethods["thread/read"]["result"]["thread"];
+    const continuedThread = {
+      ...activeThread,
+      turns: [scenario.failedTurn, scenario.continuedTurn],
+    } satisfies NativeMethods["thread/read"]["result"]["thread"];
+    const { client, events, wire } = await setup([
+      { method: "turn/start", result: { turn }, before: scenario.retrying },
+      { method: "thread/read", result: { thread: activeThread } },
+      { method: "thread/read", result: { thread: failedThread }, before: scenario.failed },
+      {
+        method: "turn/start",
+        result: { turn: scenario.continuedTurn },
+        before: scenario.continued,
+      },
+      { method: "thread/read", result: { thread: continuedThread } },
+    ]);
+    await client.request("turn/start", {
+      threadId: thread.id,
+      input: [{ type: "text", text: "Build the page", text_elements: [] }],
+    });
+    expect(events).toEqual(
+      scenario.retrying.map((notification) => ({ type: "notification", notification })),
+    );
+    expect(
+      await client.request("thread/read", { threadId: thread.id, includeTurns: true }),
+    ).toEqual({
+      thread: activeThread,
+    });
+    expect((await wire()).filter((request) => request.method === "turn/start")).toHaveLength(1);
+
+    expect(
+      await client.request("thread/read", { threadId: thread.id, includeTurns: true }),
+    ).toEqual({
+      thread: failedThread,
+    });
+    expect(events).toEqual(
+      [...scenario.retrying, ...scenario.failed].map((notification) => ({
+        type: "notification",
+        notification,
+      })),
+    );
+    expect((await wire()).map((request) => request.method)).toEqual([
+      "initialize",
+      "initialized",
+      "turn/start",
+      "thread/read",
+      "thread/read",
+    ]);
+
+    const continuation: NativeMethods["turn/start"]["params"] = {
+      threadId: thread.id,
+      input: [
+        {
+          type: "text",
+          text: "Check existing work and continue unfinished changes",
+          text_elements: [],
+        },
+      ],
+    };
+    expect(await client.request("turn/start", continuation)).toEqual({
+      turn: scenario.continuedTurn,
+    });
+    expect(
+      await client.request("thread/read", { threadId: thread.id, includeTurns: true }),
+    ).toEqual({
+      thread: continuedThread,
+    });
+    const requests = await wire();
+    expect(requests.filter((request) => request.method === "turn/start")).toHaveLength(2);
+    expect(requests.filter((request) => request.method === "turn/start").at(-1)?.params).toEqual(
+      continuation,
+    );
+    expect(
+      requests.some(
+        (request) => request.method === "turn/steer" || request.method === "thread/start",
+      ),
+    ).toBe(false);
+    expect(events).toEqual(
+      [...scenario.retrying, ...scenario.failed, ...scenario.continued].map((notification) => ({
+        type: "notification",
+        notification,
+      })),
+    );
   });
 
   it("validates external input before starting a process and validates native responses", async () => {

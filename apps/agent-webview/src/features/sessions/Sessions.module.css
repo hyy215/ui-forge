@@ -1,4 +1,14 @@
 /** 会话、原生工具详情、审批与新建设计输入的自适应样式。 */
+.failureDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.failureDetails p {
+  margin: 0;
+}
 .setup {
   max-width: 800px;
   margin: 48px auto 60px;
@@ -65,6 +75,9 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+.designUploads {
+  margin-top: 16px;
 }
 .designSource {
   display: flex;
@@ -179,6 +192,12 @@
 }
 .sessionHeader > div {
   min-width: 0;
+}
+.sessionActions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
 }
 .sessionHeader h1 {
   font-size: 17px;

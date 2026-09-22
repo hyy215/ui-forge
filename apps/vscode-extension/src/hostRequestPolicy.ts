@@ -2,6 +2,8 @@
 import { realpath } from "node:fs/promises";
 import {
   createSessionSchema,
+  checkDesignConnectionSchema,
+  designMethods,
   sessionIdSchema,
   sessionMethods,
   instructionMethods,
@@ -14,20 +16,24 @@ export interface HostWorkspace {
   trusted: boolean;
   projectPath?: string;
 }
-/** 对写入相关请求绑定宿主工作区；配置读取和历史浏览不启动执行。 */
+/** 执行和外部设计连接要求工作区信任；配置读取和历史浏览不启动执行。 */
 export async function authorizeHostRequest(
   message: CommunicationRequestMessage,
   workspace: HostWorkspace,
   read: (taskId: string) => Promise<unknown>,
 ): Promise<CommunicationRequestMessage> {
-  const mutation = [
+  const requiresTrust = [
     sessionMethods.create,
     sessionMethods.send,
     sessionMethods.stop,
     sessionMethods.respond,
     instructionMethods.save,
+    designMethods.check,
   ].some((method) => method === message.method);
-  if (mutation && !workspace.trusted) throw new Error("请先信任当前 VS Code 工作区。");
+  if (requiresTrust && !workspace.trusted) throw new Error("请先信任当前 VS Code 工作区。");
+  if (message.method === designMethods.check) {
+    return { ...message, params: checkDesignConnectionSchema.parse(message.params) };
+  }
   if (message.method === sessionMethods.create) {
     if (!workspace.projectPath) throw new Error("请先打开目标工作区。");
     const input = createSessionSchema.parse(message.params);

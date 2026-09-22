@@ -14,7 +14,12 @@ import {
   type NativeTurn,
   sessionFileMethods,
   sessionFileInputSchema,
+  diagnosticMethods,
+  readTaskDiagnosticsSchema,
+  designMethods,
+  checkDesignConnectionSchema,
 } from "@ui-forge/shared-protocol";
+import { createTaskDiagnosticsFixture } from "./taskDiagnosticsFixture";
 import type { CommunicationClient } from "../src/communication/clientContract";
 import { z } from "zod";
 
@@ -32,6 +37,12 @@ export function createFixtureClient(): CommunicationClient {
   let replyFailures = new URLSearchParams(location.search).has("replyError") ? 1 : 0;
   let sendFailures = new URLSearchParams(location.search).has("sendError") ? 1 : 0;
   let fileFailures = new URLSearchParams(location.search).has("fileError") ? 1 : 0;
+  let designCheckFailures = new URLSearchParams(location.search).has("designCheckError") ? 1 : 0;
+  let createFailures = new URLSearchParams(location.search).has("createError") ? 1 : 0;
+  let diagnosticsReads = 0;
+  const diagnosticsFailureReads = new Set(
+    (new URLSearchParams(location.search).get("diagnosticsFailAt") ?? "").split(",").map(Number),
+  );
   const emit = (taskId: string, event: SessionEvent) => {
     for (const listener of listeners.get(taskId) ?? []) listener(event);
   };
@@ -58,8 +69,40 @@ export function createFixtureClient(): CommunicationClient {
   return {
     notify: () => undefined,
     async request({ method, params, responseSchema }) {
+      window.dispatchEvent(new CustomEvent("ui-forge:fixture-request", { detail: method }));
       let result: unknown;
-      if (method === sessionFileMethods.open) {
+      if (method === designMethods.check) {
+        const { source } = checkDesignConnectionSchema.parse(params);
+        const delay = Number(new URLSearchParams(location.search).get("designCheckDelay") ?? 0);
+        if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+        if (designCheckFailures-- > 0)
+          throw new Error("连接检查失败，请确认本机 MasterGo 服务后重试。");
+        result =
+          source.kind === "local"
+            ? { source, tools: [] }
+            : {
+                source,
+                target: {
+                  documentId: "file",
+                  pageId: "1:0",
+                  nodeId: "2:3",
+                },
+                tools: ["get_selection", "get_design_context"],
+                serverVersion: "fixture-1.0",
+              };
+      } else if (method === diagnosticMethods.read) {
+        const { taskId } = readTaskDiagnosticsSchema.parse(params);
+        if (!snapshots.has(taskId)) throw new Error("任务不存在");
+        diagnosticsReads += 1;
+        const delay = Number(new URLSearchParams(location.search).get("diagnosticsDelay") ?? 0);
+        if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+        if (diagnosticsFailureReads.has(diagnosticsReads))
+          throw new Error("internal transport diagnostic details: sensitive-body");
+        result = createTaskDiagnosticsFixture(
+          taskId,
+          new URLSearchParams(location.search).get("diagnostics") === "unknown",
+        );
+      } else if (method === sessionFileMethods.open) {
         const input = sessionFileInputSchema.parse(params);
         if (!snapshots.has(input.taskId)) throw new Error("任务不存在");
         if (fileFailures-- > 0) throw new Error("文件预览失败，请重试。");
@@ -86,18 +129,37 @@ export function createFixtureClient(): CommunicationClient {
         };
       } else if (method === sessionMethods.list)
         result = {
-          tasks: [...snapshots.values()].map(({ thread }) => ({
+          tasks: [...snapshots.values()].map(({ thread, designBinding }) => ({
             taskId: thread.id,
             projectPath: thread.cwd,
             title: thread.preview,
             updatedAt: new Date().toISOString(),
+            ...(designBinding ? { designBinding } : {}),
           })),
           nextOffset: null,
         };
       else if (method === sessionMethods.create) {
         const input = createSessionSchema.parse(params);
+        if (createFailures-- > 0) throw new Error("任务创建失败，请重试。");
         const taskId = `demo-${sequence++}`;
         snapshots.set(taskId, {
+          ...(new URLSearchParams(location.search).has("legacyBinding")
+            ? {}
+            : {
+                designBinding: {
+                  bindingId: crypto.randomUUID(),
+                  source: input.designSource,
+                  ...(input.designSource.kind === "mastergo"
+                    ? {
+                        target: {
+                          documentId: "file",
+                          pageId: "1:0",
+                          nodeId: "2:3",
+                        },
+                      }
+                    : {}),
+                },
+              }),
           thread: {
             id: taskId,
             cwd: input.projectPath,
@@ -233,6 +295,28 @@ export function createFixtureClient(): CommunicationClient {
             ].join("\n\n"),
           });
         }
+        if (scenario === "capacity" || scenario === "usage-limit" || scenario === "context-limit") {
+          const snapshot = snapshots.get(taskId)!;
+          const turn = snapshot.thread.turns[0]!;
+          turn.status = "failed";
+          turn.error = {
+            message:
+              scenario === "capacity"
+                ? "Selected model is at capacity. Please try a different model."
+                : scenario === "usage-limit"
+                  ? "Usage limit exceeded."
+                  : "Context window exceeded.",
+            codexErrorInfo:
+              scenario === "capacity"
+                ? "serverOverloaded"
+                : scenario === "usage-limit"
+                  ? "usageLimitExceeded"
+                  : "contextWindowExceeded",
+            additionalDetails: null,
+          };
+          snapshot.thread.status = { type: "idle" };
+          snapshot.pendingRequests = [];
+        }
         result = { taskId };
       } else if (method === sessionMethods.read)
         result = snapshots.get(sessionIdSchema.parse(params).taskId);
@@ -324,6 +408,11 @@ export function createFixtureClient(): CommunicationClient {
         const input = sendSessionInputSchema.parse(params);
         const snapshot = snapshots.get(input.taskId);
         if (!snapshot) throw new Error("任务不存在");
+        if (
+          input.startOnlyIfIdle &&
+          snapshot.thread.turns.some((turn) => turn.status === "inProgress")
+        )
+          return responseSchema.parse({ accepted: true });
         if (sendFailures-- > 0) throw new Error("发送暂时失败，请重试。");
         const turn: NativeTurn = {
           id: `turn-${sequence++}`,

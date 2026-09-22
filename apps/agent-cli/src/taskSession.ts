@@ -1,6 +1,7 @@
 /** CLI 直接展示原生会话事件并回传真实请求，Ctrl-C 只断开连接。 */
 import { createInterface } from "node:readline";
 import { z } from "zod";
+import { getSessionFailure } from "@ui-forge/client-core";
 import {
   sessionMethods,
   sessionSnapshotSchema,
@@ -184,6 +185,12 @@ export async function watchTask(
       { type: "result", snapshot },
       `\n会话：${snapshot.thread.id}；状态：${snapshot.thread.turns.at(-1)?.status ?? "idle"}。验证结论见 Codex 输出。\n`,
     );
+    const lastTurn = snapshot.thread.turns.at(-1);
+    const failure = lastTurn?.status === "failed" ? getSessionFailure(lastTurn.error) : undefined;
+    if (!json && failure) {
+      output({}, `${failure.title}：${failure.message}\n`);
+      if (failure.canContinue) output({}, `稍后继续原任务：ui-forge resume ${taskId}\n`);
+    }
     return exitCode;
   } finally {
     rl.close();

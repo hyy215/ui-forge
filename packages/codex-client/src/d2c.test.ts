@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { bundleDirectory, prepareD2C } from "./d2c.js";
 import { prepareD2CRuntime } from "./d2cRuntime.js";
 import * as instructionFiles from "./instructions.js";
@@ -57,6 +58,36 @@ afterEach(async () => {
 });
 
 describe("D2C native request preparation", () => {
+  it("isolates the Vibe bridge from Magic credentials and disables remote access for local materials", async () => {
+    const { cwd, temporaryDirectory, readConfig } = await setup();
+    const vibe = await prepareD2C(
+      cwd,
+      {
+        prompt: "Build",
+        temporaryDirectory,
+        designAccess: { kind: "vibe", bridgeUrl: "http://127.0.0.1:43210/mcp/bound" },
+      },
+      readConfig,
+    );
+    expect(vibe.thread.config).toMatchObject({
+      mcp_servers: {
+        mastergo: { enabled: false },
+        ui_forge_vibe: { url: "http://127.0.0.1:43210/mcp/bound", enabled_tools: ["read_design"] },
+      },
+    });
+    expect(JSON.stringify(vibe.thread.config)).not.toContain("mastergo-headers");
+    expect(vibe.thread.config).toMatchObject({ mcp_servers: { mastergo: { enabled: false } } });
+    expect(vibe.thread.developerInstructions).toContain("ui_forge_vibe.read_design");
+    const local = await prepareD2CRuntime(
+      cwd,
+      { temporaryDirectory, designAccess: { kind: "local" } },
+      readConfig,
+    );
+    expect(local.config).toMatchObject({
+      mcp_servers: { mastergo: { enabled: false }, ui_forge_vibe: { enabled: false } },
+    });
+  });
+
   it("prepares the same runtime for recovery even when current instruction files cannot be read", async () => {
     const { cwd, temporaryDirectory, readConfig } = await setup();
     const created = await prepareD2C(cwd, { prompt: "Build", temporaryDirectory }, readConfig);
@@ -169,6 +200,13 @@ describe("D2C native request preparation", () => {
       readConfig,
     );
     expect(first.thread.developerInstructions).toContain("Use the target project components.");
+    expect(first.ruleFingerprints?.project).toBe(
+      createHash("sha256").update("Use the target project components.").digest("hex"),
+    );
+    expect(second.ruleFingerprints?.project).toBe(
+      createHash("sha256").update("Updated rules for coding, review and repairs.").digest("hex"),
+    );
+    expect(first.ruleFingerprints?.design).toBe(second.ruleFingerprints?.design);
     expect(second.thread.developerInstructions).toContain(
       "Updated rules for coding, review and repairs.",
     );

@@ -39,6 +39,20 @@ npm run dev:webview:server
 
 `npm run dev:webview` 为模拟演示入口，不连接真实后端。
 
+## 设计接入联调
+
+新任务区分 `local` 与 `mastergo` 来源；只有 MasterGo 再选择 `magic` 或 `vibe`。Figma 接入尚未实施，不作为 MasterGo 的连接选项。页面与 CLI 使用通信协议 22 的 `design-source-selection` 能力；修改后同步构建 Server、CLI、Extension/Webview，避免新客户端连接旧服务。
+
+Magic 使用已有 `MG_MCP_TOKEN` 与官方远程 MCP，账号还需具备设计访问权限和服务权益。Vibe 使用已启动的本机 MasterGo 服务，默认 MCP 为 `http://127.0.0.1:20678/mcp`，状态接口为 `http://127.0.0.1:30678/api/status`；它们不是同一个端点。Vibe 不使用个人 Token，账号权益仍以平台规则为准。不要为联调自动安装依赖、启动模型或修改用户画布。
+
+```bash
+npm run ui-forge -- design-check --design-source mastergo --mastergo-connection vibe --design-url "<MasterGo 图层链接>"
+```
+
+连接检查只读取状态、执行 MCP 握手和工具清单检查，不读取设计正文、不声明实例占用。Vibe 的图层链接必须与当前文档匹配；页面会在创建时固定。同一原生实例的执行准入串行化，不能用多个 MCP 桥端口模拟多个独立画布。恢复任务沿用已保存的绑定，不能因当前画布或默认配置变化而改换来源。
+
+真实设计读取需单独授权。受限桥仅提供空参数的 `read_design`：宿主固定文档/页面/节点、项目目录和 JSON 格式，强制 `writeToFile:false` 且不传 `outDir`；返回时只保留 JSON，丢弃上游的保存目录提示。它不提供画布写删、前端代码导出或截图保存。标准 MCP SDK 承担协议通信，不替代 Codex 原有权限控制。
+
 ## 验证
 
 使用 Prettier 统一格式化和检查：

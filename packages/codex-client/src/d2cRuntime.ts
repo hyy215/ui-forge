@@ -5,12 +5,23 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import type { NativeMethods } from "./generated/native.js";
 import { prepareTemporaryWorkspace, temporaryWorkspaceEnvironment } from "./temporaryWorkspace.js";
+import { loopbackUrl } from "./design/boundaries.js";
 
 /** 随包分发的配置、skill 与规则根目录；与目标项目目录分开。 */
 export const bundleDirectory = fileURLToPath(new URL("../", import.meta.url));
-/** 运行配置仅接受工具搜索与临时目录设置，不接受需求、规则或执行权限。 */
+/** 运行配置接受工具搜索、设计接入与临时目录设置，不接受需求、规则或执行权限。 */
 export const d2cRuntimeOptionsSchema = z.strictObject({
   search: z.boolean().optional(),
+  designAccess: z
+    .discriminatedUnion("kind", [
+      z.strictObject({ kind: z.literal("magic") }),
+      z.strictObject({
+        kind: z.literal("vibe"),
+        bridgeUrl: z.string().transform((value) => loopbackUrl(value).href),
+      }),
+      z.strictObject({ kind: z.literal("local") }),
+    ])
+    .optional(),
   temporaryDirectory: z
     .string()
     .refine(isAbsolute, "temporaryDirectory must be absolute")
@@ -54,11 +65,27 @@ export async function prepareD2CRuntime(
       `Cannot load codex-client config: ${layer?.disabledReason ?? "package project layer is missing; trust the package project in Codex"}`,
     );
   const config = configSchema.parse(layer.config);
-  const mastergo = config.mcp_servers.mastergo;
-  if (!mastergo) throw new Error("Package MasterGo configuration is missing");
-  // Keep the credential helper independent of the target project's Git root and shell syntax.
-  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-  mastergo.http_headers_helper = `${quote(process.execPath)} ${quote(join(bundleDirectory, "scripts/mastergo-headers.mjs"))}`;
+  const designAccess = parsed.designAccess ?? { kind: "magic" };
+  if (designAccess.kind === "magic") {
+    const mastergo = config.mcp_servers.mastergo;
+    if (!mastergo) throw new Error("Package MasterGo configuration is missing");
+    // Keep the credential helper independent of the target project's Git root and shell syntax.
+    const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+    mastergo.http_headers_helper = `${quote(process.execPath)} ${quote(join(bundleDirectory, "scripts/mastergo-headers.mjs"))}`;
+  } else if (designAccess.kind === "vibe") {
+    config.mcp_servers.mastergo = { url: "https://mastergo.com/mcp/xf/sse", enabled: false };
+    config.mcp_servers.ui_forge_vibe = {
+      url: designAccess.bridgeUrl,
+      enabled: true,
+      enabled_tools: ["read_design"],
+      startup_timeout_sec: 30,
+      tool_timeout_sec: 180,
+    };
+  } else {
+    config.mcp_servers.mastergo = { url: "https://mastergo.com/mcp/xf/sse", enabled: false };
+  }
+  if (designAccess.kind !== "vibe")
+    config.mcp_servers.ui_forge_vibe = { url: "http://127.0.0.1:9/mcp", enabled: false };
   for (const role of Object.values(config.agents)) {
     if (
       role &&

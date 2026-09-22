@@ -5,6 +5,7 @@ import {
   sessionSnapshotSchema,
 } from "@ui-forge/shared-protocol";
 import type { Command } from "commander";
+import { continuationPrompt } from "@ui-forge/client-core";
 import { LocalClient } from "../client.js";
 import { readJsonOption, readTaskId, requireTaskInputMode } from "../options.js";
 import { watchTask } from "../taskSession.js";
@@ -25,7 +26,7 @@ export function registerResumeCommand(program: Command): void {
       sessionMethods.send,
       {
         taskId,
-        text: "继续当前任务，先检查已有进度与实际工作区。",
+        text: continuationPrompt,
         startOnlyIfIdle: true,
       },
       sessionOperationResultSchema,

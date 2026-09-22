@@ -1,7 +1,11 @@
 import { expect, it } from "vitest";
 import type { NativeNotification, SessionEvent, SessionSnapshot } from "@ui-forge/shared-protocol";
 import type { PendingRequest } from "@ui-forge/codex-client";
-import { thread, approval } from "../../../../packages/codex-client/src/testing/payloads.js";
+import {
+  thread,
+  approval,
+  capacityFailureScenario,
+} from "../../../../packages/codex-client/src/testing/payloads.js";
 import { applySessionEvent, emptyPresentation, requestItem } from "@ui-forge/client-core";
 import { SessionEventHub } from "./sessionEventHub.js";
 
@@ -73,7 +77,7 @@ const events: NativeNotification[] = [
   }),
 ];
 
-it("keeps the server snapshot and Webview conversation identical across every reconnection boundary", async () => {
+async function replayAcrossReconnections(events: NativeNotification[]) {
   const continuous = events.reduce(
     (state, event) => applySessionEvent(state, { type: "notification", notification: event }),
     applySessionEvent(emptyPresentation(), {
@@ -81,13 +85,6 @@ it("keeps the server snapshot and Webview conversation identical across every re
       snapshot: structuredClone(initial),
     }),
   );
-  expect(continuous.snapshot?.thread.turns[0]?.items).toEqual([
-    { id: "message", type: "agentMessage", text: "hello world!" },
-    { id: "plan", type: "plan", text: "Check output" },
-    { id: "command", type: "commandExecution", aggregatedOutput: "first\nsecond\n" },
-    { id: "reasoning", type: "reasoning", summary: ["Inspect code", "", "Validate"] },
-  ]);
-  expect(continuous.snapshot?.thread.turns).toHaveLength(2);
   for (let split = 0; split <= events.length; split++) {
     const hub = new SessionEventHub(() => thread.cwd);
     hub.seed(initial.thread);
@@ -139,6 +136,56 @@ it("keeps the server snapshot and Webview conversation identical across every re
       await stream.return?.();
     }
   }
+  return continuous;
+}
+
+it("keeps the server snapshot and Webview conversation identical across every reconnection boundary", async () => {
+  const continuous = await replayAcrossReconnections(events);
+  expect(continuous.snapshot?.thread.turns[0]?.items).toEqual([
+    { id: "message", type: "agentMessage", text: "hello world!" },
+    { id: "plan", type: "plan", text: "Check output" },
+    { id: "command", type: "commandExecution", aggregatedOutput: "first\nsecond\n" },
+    { id: "reasoning", type: "reasoning", summary: ["Inspect code", "", "Validate"] },
+  ]);
+  expect(continuous.snapshot?.thread.turns).toHaveLength(2);
+});
+
+it("keeps native capacity retries, failure and manual continuation identical at every reconnect boundary", async () => {
+  const scenario = capacityFailureScenario;
+  const retrying = scenario.retrying.reduce(
+    (state, notification) => applySessionEvent(state, { type: "notification", notification }),
+    applySessionEvent(emptyPresentation(), { type: "snapshot", snapshot: initial }),
+  );
+  expect(retrying.snapshot?.thread.turns).toEqual([scenario.activeTurn]);
+  expect(retrying.activities).toEqual([
+    expect.objectContaining({
+      method: "error",
+      params: expect.objectContaining({ willRetry: true }),
+    }),
+  ]);
+  const exhaustedRetry = scenario.failed.find((notification) => notification.method === "error");
+  if (!exhaustedRetry) throw new Error("Missing capacity failure notification");
+  const awaitingCompletion = applySessionEvent(retrying, {
+    type: "notification",
+    notification: exhaustedRetry,
+  });
+  expect(awaitingCompletion.snapshot?.thread.turns).toEqual([scenario.activeTurn]);
+  const continuous = await replayAcrossReconnections([
+    ...scenario.retrying,
+    ...scenario.failed,
+    ...scenario.continued,
+  ]);
+  expect(continuous.snapshot?.thread.turns).toEqual([scenario.failedTurn, scenario.continuedTurn]);
+  expect(continuous.activities).toEqual([
+    expect.objectContaining({
+      method: "error",
+      params: expect.objectContaining({ willRetry: true }),
+    }),
+    expect.objectContaining({
+      method: "error",
+      params: expect.objectContaining({ willRetry: false }),
+    }),
+  ]);
 });
 
 it("includes output and approvals arriving during loading exactly once in the initial snapshot", async () => {

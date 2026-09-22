@@ -1,5 +1,6 @@
 /** 定义 ui-forge 会话操作和原生事件信封，不定义第二套执行状态。 */
 import { z } from "zod";
+import { designBindingSchema, designSourceSchema } from "../design/designSource.js";
 import {
   nativeNotificationSchema,
   nativeThreadSchema,
@@ -31,8 +32,12 @@ export const createSessionSchema = z
     projectPath: z.string().min(1),
     prompt: z.string().max(200_000),
     images: z.array(imageInputSchema).max(4).default([]),
+    designSource: designSourceSchema.default({ kind: "local" }),
   })
-  .refine((v) => v.prompt.trim() || v.images.length > 0, "请输入需求或添加设计图片。");
+  .refine(
+    (v) => v.prompt.trim() || v.images.length > 0 || v.designSource.kind === "mastergo",
+    "请输入需求或添加设计图片。",
+  );
 /** 会话操作的稳定身份，直接使用 Codex thread ID。 */
 export const sessionIdSchema = z.strictObject({ taskId: z.string().min(1).max(200) });
 /** 文字或图片补充输入；自动续接可要求仅在空闲时启动，不能覆盖已运行轮次。 */
@@ -59,6 +64,7 @@ export const listSessionsSchema = z.strictObject({
 export const sessionSnapshotSchema = z.object({
   thread: nativeThreadSchema,
   pendingRequests: z.array(pendingRequestSchema),
+  designBinding: designBindingSchema.optional(),
 });
 /** 创建成功即返回身份；轮次启动出错仍可打开原会话检查，避免重复创建。 */
 export const createdSessionSchema = z.object({
@@ -73,6 +79,7 @@ export const taskHistoryEntrySchema = z.object({
   projectPath: z.string(),
   title: z.string(),
   updatedAt: z.string(),
+  designBinding: designBindingSchema.optional(),
 });
 /** 任务列表使用安装目录内索引，不展示用户其他 Codex 会话。 */
 export const taskHistoryPageSchema = z.object({

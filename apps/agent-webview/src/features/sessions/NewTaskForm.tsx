@@ -1,23 +1,60 @@
-/** 新建任务输入：设计链接和图片并列，支持选择严格像素验收并保留失败草稿。 */
-import { useRef, useState } from "react";
-import { Alert, Button, Checkbox, Input } from "antd";
-import type { CreateSessionInput } from "@ui-forge/shared-protocol";
+/** 新建任务的显式来源与接入选择；保留各来源草稿，检查连接不启动执行。 */
+import { useEffect, useRef, useState } from "react";
+import { Alert, Button, Checkbox, Input, Radio } from "antd";
+import {
+  defaultVibeEndpoint,
+  defaultVibeStatusEndpoint,
+  type CreateSessionInput,
+  type DesignSource,
+  type DesignConnectionCheck,
+} from "@ui-forge/shared-protocol";
 import { readImage } from "./imageInput";
+import { readDesignSource, type MasterGoDraft } from "./designInput";
+import { MasterGoFields } from "./MasterGoFields";
 import styles from "./Sessions.module.css";
 
-/** 把链接、需求和所选验收要求组成 Codex 输入；图片通过现有附件协议单独传递。 */
+/** 来源与用户文字分别提交，避免把平台链接当作无绑定的普通提示词。 */
 export function NewTaskForm({
   workspacePath,
   onCreate,
+  onCheck,
 }: {
   workspacePath?: string | undefined;
   onCreate: (input: CreateSessionInput) => Promise<void>;
+  onCheck: (source: DesignSource, signal?: AbortSignal) => Promise<DesignConnectionCheck>;
 }) {
   const [target, setTarget] = useState(workspacePath ?? "");
-  const [designUrl, setDesignUrl] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [strictPixelAcceptance, setStrictPixelAcceptance] = useState(false);
-  const [images, setImages] = useState<CreateSessionInput["images"]>([]);
+  const [sourceKind, setSourceKind] = useState<DesignSource["kind"]>("local");
+  const [drafts, setDrafts] = useState<
+    Record<
+      DesignSource["kind"],
+      { prompt: string; strictPixelAcceptance: boolean; images: CreateSessionInput["images"] }
+    >
+  >({
+    local: { prompt: "", strictPixelAcceptance: false, images: [] },
+    mastergo: { prompt: "", strictPixelAcceptance: false, images: [] },
+  });
+  const { prompt, strictPixelAcceptance, images } = drafts[sourceKind];
+  const updateDraft = (update: Partial<(typeof drafts)["local"]>) =>
+    setDrafts((current) => ({ ...current, [sourceKind]: { ...current[sourceKind], ...update } }));
+  const [mastergo, setMastergo] = useState<MasterGoDraft>({
+    url: "",
+    connection: null,
+    endpoint: defaultVibeEndpoint,
+    statusEndpoint: defaultVibeStatusEndpoint,
+  });
+  const checkAbort = useRef<AbortController | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<DesignConnectionCheck | null>(null);
+  const [checkError, setCheckError] = useState("");
+  const invalidateCheck = () => {
+    checkAbort.current?.abort();
+    checkAbort.current = null;
+    setChecking(false);
+    setCheckResult(null);
+    setCheckError("");
+  };
+  useEffect(() => () => checkAbort.current?.abort(), []);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const uploadLock = useRef(false);
@@ -29,7 +66,13 @@ export function NewTaskForm({
     try {
       if (images.length + files.length > 4) throw new Error("最多添加 4 张图片。");
       const uploaded = await Promise.all(files.map(readImage));
-      setImages((current) => [...current, ...uploaded]);
+      setDrafts((current) => ({
+        ...current,
+        [sourceKind]: {
+          ...current[sourceKind],
+          images: [...current[sourceKind].images, ...uploaded],
+        },
+      }));
       setError("");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "图片读取失败");
@@ -38,27 +81,39 @@ export function NewTaskForm({
       setUploading(false);
     }
   };
+  const checkConnection = async () => {
+    invalidateCheck();
+    const controller = new AbortController();
+    checkAbort.current = controller;
+    setChecking(true);
+    try {
+      const source = readDesignSource(sourceKind, mastergo);
+      const result = await onCheck(source, controller.signal);
+      if (!controller.signal.aborted) setCheckResult(result);
+    } catch (failure) {
+      if (!controller.signal.aborted)
+        setCheckError(
+          failure instanceof Error
+            ? failure.message
+            : "连接检查失败，请确认设计链接与本机服务后重试。",
+        );
+    } finally {
+      if (!controller.signal.aborted) setChecking(false);
+    }
+  };
   const create = async () => {
     if (busy || uploading) return;
     setBusy(true);
     setError("");
     try {
-      if (designUrl.trim()) {
-        let url: URL;
-        try {
-          url = new URL(designUrl.trim());
-        } catch {
-          throw new Error("请输入完整的 http:// 或 https:// 设计链接。");
-        }
-        if (url.protocol !== "https:" && url.protocol !== "http:")
-          throw new Error("设计链接仅支持 http:// 或 https://。");
-      }
+      const designSource = readDesignSource(sourceKind, mastergo);
       await onCreate({
         projectPath: target.trim(),
-        prompt: [designUrl.trim(), prompt.trim(), strictPixelAcceptance ? "启用严格像素验收。" : ""]
+        prompt: [prompt.trim(), strictPixelAcceptance ? "启用严格像素验收。" : ""]
           .filter(Boolean)
           .join("\n\n"),
         images,
+        designSource,
       });
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "创建失败");
@@ -88,27 +143,36 @@ export function NewTaskForm({
           placeholder="已有项目或空目录的绝对路径"
         />
         <fieldset className={styles.designInputs}>
-          <legend>
-            设计输入 <span>可选其一，也可同时添加</span>
-          </legend>
-          <div className={styles.designGrid}>
-            <section className={styles.designSource} aria-label="设计链接输入">
-              <label htmlFor="design-url">
-                <span aria-hidden="true">↗</span> 设计链接
-              </label>
-              <p>粘贴设计稿的页面或节点链接</p>
-              <Input
-                id="design-url"
-                aria-label="设计链接"
-                value={designUrl}
-                disabled={busy}
-                onChange={(event) => {
-                  setDesignUrl(event.target.value);
-                  setError("");
-                }}
-                placeholder="https://…"
-              />
-            </section>
+          <legend>设计来源</legend>
+          <Radio.Group
+            aria-label="设计来源"
+            value={sourceKind}
+            disabled={busy || uploading}
+            onChange={(event) => {
+              invalidateCheck();
+              setError("");
+              setSourceKind(event.target.value as DesignSource["kind"]);
+            }}
+          >
+            <Radio value="local">图片/文字</Radio>
+            <Radio value="mastergo">MasterGo</Radio>
+          </Radio.Group>
+          {sourceKind === "mastergo" && (
+            <MasterGoFields
+              draft={mastergo}
+              disabled={busy}
+              checking={checking}
+              result={checkResult}
+              error={checkError}
+              onCheck={() => void checkConnection()}
+              onChange={(draft) => {
+                invalidateCheck();
+                setError("");
+                setMastergo(draft);
+              }}
+            />
+          )}
+          <div className={styles.designUploads}>
             <section
               className={styles.designSource}
               aria-label="设计图片输入"
@@ -150,7 +214,9 @@ export function NewTaskForm({
                     size="small"
                     disabled={busy || uploading}
                     aria-label={"移除 " + image.name}
-                    onClick={() => setImages(images.filter((_, current) => current !== index))}
+                    onClick={() =>
+                      updateDraft({ images: images.filter((_, current) => current !== index) })
+                    }
                   >
                     ×
                   </Button>
@@ -166,7 +232,7 @@ export function NewTaskForm({
           id="task-prompt"
           value={prompt}
           disabled={busy}
-          onChange={(event) => setPrompt(event.target.value)}
+          onChange={(event) => updateDraft({ prompt: event.target.value })}
           rows={4}
           placeholder="描述页面功能、交互细节，或希望调整的部分…"
         />
@@ -175,7 +241,7 @@ export function NewTaskForm({
             checked={strictPixelAcceptance}
             disabled={busy}
             aria-describedby="strict-pixel-hint"
-            onChange={(event) => setStrictPixelAcceptance(event.target.checked)}
+            onChange={(event) => updateDraft({ strictPixelAcceptance: event.target.checked })}
           >
             严格像素验收
           </Checkbox>
@@ -191,7 +257,11 @@ export function NewTaskForm({
             htmlType="submit"
             loading={busy}
             disabled={
-              uploading || !target.trim() || (!designUrl.trim() && !prompt.trim() && !images.length)
+              uploading ||
+              !target.trim() ||
+              (sourceKind === "local"
+                ? !prompt.trim() && !images.length
+                : !mastergo.url.trim() || !mastergo.connection)
             }
           >
             开始执行任务 ↗

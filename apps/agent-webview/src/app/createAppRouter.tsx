@@ -50,6 +50,7 @@ export function createAppRouter(dependencies: AppDependencies) {
               <TaskPage
                 source={source}
                 files={files}
+                host={dependencies.host ?? "browser"}
                 {...(dependencies.workspacePath
                   ? { workspacePath: dependencies.workspacePath }
                   : {})}
