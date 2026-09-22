@@ -1,7 +1,7 @@
 # prepareD2C 通过 Codex 读取此包级配置，并为目标工作区解析路径。
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 4
+max_concurrent_threads_per_session = 1
 
 [agents.d2c_design_analyst]
 description = "分析指定设计的布局、交互、尺寸、排版和资源。"
@@ -29,6 +29,7 @@ enabled_tools = [
   "browser_snapshot", "browser_find", "browser_take_screenshot", "browser_console_messages",
   "browser_network_requests", "browser_network_request", "browser_wait_for", "browser_mouse_wheel",
   "browser_click", "browser_type", "browser_fill_form", "browser_select_option", "browser_hover",
+  "browser_mouse_drag_xy",
   "browser_press_key", "browser_evaluate",
 ]
 

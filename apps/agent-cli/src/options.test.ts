@@ -2,7 +2,14 @@ import { mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { sessionMethods, type SessionSnapshot } from "@ui-forge/shared-protocol";
+import {
+  sessionMethods,
+  diagnosticMethods,
+  designMethods,
+  taskDiagnosticsSchema,
+  type TaskDiagnostics,
+  type SessionSnapshot,
+} from "@ui-forge/shared-protocol";
 import { runCli } from "./cli.js";
 
 const runtime = vi.hoisted(() => ({
@@ -55,6 +62,25 @@ const activeSnapshot: SessionSnapshot = {
     ...snapshot.thread,
     turns: [{ id: "turn-1", status: "inProgress", items: [], error: null }],
   },
+};
+const diagnostics: TaskDiagnostics = {
+  reportVersion: 2,
+  generatedAt: "2026-09-20T00:00:00.000Z",
+  taskId: "task-1",
+  source: "codex-thread-read",
+  scope: "thread-tree",
+  status: "idle",
+  model: null,
+  modelProvider: null,
+  reasoningEffort: null,
+  codexVersion: null,
+  protocolVersion: "0.153.4",
+  runtime: null,
+  agents: [],
+  ruleFingerprints: null,
+  tokenUsage: null,
+  turns: [],
+  warnings: ["rulesUnavailable", "tokenUsageUnavailable"],
 };
 const originalExitCode = process.exitCode;
 const originalTty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
@@ -112,6 +138,44 @@ afterEach(() => {
 });
 
 describe("command parsing and output", () => {
+  it("checks a design connection without creating, reading, resuming or watching a task", async () => {
+    const source = {
+      kind: "mastergo",
+      url: "https://mastergo.com/file/file?layer_id=2:3",
+      connection: { kind: "magic" },
+    };
+    const report = { source, tools: ["get_design_context"] };
+    runtime.request.mockResolvedValueOnce(report);
+    await runCli([
+      "design-check",
+      "--json",
+      "--design-source",
+      "mastergo",
+      "--mastergo-connection",
+      "magic",
+      "--design-url",
+      source.url,
+    ]);
+    expect(runtime.request).toHaveBeenCalledExactlyOnceWith(
+      designMethods.check,
+      { source },
+      expect.anything(),
+    );
+    expect(runtime.watch).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.join(""))).toEqual(report);
+    expect(stderr).toEqual([]);
+  });
+
+  it.each([
+    ["--design-url", "https://mastergo.com/file/file?layer_id=2:3"],
+    ["--design-source", "local", "--mastergo-connection", "magic"],
+    ["--design-source", "mastergo", "--design-url", "https://mastergo.com/file/file"],
+    ["--design-source", "figma"],
+  ])("rejects invalid design options before connecting %j", async (...options) => {
+    await runCli(["run", "--target", "/tmp/app", ...options, "--", "需求"]);
+    expect(process.exitCode).toBe(1);
+    expect(runtime.connect).not.toHaveBeenCalled();
+  });
   it.each([[], ["help"], ["--help"], ["-h"]])(
     "shows top-level help without connecting for %j",
     async (...argv) => {
@@ -126,7 +190,7 @@ describe("command parsing and output", () => {
     },
   );
 
-  it.each(["doctor", "serve", "run", "list", "status", "resume"])(
+  it.each(["doctor", "serve", "run", "list", "status", "resume", "diagnostics", "design-check"])(
     "shows help for %s before checking required inputs",
     async (command) => {
       await runCli([command, "--help"]);
@@ -161,6 +225,10 @@ describe("command parsing and output", () => {
     ["run", "--target", ""],
     ["run", "--target", "/tmp/app"],
     ["status"],
+    ["diagnostics"],
+    ["diagnostics", " "],
+    ["diagnostics", "one", "two"],
+    ["diagnostics", "task-1", "--target", "/tmp/app"],
     ["resume"],
     ["status", " "],
     ["resume", "one", "two"],
@@ -226,6 +294,101 @@ describe("command parsing and output", () => {
 });
 
 describe("command execution", () => {
+  it.each([
+    ["diagnostics", "task-1", "--json"],
+    ["--json", "diagnostics", "task-1"],
+  ])("exports diagnostics with one read-only request: %j", async (...argv) => {
+    Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: false });
+    runtime.request.mockResolvedValue(diagnostics);
+    await runCli(argv);
+    expect(runtime.request).toHaveBeenCalledExactlyOnceWith(
+      diagnosticMethods.read,
+      { taskId: "task-1" },
+      taskDiagnosticsSchema,
+    );
+    expect(JSON.parse(stdout.join(""))).toEqual(diagnostics);
+    expect(runtime.watch).not.toHaveBeenCalled();
+    expect(runtime.account).not.toHaveBeenCalled();
+    expect(stderr).toEqual([]);
+  });
+
+  it("shows missing diagnostics as unknown without inventing zero usage", async () => {
+    runtime.request.mockResolvedValue({
+      ...diagnostics,
+      turns: [
+        {
+          turnId: "old-failure",
+          status: "failed",
+          startedAt: null,
+          completedAt: null,
+          durationMs: null,
+          errorCode: null,
+          tools: [],
+        },
+      ],
+    } satisfies TaskDiagnostics);
+    await runCli(["diagnostics", "task-1"]);
+    expect(stdout.join("")).toContain("原生累计 Token：未知");
+    expect(stdout.join("")).toContain("未记录任务创建时的规则指纹");
+    expect(stdout.join("")).not.toContain("/tmp/app");
+    expect(stdout.join("")).toContain("old-failure | failed | 未知 | 错误码：未记录");
+  });
+
+  it("prints observed zero usage, capacity errors and known tool timings separately", async () => {
+    runtime.request.mockResolvedValue({
+      ...diagnostics,
+      model: "fixture-model",
+      tokenUsage: {
+        observedAt: diagnostics.generatedAt,
+        total: {
+          totalTokens: 0,
+          inputTokens: 0,
+          cachedInputTokens: 0,
+          cacheWriteInputTokens: 0,
+          outputTokens: 0,
+          reasoningOutputTokens: 0,
+        },
+      },
+      turns: [
+        {
+          turnId: "turn-1",
+          status: "failed",
+          startedAt: null,
+          completedAt: null,
+          durationMs: 10,
+          errorCode: "serverOverloaded",
+          tools: [
+            {
+              type: "commandExecution",
+              count: 1,
+              completed: 1,
+              failed: 0,
+              inProgress: 0,
+              other: 0,
+              timedCount: 1,
+              knownDurationMs: 25,
+            },
+          ],
+        },
+      ],
+    } satisfies TaskDiagnostics);
+    await runCli(["diagnostics", "task-1"]);
+    expect(stdout.join("")).toContain("原生累计 Token：0");
+    expect(stdout.join("")).toContain("turn-1 | failed | 10 ms | 错误码：serverOverloaded");
+    expect(stdout.join("")).toContain("已知耗时 25 ms（1 项）");
+    expect(stdout.join("")).toContain("不等于轮次耗时");
+  });
+
+  it("reports a failed diagnostic read without retrying, resuming or watching", async () => {
+    runtime.request.mockRejectedValueOnce(new Error("诊断历史不可用"));
+    await runCli(["diagnostics", "task-1", "--json"]);
+    expect(stdout).toEqual([]);
+    expect(stderr).toEqual(['{"type":"error","message":"诊断历史不可用"}\n']);
+    expect(runtime.request).toHaveBeenCalledTimes(1);
+    expect(runtime.watch).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
   it("keeps literal requirements, resolves file paths and sends text, links and images together", async () => {
     runtime.request
       .mockResolvedValueOnce({ taskId: "task-1", warning: "启动警告" })
@@ -239,7 +402,11 @@ describe("command execution", () => {
       "--image",
       join(directory, "design.png"),
       "--design-url",
-      "https://example.com/design",
+      "https://mastergo.com/file/file?layer_id=2:3",
+      "--design-source",
+      "mastergo",
+      "--mastergo-connection",
+      "magic",
       "--",
       literal,
       "--json",
@@ -249,7 +416,12 @@ describe("command execution", () => {
       sessionMethods.create,
       {
         projectPath: resolve("./app"),
-        prompt: `https://example.com/design\n\n${literal} --json`,
+        prompt: `${literal} --json`,
+        designSource: {
+          kind: "mastergo",
+          url: "https://mastergo.com/file/file?layer_id=2:3",
+          connection: { kind: "magic" },
+        },
         images: [
           {
             name: "design.png",
@@ -275,7 +447,14 @@ describe("command execution", () => {
         kind === "text"
           ? ["--", "hello"]
           : kind === "link"
-            ? ["--design-url", "https://example.com/design"]
+            ? [
+                "--design-source",
+                "mastergo",
+                "--mastergo-connection",
+                "magic",
+                "--design-url",
+                "https://mastergo.com/file/file?layer_id=2:3",
+              ]
             : ["--image", join(directory, "design.png")];
       await runCli(["run", "--json", "--target", "/tmp/app", ...input]);
       expect(runtime.watch).toHaveBeenCalledWith(expect.anything(), activeSnapshot, true);
@@ -320,9 +499,7 @@ describe("command execution", () => {
 
   it("continues an idle task once and subscribes to the refreshed snapshot", async () => {
     Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: false });
-    runtime.request
-      .mockResolvedValueOnce({ accepted: true })
-      .mockResolvedValueOnce(activeSnapshot);
+    runtime.request.mockResolvedValueOnce({ accepted: true }).mockResolvedValueOnce(activeSnapshot);
     await runCli(["resume", "task-1", "--json"]);
     expect(runtime.request.mock.calls.map(([method]) => method)).toEqual([
       sessionMethods.send,
@@ -333,7 +510,7 @@ describe("command execution", () => {
       sessionMethods.send,
       {
         taskId: "task-1",
-        text: "继续当前任务，先检查已有进度与实际工作区。",
+        text: "继续当前任务，先检查原会话记录、实际工作区及已有验证结果，只处理尚未完成的工作。复用仍有效的验证结果，避免重复已完成的修改或有副作用的操作；无法确认时先核实当前状态。",
         startOnlyIfIdle: true,
       },
       expect.anything(),
@@ -342,9 +519,7 @@ describe("command execution", () => {
   });
 
   it("attaches to an active task without steering it and preserves the session exit code", async () => {
-    runtime.request
-      .mockResolvedValueOnce({ accepted: true })
-      .mockResolvedValueOnce(activeSnapshot);
+    runtime.request.mockResolvedValueOnce({ accepted: true }).mockResolvedValueOnce(activeSnapshot);
     runtime.watch.mockResolvedValue(1);
     await runCli(["resume", "task-1"]);
     expect(runtime.request.mock.calls.map(([method]) => method)).toEqual([
@@ -356,7 +531,7 @@ describe("command execution", () => {
       sessionMethods.send,
       {
         taskId: "task-1",
-        text: "继续当前任务，先检查已有进度与实际工作区。",
+        text: "继续当前任务，先检查原会话记录、实际工作区及已有验证结果，只处理尚未完成的工作。复用仍有效的验证结果，避免重复已完成的修改或有副作用的操作；无法确认时先核实当前状态。",
         startOnlyIfIdle: true,
       },
       expect.anything(),

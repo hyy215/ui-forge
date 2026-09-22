@@ -37,6 +37,11 @@ export class SessionViewCache {
       if (view.snapshot?.thread.cwd === cwd) this.views.delete(id);
   }
 
+  /** 隔离连接关闭只清理该连接装载过的任务，不影响同目录的其他设计来源。 */
+  removeTasks(taskIds: ReadonlySet<string>): void {
+    for (const taskId of taskIds) this.views.delete(taskId);
+  }
+
   /** 使用与页面相同的归并规则，并为待审批子任务保留必要的补丁预览。 */
   apply(taskId: string, event: SessionEvent): void {
     const view = this.views.get(taskId);

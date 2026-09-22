@@ -1,0 +1,46 @@
+/** 显式来源、接入字段与绑定元数据，保持窄屏可读且不截断目标身份。 */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 4px 0 18px;
+}
+.fields > label,
+.fields > span {
+  font-weight: 600;
+  font-size: 13px;
+}
+.advanced {
+  min-width: 0;
+  font-size: 12px;
+}
+.advanced summary {
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.advanced label {
+  display: block;
+  margin-bottom: 8px;
+}
+.checkResult,
+.binding {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  overflow-wrap: anywhere;
+}
+.checkResult > span,
+.binding > span {
+  min-width: 0;
+  max-width: 100%;
+}
+.binding {
+  flex-shrink: 0;
+  padding: 0 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.binding a {
+  color: var(--accent);
+}

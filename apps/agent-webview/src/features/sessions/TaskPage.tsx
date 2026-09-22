@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Tag } from "antd";
-import { z } from "zod";
 import type { SessionDataSource } from "../../data-sources/sessionDataSource";
 import type { SessionFileSource } from "../../data-sources/sessionFileSource";
 import { SessionFileContext } from "./sessionFileContext";
@@ -11,6 +10,9 @@ import { PendingRequestPanel } from "./PendingRequestPanel";
 import { NewTaskForm } from "./NewTaskForm";
 import { TaskComposer } from "./TaskComposer";
 import { SessionActivityView } from "./SessionActivityView";
+import { SessionFailureNotice } from "./SessionFailureNotice";
+import { TaskDiagnosticsPanel } from "./TaskDiagnosticsPanel";
+import { TaskDesignBinding } from "./TaskDesignBinding";
 import { requestItem } from "@ui-forge/client-core";
 import { useTaskSession } from "./useTaskSession";
 import styles from "./Sessions.module.css";
@@ -20,10 +22,12 @@ export function TaskPage({
   source,
   files,
   workspacePath,
+  host = "browser",
 }: {
   source: SessionDataSource;
   files: SessionFileSource;
   workspacePath?: string;
+  host?: "vscode" | "browser";
 }) {
   const [search, setSearch] = useSearchParams();
   const taskId = search.get("taskId");
@@ -46,6 +50,7 @@ export function TaskPage({
     return (
       <NewTaskForm
         workspacePath={workspacePath}
+        onCheck={source.checkDesignConnection}
         onCreate={async (value) => {
           const result = await source.create(value);
           setWarning(result.warning ?? "");
@@ -77,24 +82,28 @@ export function TaskPage({
               任务执行会逐步读取文件、运行命令、修改文件或调用工具；这些都是执行中的具体步骤。
             </p>
           </div>
-          <Tag
-            color={
-              state.connection === "connected"
-                ? pendingCount
-                  ? "warning"
-                  : activeTurn
-                    ? "processing"
-                    : "default"
-                : "warning"
-            }
-          >
-            {state.connection === "connected"
-              ? status
-              : state.connection === "connecting"
-                ? "连接中"
-                : "连接中断"}
-          </Tag>
+          <div className={styles.sessionActions}>
+            <TaskDiagnosticsPanel key={taskId} taskId={taskId} source={source} host={host} />
+            <Tag
+              color={
+                state.connection === "connected"
+                  ? pendingCount
+                    ? "warning"
+                    : activeTurn
+                      ? "processing"
+                      : "default"
+                  : "warning"
+              }
+            >
+              {state.connection === "connected"
+                ? status
+                : state.connection === "connecting"
+                  ? "连接中"
+                  : "连接中断"}
+            </Tag>
+          </div>
         </header>
+        {snapshot && <TaskDesignBinding binding={snapshot.designBinding} />}
         {(state.notice || warning) && (
           <Alert
             title={state.notice || warning}
@@ -126,18 +135,18 @@ export function TaskPage({
                 <NativeItemView key={item.id} item={item} />
               ))}
               {turn.error && (
-                <Alert
-                  title="Codex 返回错误"
-                  description={
-                    z
-                      .object({ message: z.string() })
-                      .catch({
-                        message:
-                          typeof turn.error === "string" ? turn.error : JSON.stringify(turn.error),
-                      })
-                      .parse(turn.error).message
+                <SessionFailureNotice
+                  error={turn.error}
+                  busy={busy}
+                  connected={state.connection === "connected"}
+                  onContinue={
+                    turn.id === lastTurn?.id &&
+                    turn.status === "failed" &&
+                    !activeTurn &&
+                    pendingCount === 0
+                      ? () => run(() => source.continue(taskId))
+                      : undefined
                   }
-                  type="error"
                 />
               )}
             </section>

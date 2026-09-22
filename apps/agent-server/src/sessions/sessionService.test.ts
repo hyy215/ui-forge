@@ -12,19 +12,25 @@ import {
   readInstructions,
   saveInstructions,
   prepareTemporaryWorkspace,
+  CodexTimeoutError,
 } from "@ui-forge/codex-client";
 import { z } from "zod";
 import {
   createCommunicationRequestMessage,
   communicationResponseMessageSchema,
   sessionMethods,
+  designMethods,
   instructionMethods,
   type NativeThread,
+  type DesignSource,
 } from "@ui-forge/shared-protocol";
+import type { SessionDesignOptions } from "../design/sessionDesignBindings.js";
+import type { VibeReadOnlyBridgeOptions } from "@ui-forge/codex-client";
 import { SessionService } from "./sessionService.js";
 import { CodexConnections, type CodexConnection } from "../runtime/codexConnections.js";
 import { InstructionService } from "../instructions/instructionService.js";
 import { buildApp } from "../http/buildApp.js";
+import { capacityFailureScenario } from "../../../../packages/codex-client/src/testing/payloads.js";
 
 const directories: string[] = [];
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -48,6 +54,8 @@ class FakeCodex implements CodexConnection {
   pending: CodexPending[] = [];
   calls: { method: string; params: unknown }[] = [];
   closeCount = 0;
+  startError: Error | undefined;
+  beforeClose: (() => Promise<void>) | undefined;
   prepareD2C = vi.fn(async () => ({
     thread: {
       developerInstructions: "shared rules",
@@ -92,6 +100,7 @@ class FakeCodex implements CodexConnection {
     this.pending = this.pending.filter((entry) => entry.token !== token);
   }
   async close() {
+    await this.beforeClose?.();
     this.closeCount++;
     this.pending = [];
     for (const listener of this.listeners) listener({ type: "close", error: new Error("closed") });
@@ -125,6 +134,7 @@ class FakeCodex implements CodexConnection {
       if (method === "thread/read" || method === "thread/resume")
         result = { thread: structuredClone(thread) };
       else if (method === "turn/start") {
+        if (this.startError) throw this.startError;
         const turn = {
           id: `${id}-turn-${thread.turns.length}`,
           status: "inProgress",
@@ -168,7 +178,11 @@ class FakeCodex implements CodexConnection {
     for (const listener of this.listeners) listener({ type: "request", ...pending });
   }
 }
-async function setup(inheritedServers?: unknown) {
+async function setup(
+  inheritedServers?: unknown,
+  designOptions: SessionDesignOptions = {},
+  configureClient?: (client: FakeCodex) => void,
+) {
   const directory = await mkdtemp(join(tmpdir(), "ui-forge-server-"));
   directories.push(directory);
   const threads = new Map<string, NativeThread>();
@@ -178,6 +192,7 @@ async function setup(inheritedServers?: unknown) {
   const factory = (cwd: string, overrides: Record<string, string | number | boolean> = {}) => {
     launches.push(overrides);
     const client = new FakeCodex(cwd, threads);
+    configureClient?.(client);
     if (inheritedServers !== undefined) client.inheritedServers = inheritedServers;
     probes.push(client);
     const subscribe = client.subscribe.bind(client);
@@ -187,7 +202,7 @@ async function setup(inheritedServers?: unknown) {
     };
     return client;
   };
-  const service = new SessionService({ directory, connectionFactory: factory });
+  const service = new SessionService({ directory, connectionFactory: factory, ...designOptions });
   await service.initialize();
   cleanup.push(() => service.close());
   return { directory, threads, clients, probes, launches, factory, service };
@@ -445,16 +460,85 @@ describe("native session service", () => {
     signal.abort();
     await stream.return?.();
   });
-  it("restarts from the durable index and native history without starting another turn or replaying approval", async () => {
-    const { directory, service, clients, factory } = await setup();
+  it("continues a capacity failure only after explicit input and preserves the previous results", async () => {
+    const { directory, service, clients, threads } = await setup();
     const { taskId } = await service.create({ projectPath: directory, prompt: "one", images: [] });
+    const nativeThread = threads.get(taskId);
+    const nativeTurn = nativeThread?.turns[0];
+    const client = clients[0];
+    if (!nativeThread || !nativeTurn || !client) throw new Error("Missing fixture thread");
+    nativeTurn.items = structuredClone(capacityFailureScenario.activeTurn.items);
+    client.emit("error", {
+      threadId: taskId,
+      turnId: nativeTurn.id,
+      error: capacityFailureScenario.failedTurn.error,
+      willRetry: true,
+    });
+    const retryBoundary = client.calls.length;
+    await service.send(taskId, "Continue only if idle", [], true);
+    expect(
+      client.calls
+        .slice(retryBoundary)
+        .filter((call) => call.method === "turn/start" || call.method === "turn/steer"),
+    ).toEqual([]);
+    expect((await service.read(taskId)).thread.turns[0]).toMatchObject({
+      status: "inProgress",
+      error: null,
+      items: capacityFailureScenario.activeTurn.items,
+    });
+
+    nativeTurn.status = "failed";
+    nativeTurn.error = structuredClone(capacityFailureScenario.failedTurn.error);
+    nativeThread.status = { type: "idle" };
+    client.emit("error", {
+      threadId: taskId,
+      turnId: nativeTurn.id,
+      error: nativeTurn.error,
+      willRetry: false,
+    });
+    client.emit("turn/completed", { threadId: taskId, turn: nativeTurn });
+    const failedTurn = structuredClone(nativeTurn);
+    expect((await service.read(taskId)).thread.turns).toEqual([failedTurn]);
+    expect(client.calls.filter((call) => call.method === "turn/start")).toHaveLength(1);
+
+    const continuationBoundary = client.calls.length;
+    await service.send(taskId, "Check existing work and continue unfinished changes", [], true);
+    expect(
+      client.calls
+        .slice(continuationBoundary)
+        .filter((call) => call.method === "turn/start" || call.method === "turn/steer"),
+    ).toEqual([
+      expect.objectContaining({
+        method: "turn/start",
+        params: expect.objectContaining({ threadId: taskId }),
+      }),
+    ]);
+    expect((await service.read(taskId)).thread.turns).toEqual([
+      failedTurn,
+      expect.objectContaining({ status: "inProgress", error: null, items: [] }),
+    ]);
+  });
+  it("restarts from the durable index and native history without starting another turn or replaying approval", async () => {
+    const { directory, service, clients, factory, threads } = await setup();
+    const { taskId } = await service.create({ projectPath: directory, prompt: "one", images: [] });
+    const nativeThread = threads.get(taskId);
+    if (!nativeThread) throw new Error("Missing fixture thread");
+    nativeThread.turns.unshift(
+      structuredClone({
+        ...capacityFailureScenario.failedTurn,
+        id: "previous-capacity-failure",
+      }),
+    );
+    const previousTurns = structuredClone(nativeThread.turns);
     clients[0]!.ask(taskId, "old-token");
     await service.close();
     const restarted = new SessionService({ directory, connectionFactory: factory });
     cleanup.push(() => restarted.close());
     await restarted.initialize();
     expect(restarted.index.list(0).tasks[0]?.taskId).toBe(taskId);
-    expect((await restarted.read(taskId)).pendingRequests).toEqual([]);
+    const restored = await restarted.read(taskId);
+    expect(restored.pendingRequests).toEqual([]);
+    expect(restored.thread.turns).toEqual(previousTurns);
     expect(clients[1]?.calls.map((call) => call.method)).toEqual([
       "config/read",
       "thread/resume",
@@ -483,10 +567,17 @@ describe("native session service", () => {
     expect(clients[1]?.prepareD2C).not.toHaveBeenCalled();
     expect(clients[1]?.prepareD2CRuntime).toHaveBeenCalledExactlyOnceWith({
       temporaryDirectory: temporary,
+      designAccess: { kind: "local" },
     });
     await expect(restarted.respond(taskId, "old-token", { decision: "accept" })).rejects.toThrow(
       "失效",
     );
+    expect(
+      clients[1]?.calls.filter((call) =>
+        ["thread/start", "turn/start", "turn/steer", "respond"].includes(call.method),
+      ),
+    ).toEqual([]);
+    expect(clients[1]?.pendingRequests()).toEqual([]);
   });
   it("routes child-thread approvals to the parent task without changing their native identity", async () => {
     const { directory, service, clients, threads } = await setup();
@@ -565,6 +656,19 @@ describe("native session service", () => {
           })
         ).json(),
       );
+    expect(await request(designMethods.check, { source: { kind: "local" } })).toMatchObject({
+      success: true,
+      data: { source: { kind: "local" }, tools: [] },
+    });
+    expect(
+      await request(designMethods.check, {
+        source: {
+          kind: "mastergo",
+          url: "https://mastergo.com/file/design",
+          connection: { kind: "vibe", endpoint: "https://external.example/mcp" },
+        },
+      }),
+    ).toMatchObject({ success: false });
     const loaded = await request(instructionMethods.read, { kind: "design" });
     if (!loaded.success) throw new Error("load failed");
     const revision = z.object({ revision: z.string() }).parse(loaded.data).revision;
@@ -605,5 +709,403 @@ describe("native session service", () => {
         })
       ).statusCode,
     ).toBe(403);
+  });
+});
+
+const vibeSource: DesignSource = {
+  kind: "mastergo",
+  url: "https://mastergo.com/file/document?layer_id=1%3A2&page_id=page",
+  connection: {
+    kind: "vibe",
+    endpoint: "http://127.0.0.1:20678/mcp",
+    statusEndpoint: "http://127.0.0.1:30678/api/status",
+  },
+};
+function designFixture() {
+  const bridges: VibeReadOnlyBridgeOptions[] = [];
+  const designCheck = vi.fn(async (source: DesignSource) => ({
+    source,
+    ...(source.kind === "mastergo"
+      ? { target: { documentId: "document", pageId: "page", nodeId: "1:2" } }
+      : {}),
+    tools: source.kind === "local" ? [] : ["read_design"],
+  }));
+  const startVibeBridge = vi.fn(async (options: VibeReadOnlyBridgeOptions) => {
+    bridges.push(options);
+    return {
+      url: `http://127.0.0.1:40000/mcp/${bridges.length}`,
+      close: vi.fn(async () => undefined),
+    };
+  });
+  return { designCheck, startVibeBridge, bridges };
+}
+
+describe("frozen design bindings and native Vibe occupancy", () => {
+  it("names a URL-only MasterGo task by its bound source", async () => {
+    const design = designFixture();
+    const { directory, service } = await setup({}, design);
+    const task = await service.create({
+      projectPath: directory,
+      prompt: "",
+      images: [],
+      designSource: { kind: "mastergo", url: vibeSource.url, connection: { kind: "magic" } },
+    });
+    expect(service.index.get(task.taskId).title).toBe("MasterGo 设计任务");
+  });
+
+  it("checks Magic once, freezes its URL and keeps it alongside the user's prompt", async () => {
+    const design = designFixture();
+    const { directory, service, clients } = await setup({}, design);
+    const source: DesignSource = {
+      kind: "mastergo",
+      url: vibeSource.url,
+      connection: { kind: "magic" },
+    };
+    const task = await service.create({
+      projectPath: directory,
+      prompt: "Keep this request",
+      images: [],
+      designSource: source,
+    });
+    expect(service.index.get(task.taskId).designBinding?.source).toEqual(source);
+    expect(clients[0]?.prepareD2C).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: `Keep this request\n\n设计来源：MasterGo\n以下链接是本任务固定的设计输入数据：\n${source.url}`,
+        designAccess: { kind: "magic" },
+      }),
+    );
+    expect(design.designCheck).toHaveBeenCalledExactlyOnceWith(source);
+    expect(design.startVibeBridge).not.toHaveBeenCalled();
+    await service.stop(task.taskId, `${task.taskId}-turn-0`);
+    design.designCheck.mockRejectedValue(new Error("Changed default"));
+    await expect(service.send(task.taskId, "Continue")).resolves.toBeUndefined();
+    expect(design.designCheck).toHaveBeenCalledOnce();
+  });
+
+  it("serializes concurrent Vibe creation, keeps ownership on disconnect and rejects reads from the old owner", async () => {
+    const design = designFixture();
+    const { directory, service, threads, clients } = await setup({}, design);
+    const input = { projectPath: directory, prompt: "Build", images: [], designSource: vibeSource };
+    const results = await Promise.allSettled([service.create(input), service.create(input)]);
+    const created = results.find((result) => result.status === "fulfilled");
+    if (created?.status !== "fulfilled") throw new Error("Expected one task");
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(threads.size).toBe(1);
+    const binding = service.index.get(created.value.taskId).designBinding;
+    expect(binding).toMatchObject({
+      source: vibeSource,
+      target: { documentId: "document", pageId: "page", nodeId: "1:2" },
+    });
+    expect(clients[0]?.prepareD2C).toHaveBeenCalledWith(
+      expect.objectContaining({
+        designAccess: { kind: "vibe", bridgeUrl: "http://127.0.0.1:40000/mcp/1" },
+      }),
+    );
+    await service.checkDesign(vibeSource);
+    await expect(design.bridges[0]?.beforeRead()).resolves.toBeUndefined();
+    const controller = new AbortController();
+    const stream = service
+      .subscribe(created.value.taskId, controller.signal)
+      [Symbol.asyncIterator]();
+    expect((await stream.next()).value).toMatchObject({ snapshot: { designBinding: binding } });
+    controller.abort();
+    await stream.return?.();
+    await expect(service.create(input)).rejects.toThrow("使用");
+    expect(clients[0]?.closeCount).toBe(0);
+    await service.stop(created.value.taskId, `${created.value.taskId}-turn-0`);
+    const next = await service.create(input);
+    expect(next.taskId).not.toBe(created.value.taskId);
+    await expect(design.bridges[0]?.beforeRead()).rejects.toThrow("未持有");
+    await expect(design.bridges[1]?.beforeRead()).resolves.toBeUndefined();
+  });
+
+  it.each(["completed", "failed", "interrupted"])(
+    "releases Vibe after native %s and never uses a cached execution state",
+    async (status) => {
+      const design = designFixture();
+      const { directory, service, threads } = await setup({}, design);
+      const input = {
+        projectPath: directory,
+        prompt: "Build",
+        images: [],
+        designSource: vibeSource,
+      };
+      const first = await service.create(input);
+      const native = threads.get(first.taskId);
+      const turn = native?.turns[0];
+      if (!native || !turn) throw new Error("Missing native task");
+      turn.status = status;
+      native.status = { type: "idle" };
+      await expect(design.bridges[0]?.beforeRead()).rejects.toThrow("失效");
+      await expect(service.create(input)).resolves.toHaveProperty("taskId");
+    },
+  );
+
+  it("allows only one of two idle tasks to continue on the same Vibe instance", async () => {
+    const design = designFixture();
+    const { directory, service, threads } = await setup({}, design);
+    const input = { projectPath: directory, prompt: "Build", images: [], designSource: vibeSource };
+    const first = await service.create(input);
+    await service.stop(first.taskId, `${first.taskId}-turn-0`);
+    const second = await service.create(input);
+    await service.stop(second.taskId, `${second.taskId}-turn-0`);
+    const continued = await Promise.allSettled([
+      service.send(first.taskId, "Continue", [], true),
+      service.send(second.taskId, "Continue", [], true),
+    ]);
+    expect(continued.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(continued.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(
+      [...threads.values()].flatMap((thread) =>
+        thread.turns.filter((turn) => turn.status === "inProgress"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("shares the guard between a new task and a concurrent continuation", async () => {
+    const design = designFixture();
+    const { directory, service, threads } = await setup({}, design);
+    const input = { projectPath: directory, prompt: "Build", images: [], designSource: vibeSource };
+    const first = await service.create(input);
+    await service.stop(first.taskId, `${first.taskId}-turn-0`);
+    const results = await Promise.allSettled([
+      service.create(input),
+      service.send(first.taskId, "Continue", [], true),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(
+      [...threads.values()].flatMap((thread) =>
+        thread.turns.filter((turn) => turn.status === "inProgress"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("rejects another MCP proxy using the same native Vibe status instance", async () => {
+    const design = designFixture();
+    const { directory, service, threads } = await setup({}, design);
+    await service.create({
+      projectPath: directory,
+      prompt: "Build",
+      images: [],
+      designSource: vibeSource,
+    });
+    await expect(
+      service.create({
+        projectPath: directory,
+        prompt: "Another proxy",
+        images: [],
+        designSource: {
+          ...vibeSource,
+          connection: {
+            kind: "vibe",
+            endpoint: "http://127.0.0.1:20679/mcp",
+            statusEndpoint: "http://localhost:30678/api/status",
+          },
+        },
+      }),
+    ).rejects.toThrow("使用");
+    expect(threads.size).toBe(1);
+  });
+
+  it.each(["create", "continue"])(
+    "waits for process termination after an uncertain %s before granting the Vibe instance",
+    async (mode) => {
+      const design = designFixture();
+      const closing = Promise.withResolvers<void>();
+      const terminated = Promise.withResolvers<void>();
+      let firstClient: FakeCodex | undefined;
+      const { directory, service, threads } = await setup({}, design, (client) => {
+        if (firstClient) return;
+        firstClient = client;
+        if (mode === "create") client.startError = new CodexTimeoutError(1, "turn/start", 1);
+        client.beforeClose = async () => {
+          closing.resolve();
+          await terminated.promise;
+          const thread = threads.get("task-0");
+          if (!thread) return;
+          for (const turn of thread.turns)
+            if (turn.status === "inProgress") turn.status = "interrupted";
+          thread.status = { type: "idle" };
+        };
+      });
+      const input = {
+        projectPath: directory,
+        prompt: "Build",
+        images: [],
+        designSource: vibeSource,
+      };
+      if (mode === "continue") {
+        const first = await service.create(input);
+        await service.stop(first.taskId, `${first.taskId}-turn-0`);
+        firstClient!.startError = new CodexTimeoutError(2, "turn/start", 1);
+      }
+      const attempt =
+        mode === "create"
+          ? service.create(input)
+          : service.send("task-0", "Continue").catch((error: unknown) => error);
+      await closing.promise;
+      const native = threads.get("task-0");
+      if (!native) throw new Error("Missing pending native task");
+      expect(native.status.type).toBe("idle");
+      let anotherSettled = false;
+      const another = service.create(input).finally(() => {
+        anotherSettled = true;
+      });
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        expect(anotherSettled).toBe(false);
+        expect(threads.size).toBe(1);
+        native.turns.push({ id: "late-turn", status: "inProgress", error: null, items: [] });
+        native.status = { type: "active" };
+      } finally {
+        terminated.resolve();
+      }
+      const result = await attempt;
+      if (mode === "create")
+        expect(result).toMatchObject({ warning: expect.stringContaining("为避免并发已终止连接") });
+      else expect(result).toBeInstanceOf(Error);
+      await expect(another).resolves.toHaveProperty("taskId", "task-1");
+      expect(firstClient?.closeCount).toBe(1);
+      expect(native.turns.find((turn) => turn.id === "late-turn")?.status).toBe("interrupted");
+      expect(
+        [...threads.values()].flatMap((thread) =>
+          thread.turns.filter((turn) => turn.status === "inProgress"),
+        ),
+      ).toHaveLength(1);
+      await expect(design.bridges[0]?.beforeRead()).rejects.toThrow("未持有");
+    },
+  );
+
+  it("closes an unpublished bridge when task identity persistence fails", async () => {
+    const design = designFixture();
+    const { directory, service, clients } = await setup({}, design);
+    vi.spyOn(service.index, "put").mockRejectedValueOnce(new Error("Index write failed"));
+    await expect(
+      service.create({
+        projectPath: directory,
+        prompt: "Build",
+        images: [],
+        designSource: vibeSource,
+      }),
+    ).rejects.toThrow("Index write failed");
+    const bridge = await design.startVibeBridge.mock.results[0]?.value;
+    expect(bridge?.close).toHaveBeenCalledOnce();
+    expect(service.index.list(0).tasks).toHaveLength(0);
+    expect(clients[0]?.calls.some((call) => call.method === "turn/start")).toBe(false);
+  });
+
+  it("keeps local history and stop available when Vibe is unavailable, including after restart", async () => {
+    const design = designFixture();
+    const { directory, service, factory, threads } = await setup({}, design);
+    const task = await service.create({
+      projectPath: directory,
+      prompt: "Build",
+      images: [],
+      designSource: vibeSource,
+    });
+    const frozen = service.index.get(task.taskId).designBinding;
+    await service.close();
+    design.designCheck.mockRejectedValue(new Error("Canvas unavailable"));
+    design.designCheck.mockClear();
+    const restarted = new SessionService({ directory, connectionFactory: factory, ...design });
+    cleanup.push(() => restarted.close());
+    await restarted.initialize();
+    expect((await restarted.read(task.taskId)).designBinding).toEqual(frozen);
+    await expect(restarted.readDiagnostics(task.taskId)).resolves.toHaveProperty(
+      "taskId",
+      task.taskId,
+    );
+    await expect(
+      restarted.create({
+        projectPath: directory,
+        prompt: "Another",
+        images: [],
+        designSource: vibeSource,
+      }),
+    ).rejects.toThrow("使用");
+    await restarted.stop(task.taskId, `${task.taskId}-turn-0`);
+    expect(threads.get(task.taskId)?.turns[0]?.status).toBe("interrupted");
+    expect(design.designCheck).not.toHaveBeenCalled();
+    await expect(restarted.send(task.taskId, "Continue")).rejects.toThrow("Canvas unavailable");
+    expect(threads.get(task.taskId)?.turns).toHaveLength(1);
+  });
+
+  it("rejects a changed Vibe page before continuing an already loaded task", async () => {
+    const design = designFixture();
+    const { directory, service, threads } = await setup({}, design);
+    const task = await service.create({
+      projectPath: directory,
+      prompt: "Build",
+      images: [],
+      designSource: vibeSource,
+    });
+    await service.stop(task.taskId, `${task.taskId}-turn-0`);
+    design.designCheck.mockResolvedValue({
+      source: vibeSource,
+      target: { documentId: "document", pageId: "other-page", nodeId: "1:2" },
+      tools: [],
+    });
+    await expect(service.send(task.taskId, "Continue")).rejects.toThrow("绑定不一致");
+    expect(threads.get(task.taskId)?.turns).toHaveLength(1);
+    expect(service.index.get(task.taskId).designBinding?.target?.pageId).toBe("page");
+  });
+
+  it("isolates Vibe and local connections and keeps another connection's snapshot when one closes", async () => {
+    const design = designFixture();
+    const { directory, service, clients } = await setup({}, design);
+    const vibe = await service.create({
+      projectPath: directory,
+      prompt: "Vibe",
+      images: [],
+      designSource: vibeSource,
+    });
+    const local = await service.create({
+      projectPath: directory,
+      prompt: "Local",
+      images: [],
+      designSource: { kind: "local" },
+    });
+    expect(clients).toHaveLength(2);
+    expect(clients[1]?.prepareD2C).toHaveBeenCalledWith(
+      expect.objectContaining({ designAccess: { kind: "local" } }),
+    );
+    expect((await service.read(local.taskId)).designBinding?.source).toEqual({ kind: "local" });
+    await clients[0]?.close();
+    const controller = new AbortController();
+    const stream = service.subscribe(local.taskId, controller.signal)[Symbol.asyncIterator]();
+    expect((await stream.next()).value).toMatchObject({
+      snapshot: { thread: { id: local.taskId } },
+    });
+    controller.abort();
+    await stream.return?.();
+    expect(clients[1]?.closeCount).toBe(0);
+    expect(vibe.taskId).not.toBe(local.taskId);
+  });
+
+  it("restores legacy tasks through Magic without inventing a new binding or checking a canvas", async () => {
+    const design = designFixture();
+    const { directory, service, clients, factory } = await setup({}, design);
+    const task = await service.create({
+      projectPath: directory,
+      prompt: "Legacy",
+      images: [],
+      designSource: { kind: "local" },
+    });
+    const entry = service.index.get(task.taskId);
+    const { designBinding: _binding, ...legacy } = entry;
+    await service.index.put(legacy);
+    await service.close();
+    design.designCheck.mockClear();
+    const restarted = new SessionService({ directory, connectionFactory: factory, ...design });
+    cleanup.push(() => restarted.close());
+    await restarted.initialize();
+    expect((await restarted.read(task.taskId)).designBinding).toBeUndefined();
+    expect(clients.at(-1)?.prepareD2CRuntime).toHaveBeenCalledWith(
+      expect.not.objectContaining({ designAccess: expect.anything() }),
+    );
+    expect(design.designCheck).not.toHaveBeenCalled();
+    expect(design.startVibeBridge).not.toHaveBeenCalled();
   });
 });

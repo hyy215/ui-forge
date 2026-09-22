@@ -1,0 +1,115 @@
+/** 按需诊断抽屉的紧凑布局，长标识和指纹在窄屏内换行。 */
+.body {
+  padding: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.message {
+  margin: 12px 0;
+  font-size: 12px;
+}
+.report {
+  min-width: 0;
+  font-size: 12px;
+}
+.section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.section h2 {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.fields {
+  margin: 0;
+}
+.fields > div {
+  display: grid;
+  grid-template-columns: minmax(80px, 34%) minmax(0, 1fr);
+  gap: 12px;
+  padding: 5px 0;
+}
+.fields dt {
+  color: var(--muted);
+}
+.fields dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fields code {
+  font-size: 11px;
+  word-break: break-all;
+}
+.note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.warnings {
+  margin: 0;
+  padding-left: 18px;
+}
+.agentList {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.agent {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.agent h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.turn {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.turn h3 {
+  font-size: 13px;
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tool {
+  margin-top: 10px;
+}
+.tool h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+.tool p {
+  margin: 4px 0;
+  line-height: 1.7;
+}
+@media (max-width: 400px) {
+  .body {
+    padding: 12px;
+  }
+  .fields > div {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 8px;
+  }
+}

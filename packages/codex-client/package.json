@@ -20,6 +20,7 @@
     "test:live": "UI_FORGE_CODEX_LIVE=1 vitest run --root ../.. packages/codex-client/src/codexClient.live.test.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
     "zod": "4.4.3"
   }
 }

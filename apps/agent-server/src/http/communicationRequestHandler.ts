@@ -8,6 +8,10 @@ import {
   listSessionsSchema,
   sessionMethods,
   instructionMethods,
+  diagnosticMethods,
+  readTaskDiagnosticsSchema,
+  designMethods,
+  checkDesignConnectionSchema,
   readInstructionSchema,
   saveInstructionSchema,
   sessionFileMethods,
@@ -50,6 +54,10 @@ export class CommunicationRequestHandler {
         return this.sessions.create(createSessionSchema.parse(params));
       case sessionMethods.read:
         return this.sessions.read(sessionIdSchema.parse(params).taskId);
+      case diagnosticMethods.read:
+        return this.sessions.readDiagnostics(readTaskDiagnosticsSchema.parse(params).taskId);
+      case designMethods.check:
+        return this.sessions.checkDesign(checkDesignConnectionSchema.parse(params).source);
       case sessionMethods.list: {
         const input = listSessionsSchema.parse(params);
         return this.sessions.index.list(input.offset, input.projectPath);

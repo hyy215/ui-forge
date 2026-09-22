@@ -163,11 +163,72 @@ test("navigation detaches while reopening recovers the pending request; explicit
   await expect(page.getByRole("region", { name: "Codex 请求" })).toHaveCount(0);
 });
 
-test("design URL and image inputs are peers and submit together after URL validation", async ({
+test("capacity failure keeps progress and continues only after an explicit request", async ({
+  page,
+}) => {
+  await page.goto("/?scenario=capacity&sendError#/tasks");
+  await page.getByLabel("目标工作区", { exact: true }).fill("/tmp/demo-project");
+  await page.getByLabel("需求说明", { exact: false }).fill("实现客户列表");
+  await page.getByRole("button", { name: "开始执行任务 ↗", exact: true }).click();
+  const taskUrl = page.url();
+  const resume = page.getByRole("button", { name: "继续当前任务", exact: true });
+  await expect(resume).toBeVisible();
+  await expect(page.getByText("本轮失败", { exact: true })).toBeVisible();
+  await expect(page.getByText("模型暂时繁忙", { exact: true })).toBeVisible();
+  await expect(page.getByText("Selected model is at capacity.", { exact: false })).toBeVisible();
+  await page.getByRole("link", { name: "ui-forge", exact: true }).click();
+  await page.getByRole("link", { name: /实现客户列表/ }).click();
+  await expect(page).toHaveURL(taskUrl);
+  await expect(resume).toBeVisible();
+  await page.locator("summary").filter({ hasText: "文件修改" }).click();
+  await expect(page.locator("summary").filter({ hasText: "src/CustomerList.tsx" })).toBeVisible();
+  const draft = page.getByLabel("补充需求", { exact: true });
+  await draft.fill("保留这条尚未发送的补充要求");
+  await page.getByLabel("添加对话图片").setInputFiles(imageFile("capacity-draft.png"));
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
+  await resume.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "apps/agent-webview/test-results/capacity-failure-" + test.info().project.name + ".png",
+    fullPage: true,
+  });
+  await resume.click();
+  await expect(page.getByText("发送暂时失败，请重试。", { exact: true })).toBeVisible();
+  await expect(resume).toBeEnabled();
+  await expect(draft).toHaveValue("保留这条尚未发送的补充要求");
+  await expect(page.getByRole("img", { name: "capacity-draft.png" })).toBeVisible();
+  await resume.click();
+  await expect(page.locator("article").filter({ hasText: "先检查原会话记录" })).toHaveCount(1);
+  await expect(resume).toHaveCount(0);
+  await expect(page.getByText("将按最新要求继续修改。", { exact: true })).toBeVisible();
+  await expect(draft).toHaveValue("保留这条尚未发送的补充要求");
+  await expect(page.getByRole("img", { name: "capacity-draft.png" })).toBeVisible();
+  await expect(page).toHaveURL(taskUrl);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
+});
+
+for (const scenario of ["usage-limit", "context-limit"]) {
+  test(`does not offer capacity continuation for ${scenario}`, async ({ page }) => {
+    await page.goto(`/?scenario=${scenario}#/tasks`);
+    await page.getByLabel("目标工作区", { exact: true }).fill("/tmp/demo-project");
+    await page.getByLabel("需求说明", { exact: false }).fill("实现客户列表");
+    await page.getByRole("button", { name: "开始执行任务 ↗", exact: true }).click();
+    await expect(page.getByText("本轮失败", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "继续当前任务", exact: true })).toHaveCount(0);
+    await expect(page.getByText("模型暂时繁忙", { exact: true })).toHaveCount(0);
+  });
+}
+
+test("MasterGo URL and image submit together after explicit connection and URL validation", async ({
   page,
 }) => {
   await page.goto("/#/tasks");
   await page.getByLabel("目标工作区", { exact: true }).fill("/tmp/demo-project");
+  await page.getByRole("radio", { name: "MasterGo", exact: true }).check();
+  await page.getByRole("radio", { name: "Magic", exact: true }).check();
   const strictAcceptance = page.getByRole("checkbox", { name: "严格像素验收", exact: true });
   await strictAcceptance.check();
   await expect(page.getByRole("button", { name: "开始执行任务 ↗", exact: true })).toBeDisabled();
@@ -182,30 +243,26 @@ test("design URL and image inputs are peers and submit together after URL valida
   });
   await expect(page.getByRole("img", { name: "design.png" })).toBeVisible();
   await page.getByRole("button", { name: "开始执行任务 ↗", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("完整的 http://");
+  await expect(page.getByRole("alert")).toContainText("MasterGo HTTPS");
   await expect(strictAcceptance).toBeChecked();
   await expect(page.getByRole("img", { name: "design.png" })).toBeVisible();
-  await page.getByLabel("设计链接", { exact: true }).fill("https://example.com/design/page");
+  await page
+    .getByLabel("设计链接", { exact: true })
+    .fill("https://mastergo.com/file/file?layer_id=2:3");
   await expect(page.getByRole("alert")).toHaveCount(0);
-  const sections = page.locator("fieldset > div").first().locator(":scope > section");
-  await expect(sections).toHaveCount(2);
-  const linkBounds = await sections.nth(0).boundingBox();
-  const imageBounds = await sections.nth(1).boundingBox();
-  expect(linkBounds).not.toBeNull();
-  expect(imageBounds).not.toBeNull();
-  expect(Math.abs(linkBounds!.width - imageBounds!.width)).toBeLessThan(1);
   await page.screenshot({
     path: "apps/agent-webview/test-results/design-inputs-" + test.info().project.name + ".png",
     fullPage: true,
   });
   await page.getByRole("button", { name: "开始执行任务 ↗", exact: true }).click();
   await expect(page.getByRole("region", { name: "Codex 请求" })).toBeVisible();
+  await expect(page.getByLabel("任务设计绑定")).toContainText("接入：Magic");
   await expect(
-    page.locator("article").filter({ hasText: "https://example.com/design/page" }),
-  ).toContainText("设计图片");
-  await expect(
-    page.locator("article").filter({ hasText: "https://example.com/design/page" }),
-  ).toContainText("启用严格像素验收。");
+    page.getByLabel("任务设计绑定").getByRole("link", { name: "设计链接" }),
+  ).toHaveAttribute("href", "https://mastergo.com/file/file?layer_id=2:3");
+  await expect(page.locator("article").filter({ hasText: "启用严格像素验收。" })).toContainText(
+    "启用严格像素验收。",
+  );
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);

@@ -58,6 +58,36 @@ it("preserves unknown activity and invalidates approvals on connection loss", ()
   state = applySessionEvent(state, { type: "close", message: "Disconnected" });
   expect(state.snapshot?.pendingRequests).toEqual([]);
 });
+it("preserves a completed turn's structured capacity error and existing output", () => {
+  const error = {
+    message: "Selected model is at capacity. Please try a different model.",
+    codexErrorInfo: "serverOverloaded",
+    additionalDetails: null,
+  };
+  const state = applySessionEvent(
+    applySessionEvent(emptyPresentation(), { type: "snapshot", snapshot }),
+    {
+      type: "notification",
+      notification: {
+        method: "turn/completed",
+        params: {
+          threadId: "t",
+          turn: { id: "turn", status: "failed", items: [], error },
+        },
+      },
+    },
+  );
+  expect(state.snapshot?.thread.turns[0]).toMatchObject({
+    status: "failed",
+    error,
+    items: snapshot.thread.turns[0]?.items,
+  });
+  const reconnected = applySessionEvent(emptyPresentation(), {
+    type: "snapshot",
+    snapshot: state.snapshot ?? snapshot,
+  });
+  expect(reconnected.snapshot?.thread.turns[0]?.error).toEqual(error);
+});
 it("does not merge a child agent turn into the parent conversation", () => {
   const state = applySessionEvent(
     applySessionEvent(emptyPresentation(), { type: "snapshot", snapshot }),

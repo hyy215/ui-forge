@@ -117,7 +117,11 @@ it("never steers an idle-only continuation into a turn started by another client
   });
   await service.initialize();
   try {
-    const { taskId } = await service.create({ projectPath: directory, prompt: "Build", images: [] });
+    const { taskId } = await service.create({
+      projectPath: directory,
+      prompt: "Build",
+      images: [],
+    });
 
     const activeStart = client.calls.length;
     await service.send(taskId, "automatic continuation", [], true);
