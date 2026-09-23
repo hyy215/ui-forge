@@ -177,3 +177,7 @@ packages/shared-protocol/  客户端与服务通信 Schema
 源码调试、浏览器入口、VSIX 打包和验证方式见 [开发说明](DEVELOPMENT.md)。Codex 接入细节见 [codex-client](packages/codex-client/README.md)。
 
 `npm run dev:webview` 是模拟演示入口，不连接真实后端，也不执行模型任务。真实浏览器联调使用 `npm run dev:server` 和 `npm run dev:webview:server`，具体步骤见[浏览器联调](DEVELOPMENT.md#浏览器联调)。
+
+### 实现详解
+
+项目分工、任务流程和关键设计见 [ui-forge 项目架构](https://hyy215.github.io/ai/ui-forge-project-architecture)。
