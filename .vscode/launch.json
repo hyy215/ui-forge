@@ -43,6 +43,19 @@
       },
       "sourceMaps": true,
       "preLaunchTask": "build:vscode-debug"
+    },
+    {
+      "name": "VS Code: Extension (Run Without Debugging)",
+      "type": "extensionHost",
+      "request": "launch",
+      "noDebug": true,
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/apps/vscode-extension"],
+      "outFiles": ["${workspaceFolder}/apps/vscode-extension/dist/**/*.js"],
+      "env": {
+        "UI_FORGE_SERVER_URL": "http://127.0.0.1:4310"
+      },
+      "sourceMaps": true,
+      "preLaunchTask": "build:vscode-debug"
     }
   ],
   "compounds": [
@@ -54,6 +67,11 @@
     {
       "name": "ui-forge: Server + VS Code",
       "configurations": ["Server: Agent Server", "VS Code: Extension"],
+      "stopAll": true
+    },
+    {
+      "name": "ui-forge: Server + VS Code (Run Without Debugging)",
+      "configurations": ["Server: Agent Server", "VS Code: Extension (Run Without Debugging)"],
       "stopAll": true
     },
     {

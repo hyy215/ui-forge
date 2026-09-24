@@ -10,6 +10,7 @@ export { CodexProcessError, CodexRpcError, CodexTimeoutError } from "./errors.js
 export { resolveCodexExecutable, explainCodexStartupError } from "./runtime/executable.js";
 export { checkCodexVersion } from "./version.js";
 export { codexProtocolVersion } from "./protocol.js";
+export { deliveryContext, deliveryReportPath } from "./deliveryContext.js";
 export type {
   NativeMethods,
   NativeReplies,
@@ -32,6 +33,7 @@ export {
 export {
   prepareTemporaryWorkspace,
   temporaryWorkspacePath,
+  temporaryWorkspacePathForCanonicalCwd,
   temporaryWorkspaceContext,
 } from "./temporaryWorkspace.js";
 export {

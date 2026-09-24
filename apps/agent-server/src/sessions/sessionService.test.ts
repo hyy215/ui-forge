@@ -15,14 +15,23 @@ import {
   CodexTimeoutError,
 } from "@ui-forge/codex-client";
 import { z } from "zod";
+import { applySessionEvent, emptyPresentation } from "@ui-forge/client-core";
 import {
   createCommunicationRequestMessage,
   communicationResponseMessageSchema,
+  createdSessionSchema,
   sessionMethods,
+  sessionOperationResultSchema,
+  sessionSnapshotSchema,
+  diagnosticMethods,
+  taskDiagnosticsSchema,
+  deliveryMethods,
+  taskDeliverySchema,
   designMethods,
   instructionMethods,
   type NativeThread,
   type DesignSource,
+  type SessionEvent,
 } from "@ui-forge/shared-protocol";
 import type { SessionDesignOptions } from "../design/sessionDesignBindings.js";
 import type { VibeReadOnlyBridgeOptions } from "@ui-forge/codex-client";
@@ -31,6 +40,10 @@ import { CodexConnections, type CodexConnection } from "../runtime/codexConnecti
 import { InstructionService } from "../instructions/instructionService.js";
 import { buildApp } from "../http/buildApp.js";
 import { capacityFailureScenario } from "../../../../packages/codex-client/src/testing/payloads.js";
+import { LocalClient } from "../../../agent-cli/src/client.js";
+import { createSessionDataSource } from "../../../agent-webview/src/data-sources/sessionDataSource.js";
+import { createHttpCommunicationClient } from "../../../agent-webview/src/communication/http/createHttpCommunicationClient.js";
+import { createNegotiatedCommunicationClient } from "../../../agent-webview/src/communication/createNegotiatedCommunicationClient.js";
 
 const directories: string[] = [];
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -113,6 +126,8 @@ class FakeCodex implements CodexConnection {
     const object = z.record(z.string(), z.unknown()).parse(params);
     let result: unknown;
     if (method === "config/read") result = { config: { mcp_servers: this.inheritedServers } };
+    else if (method === "thread/list")
+      result = { data: [], nextCursor: null, backwardsCursor: null };
     else if (method === "thread/start") {
       const id = `task-${this.threads.size}`;
       const thread = {
@@ -207,6 +222,283 @@ async function setup(
   cleanup.push(() => service.close());
   return { directory, threads, clients, probes, launches, factory, service };
 }
+
+async function setupHttpEntries() {
+  const fixture = await setup();
+  const app = buildApp({
+    sessionService: fixture.service,
+    runtimeDirectory: fixture.directory,
+    instanceLock: false,
+  });
+  const subscriptions: { controller: AbortController; done: Promise<void> }[] = [];
+  const streamErrors: unknown[] = [];
+  const close = async () => {
+    for (const { controller } of subscriptions) controller.abort();
+    await Promise.all(subscriptions.map(({ done }) => done));
+    try {
+      await app.close();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  };
+  try {
+    const address = await app.listen({ host: "127.0.0.1", port: 0 });
+    vi.stubGlobal("window", { setTimeout, clearTimeout });
+    const cli = new LocalClient(Number(new URL(address).port));
+    await cli.connect(false);
+    const web = createSessionDataSource(
+      createNegotiatedCommunicationClient(
+        createHttpCommunicationClient({ endpoint: `${address}/api/communication` }),
+      ),
+    );
+    const observe = (entry: "cli" | "webview", taskId: string) => {
+      const controller = new AbortController();
+      const events: SessionEvent[] = [];
+      const receive = (event: SessionEvent) => events.push(event);
+      const done = (
+        entry === "cli"
+          ? cli.subscribe(taskId, receive, controller.signal)
+          : web.subscribe(taskId, receive, controller.signal)
+      ).catch((error: unknown) => {
+        if (!controller.signal.aborted) streamErrors.push(error);
+      });
+      subscriptions.push({ controller, done });
+      return {
+        controller,
+        done,
+        events,
+        presentation: () => events.reduce(applySessionEvent, emptyPresentation()),
+      };
+    };
+    return { ...fixture, cli, web, observe, streamErrors, close };
+  } catch (error) {
+    await close();
+    throw error;
+  }
+}
+
+describe("cross-entry CLI and Webview HTTP regression", () => {
+  it.each(["decline", "cancel"] as const)(
+    "shares approval snapshots and resolves %s without accepting reused or cross-task tokens",
+    async (decision) => {
+      const fixture = await setupHttpEntries();
+      const { cli, web, observe, directory, clients, streamErrors } = fixture;
+      try {
+        const first = await web.create({ projectPath: directory, prompt: "one", images: [] });
+        const second = await cli.request(
+          sessionMethods.create,
+          { projectPath: directory, prompt: "two", images: [] },
+          createdSessionSchema,
+        );
+        const native = clients[0]!;
+        native.ask(first.taskId, "pending-on-connect");
+        const terminal = observe("cli", first.taskId);
+        const page = observe("webview", first.taskId);
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          for (const entry of [terminal, page])
+            expect(entry.events[0]).toMatchObject({
+              type: "snapshot",
+              snapshot: {
+                thread: { id: first.taskId },
+                pendingRequests: [{ token: "pending-on-connect" }],
+              },
+            });
+        });
+        expect(page.events[0]).toEqual(terminal.events[0]);
+
+        await expect(
+          cli.request(
+            sessionMethods.respond,
+            { taskId: second.taskId, token: "pending-on-connect", result: { decision } },
+            sessionOperationResultSchema,
+          ),
+        ).rejects.toThrow("不属于");
+        await expect(
+          web.respond(second.taskId, "pending-on-connect", { decision }),
+        ).rejects.toThrow("不属于");
+        expect(native.calls.filter((call) => call.method === "respond")).toEqual([]);
+        expect(native.pendingRequests()).toHaveLength(1);
+
+        await cli.request(
+          sessionMethods.respond,
+          { taskId: first.taskId, token: "pending-on-connect", result: { decision } },
+          sessionOperationResultSchema,
+        );
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          for (const entry of [terminal, page]) {
+            expect(entry.events).toContainEqual({ type: "resolved", token: "pending-on-connect" });
+            expect(entry.presentation().snapshot?.pendingRequests).toEqual([]);
+          }
+        });
+        await expect(
+          web.respond(first.taskId, "pending-on-connect", { decision: "accept" }),
+        ).rejects.toThrow("失效");
+        await expect(
+          cli.request(
+            sessionMethods.respond,
+            { taskId: first.taskId, token: "pending-on-connect", result: { decision: "accept" } },
+            sessionOperationResultSchema,
+          ),
+        ).rejects.toThrow("失效");
+
+        native.ask(first.taskId, "arrived-after-connect");
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          for (const entry of [terminal, page])
+            expect(entry.presentation().snapshot?.pendingRequests).toMatchObject([
+              { token: "arrived-after-connect" },
+            ]);
+        });
+        await web.respond(first.taskId, "arrived-after-connect", { decision: "cancel" });
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          for (const entry of [terminal, page]) {
+            expect(entry.events).toContainEqual({
+              type: "resolved",
+              token: "arrived-after-connect",
+            });
+            expect(entry.presentation().snapshot?.pendingRequests).toEqual([]);
+          }
+        });
+        expect(native.calls.filter((call) => call.method === "respond")).toEqual([
+          {
+            method: "respond",
+            params: { token: "pending-on-connect", result: { decision } },
+          },
+          {
+            method: "respond",
+            params: { token: "arrived-after-connect", result: { decision: "cancel" } },
+          },
+        ]);
+        expect(await web.read(first.taskId)).toEqual(
+          await cli.request(sessionMethods.read, { taskId: first.taskId }, sessionSnapshotSchema),
+        );
+        expect(native.calls.filter((call) => call.method === "turn/interrupt")).toEqual([]);
+        expect(native.closeCount).toBe(0);
+      } finally {
+        await fixture.close();
+      }
+    },
+  );
+
+  it.each(["cli", "webview"] as const)(
+    "keeps the shared task active when %s disconnects and scopes explicit stop to its original turn",
+    async (disconnectedEntry) => {
+      const fixture = await setupHttpEntries();
+      const { cli, web, observe, directory, clients, threads, streamErrors } = fixture;
+      try {
+        const first = await web.create({ projectPath: directory, prompt: "one", images: [] });
+        const second = await web.create({ projectPath: directory, prompt: "two", images: [] });
+        const native = clients[0]!;
+        const terminal = observe("cli", first.taskId);
+        const page = observe("webview", first.taskId);
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          for (const entry of [terminal, page])
+            expect(entry.presentation().snapshot?.thread.id).toBe(first.taskId);
+        });
+        const disconnected = disconnectedEntry === "cli" ? terminal : page;
+        const remaining = disconnectedEntry === "cli" ? page : terminal;
+        disconnected.controller.abort();
+        await disconnected.done;
+        const disconnectedEventCount = disconnected.events.length;
+        expect(clients).toHaveLength(1);
+        expect(native.closeCount).toBe(0);
+        expect(native.calls.filter((call) => call.method === "turn/interrupt")).toEqual([]);
+        expect(threads.get(first.taskId)?.turns[0]?.status).toBe("inProgress");
+        expect(threads.get(second.taskId)?.turns[0]?.status).toBe("inProgress");
+
+        native.emit("item/completed", {
+          threadId: first.taskId,
+          turnId: `${first.taskId}-turn-0`,
+          item: { type: "agentMessage", id: "after-disconnect", text: "Still working" },
+        });
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          expect(remaining.presentation().snapshot?.thread.turns[0]?.items).toMatchObject([
+            { id: "after-disconnect", text: "Still working" },
+          ]);
+        });
+        const originalTurnId = `${first.taskId}-turn-0`;
+        if (disconnectedEntry === "cli") await web.stop(first.taskId, originalTurnId);
+        else
+          await cli.request(
+            sessionMethods.stop,
+            { taskId: first.taskId, turnId: originalTurnId },
+            sessionOperationResultSchema,
+          );
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          expect(remaining.presentation().snapshot?.thread.turns[0]?.status).toBe("interrupted");
+        });
+        await web.send(first.taskId, "Continue unfinished work");
+        await vi.waitFor(() => {
+          expect(streamErrors).toEqual([]);
+          expect(remaining.presentation().snapshot?.thread.turns.at(-1)).toMatchObject({
+            id: `${first.taskId}-turn-1`,
+            status: "inProgress",
+          });
+        });
+        await expect(web.stop(first.taskId, originalTurnId)).rejects.toThrow("失效");
+        await expect(
+          cli.request(
+            sessionMethods.stop,
+            { taskId: first.taskId, turnId: originalTurnId },
+            sessionOperationResultSchema,
+          ),
+        ).rejects.toThrow("失效");
+        expect(native.calls.filter((call) => call.method === "turn/interrupt")).toEqual([
+          {
+            method: "turn/interrupt",
+            params: { threadId: first.taskId, turnId: originalTurnId },
+          },
+        ]);
+        expect(threads.get(first.taskId)?.turns.at(-1)?.status).toBe("inProgress");
+        expect(threads.get(second.taskId)?.turns[0]?.status).toBe("inProgress");
+        expect(disconnected.events).toHaveLength(disconnectedEventCount);
+        expect(native.closeCount).toBe(0);
+      } finally {
+        await fixture.close();
+      }
+    },
+  );
+
+  it("returns the same read-only diagnostics and missing delivery through both entries without resuming or executing", async () => {
+    const fixture = await setupHttpEntries();
+    const { cli, web, directory, clients } = fixture;
+    try {
+      const { taskId } = await web.create({ projectPath: directory, prompt: "one", images: [] });
+      const native = clients[0]!;
+      const before = native.calls.length;
+      const cliDiagnostics = await cli.request(
+        diagnosticMethods.read,
+        { taskId },
+        taskDiagnosticsSchema,
+      );
+      const webDiagnostics = await web.readDiagnostics(taskId);
+      expect({ ...webDiagnostics, generatedAt: cliDiagnostics.generatedAt }).toEqual(
+        cliDiagnostics,
+      );
+      expect(webDiagnostics).toMatchObject({ taskId, status: "active" });
+      expect(webDiagnostics.warnings).not.toContain("agentsUnavailable");
+      const cliDelivery = await cli.request(deliveryMethods.read, { taskId }, taskDeliverySchema);
+      const webDelivery = await web.readDelivery(taskId);
+      expect({ ...webDelivery, checkedAt: cliDelivery.checkedAt }).toEqual(cliDelivery);
+      expect(webDelivery).toMatchObject({ taskId, availability: "missing", report: null });
+      expect(native.calls.slice(before).map((call) => call.method)).toEqual([
+        "thread/read",
+        "thread/list",
+        "thread/read",
+        "thread/list",
+      ]);
+      expect(native.closeCount).toBe(0);
+    } finally {
+      await fixture.close();
+    }
+  });
+});
 
 describe("native session service", () => {
   it("shares concurrent configuration discovery and disables desktop tools before launching the real connection", async () => {
@@ -315,6 +607,9 @@ describe("native session service", () => {
       expect(params.threadId).toBe(taskId);
       expect(params.additionalContext.ui_forge_artifacts?.value).toContain(
         await prepareTemporaryWorkspace(directory, directory),
+      );
+      expect(params.additionalContext.ui_forge_delivery?.value).toContain(
+        '"taskId":' + JSON.stringify(taskId),
       );
       expect(params.input).toHaveLength(status === "active" ? 2 : 1);
       if (status === "active") {
@@ -913,16 +1208,22 @@ describe("frozen design bindings and native Vibe occupancy", () => {
     "waits for process termination after an uncertain %s before granting the Vibe instance",
     async (mode) => {
       const design = designFixture();
-      const closing = Promise.withResolvers<void>();
-      const terminated = Promise.withResolvers<void>();
+      let resolveClosing!: () => void;
+      const closing = new Promise<void>((resolve) => {
+        resolveClosing = resolve;
+      });
+      let resolveTerminated!: () => void;
+      const terminated = new Promise<void>((resolve) => {
+        resolveTerminated = resolve;
+      });
       let firstClient: FakeCodex | undefined;
       const { directory, service, threads } = await setup({}, design, (client) => {
         if (firstClient) return;
         firstClient = client;
         if (mode === "create") client.startError = new CodexTimeoutError(1, "turn/start", 1);
         client.beforeClose = async () => {
-          closing.resolve();
-          await terminated.promise;
+          resolveClosing();
+          await terminated;
           const thread = threads.get("task-0");
           if (!thread) return;
           for (const turn of thread.turns)
@@ -945,7 +1246,7 @@ describe("frozen design bindings and native Vibe occupancy", () => {
         mode === "create"
           ? service.create(input)
           : service.send("task-0", "Continue").catch((error: unknown) => error);
-      await closing.promise;
+      await closing;
       const native = threads.get("task-0");
       if (!native) throw new Error("Missing pending native task");
       expect(native.status.type).toBe("idle");
@@ -960,7 +1261,7 @@ describe("frozen design bindings and native Vibe occupancy", () => {
         native.turns.push({ id: "late-turn", status: "inProgress", error: null, items: [] });
         native.status = { type: "active" };
       } finally {
-        terminated.resolve();
+        resolveTerminated();
       }
       const result = await attempt;
       if (mode === "create")

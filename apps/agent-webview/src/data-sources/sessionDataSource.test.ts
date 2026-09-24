@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { continuationPrompt } from "@ui-forge/client-core";
-import { diagnosticMethods, designMethods, sessionMethods } from "@ui-forge/shared-protocol";
+import {
+  deliveryMethods,
+  diagnosticMethods,
+  designMethods,
+  sessionMethods,
+} from "@ui-forge/shared-protocol";
 import { createTaskDiagnosticsFixture } from "../../fixtures/taskDiagnosticsFixture";
+import { createTaskDeliveryFixture } from "../../fixtures/taskDeliveryFixture";
 import type { CommunicationClient, CommunicationRequest } from "../communication/clientContract";
 import { createSessionDataSource } from "./sessionDataSource";
 
@@ -153,5 +159,58 @@ describe("task diagnostics", () => {
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
     expect(calls).toBe(1);
+  });
+});
+
+describe("task delivery", () => {
+  it("only reads delivery and forwards cancellation without recovering the task", async () => {
+    const requests: CommunicationRequest<unknown>[] = [];
+    const controller = new AbortController();
+    const client: CommunicationClient = {
+      notify: vi.fn(),
+      stream: vi.fn(),
+      async request<TResult>(request: CommunicationRequest<TResult>): Promise<TResult> {
+        requests.push(request);
+        return request.responseSchema.parse(createTaskDeliveryFixture("task-1"));
+      },
+    };
+    await expect(
+      createSessionDataSource(client).readDelivery("task-1", controller.signal),
+    ).resolves.toMatchObject({
+      taskId: "task-1",
+      availability: "missing",
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      method: deliveryMethods.read,
+      params: { taskId: "task-1" },
+      signal: controller.signal,
+    });
+  });
+
+  it("rejects mismatched and malformed delivery responses", async () => {
+    let result: unknown = createTaskDeliveryFixture("other-task");
+    const client: CommunicationClient = {
+      notify: vi.fn(),
+      stream: vi.fn(),
+      async request<TResult>(request: CommunicationRequest<TResult>): Promise<TResult> {
+        return request.responseSchema.parse(result);
+      },
+    };
+    const source = createSessionDataSource(client);
+    await expect(source.readDelivery("task-1")).rejects.toThrow("不属于当前任务");
+    result = { ...createTaskDeliveryFixture("other-task", "delivery"), taskId: "task-1" };
+    await expect(source.readDelivery("task-1")).rejects.toThrow("不属于当前任务");
+    result = { ...createTaskDeliveryFixture("task-1"), passed: true };
+    await expect(source.readDelivery("task-1")).rejects.toThrow();
+  });
+
+  it("does not retry a failed delivery read", async () => {
+    const request = vi.fn().mockRejectedValue(new Error("unavailable"));
+    const client: CommunicationClient = { notify: vi.fn(), stream: vi.fn(), request };
+    await expect(createSessionDataSource(client).readDelivery("task-1")).rejects.toThrow(
+      "unavailable",
+    );
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

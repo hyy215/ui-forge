@@ -1,5 +1,6 @@
 /** 用对话与可展开工具行呈现 Codex 原生 item，不将空消息和协议外壳作为正文。 */
 import type { NativeItem } from "@ui-forge/shared-protocol";
+import { memo } from "react";
 import { z } from "zod";
 import { MarkdownText } from "./MarkdownText";
 import { SessionFileLink } from "./SessionFileLink";
@@ -35,8 +36,8 @@ function compact(value: string, limit = 88): string {
   const text = value.replace(/\s+/g, " ").trim();
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
-/** 正文保持原文；仅对命令、补丁和工具载荷添加展示结构。 */
-export function NativeItemView({ item }: { item: NativeItem }) {
+/** 按不可变 item 引用复用历史展示；同 ID 的新内容仍刷新，不冻结已完成消息。 */
+export const NativeItemView = memo(function NativeItemView({ item }: { item: NativeItem }) {
   if (item.type === "userMessage") {
     const content = z
       .array(
@@ -217,4 +218,4 @@ export function NativeItemView({ item }: { item: NativeItem }) {
       </div>
     </details>
   );
-}
+});

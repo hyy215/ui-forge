@@ -46,6 +46,7 @@ await client.request("turn/start", { threadId: thread.id, input: prepared.input 
 - **停止与关闭**：`turn/interrupt` 停止指定轮次；取消订阅不停止任务。`close()`、宿主退出或 `signal` 取消会结束 Codex 进程。服务关闭时需同步清理连接。
 - **超时**：`CodexTimeoutError` 表示等待超时，不会取消或重试任务。可通过 `requestId` 关联 `lateResponse`；没有迟到结果时，用原生线程查询确认执行状态。
 - **临时产物**：默认使用安装根 `.ui-forge/runtime/tmp/<项目标识>/`。自定义 `temporaryDirectory` 须为已存在的绝对路径，可用 `prepareTemporaryWorkspace` 提前创建。
+- **交付声明**：`deliveryContext(temporaryDirectory, taskId)` 提供任务隔离的报告位置、格式与证据边界，供宿主合并到每轮 `additionalContext`。它不写入文件、不运行验收、不扩大权限；`deliveryReportPath` 为宿主读取使用同一路径。新报告的文件证据必须包含实际 SHA-256；读取旧任务留下的裸路径证据时只标记为不可核验。报告声明与实际证据核对分开，接口不生成整体通过结论。
 
 完整 API 见 [CodexClient](src/codexClient.ts) 和 [D2C 输入](src/d2c.ts)。
 
@@ -90,6 +91,6 @@ npm run dry-run -w @ui-forge/codex-client -- --target /absolute/target-project -
 
 检查和预览只准备临时目录、启动通信进程，不创建任务、连接 MCP 或调用模型。`check` 报告配置与版本，`dry-run` 省略规则正文和 MCP 配置值。
 
-平台连接检查使用 CLI `design-check`，不要与上述包配置 `check` 混淆；用法见[根 README](../../README.md#使用-cli)。第一方协议 22 的来源选择由 Server/CLI/Extension 共同消费，本包仍只适配原生 Codex 与 MCP 协议。
+平台连接检查使用 CLI `design-check`，不要与上述包配置 `check` 混淆；用法见[根 README](../../README.md#使用-cli)。第一方协议 23 的来源选择和交付查询由 Server/CLI/Extension 共同消费，本包仍只适配原生 Codex 与 MCP 协议。
 
 真实验证与协议升级见[开发说明](../../DEVELOPMENT.md#codex-接入验证与协议升级)。

@@ -1,7 +1,13 @@
 /** 订阅原生会话并维护展示缓存；清理订阅不会发送停止请求。 */
 import { useCallback, useEffect, useState } from "react";
 import type { SessionDataSource } from "../../data-sources/sessionDataSource";
-import { applySessionEvent, emptyPresentation } from "@ui-forge/client-core";
+import {
+  applySessionEvent,
+  emptyPresentation,
+  emptyTaskObservation,
+  observeTaskEvent,
+  type TaskObservation,
+} from "@ui-forge/client-core";
 
 /** 断开后有限重连；任务操作从不自动重试。 */
 export function useTaskSession(source: SessionDataSource, taskId: string | null) {
@@ -9,9 +15,11 @@ export function useTaskSession(source: SessionDataSource, taskId: string | null)
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [observation, setObservation] = useState<TaskObservation | null>(null);
   useEffect(() => {
     if (!taskId) {
       setState(emptyPresentation());
+      setObservation(null);
       return;
     }
     const controller = new AbortController();
@@ -19,12 +27,22 @@ export function useTaskSession(source: SessionDataSource, taskId: string | null)
     setError("");
     const connect = async () => {
       for (let retry = 0; retry < 5 && !controller.signal.aborted; retry += 1) {
+        setObservation(emptyTaskObservation(taskId, Date.now()));
         try {
           await source.subscribe(
             taskId,
             (event) => {
-              if (!controller.signal.aborted)
+              if (!controller.signal.aborted) {
                 setState((current) => applySessionEvent(current, event));
+                const observedAt = Date.now();
+                setObservation((current) =>
+                  observeTaskEvent(
+                    current ?? emptyTaskObservation(taskId, observedAt),
+                    event,
+                    observedAt,
+                  ),
+                );
+              }
             },
             controller.signal,
           );
@@ -68,5 +86,12 @@ export function useTaskSession(source: SessionDataSource, taskId: string | null)
       setBusy(false);
     }
   }, []);
-  return { state, error, busy, run, reconnect: () => setAttempt((value) => value + 1) };
+  return {
+    state,
+    observation,
+    error,
+    busy,
+    run,
+    reconnect: () => setAttempt((value) => value + 1),
+  };
 }

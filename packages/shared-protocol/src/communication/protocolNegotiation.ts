@@ -3,7 +3,7 @@
 import { z } from "zod";
 
 /** 当前第一方 Client 与 Server 支持的通信协议版本。 */
-export const currentCommunicationProtocolVersion = 22 as const;
+export const currentCommunicationProtocolVersion = 23 as const;
 
 /** 当前协议公开且可稳定协商的能力集合。 */
 export const communicationCapabilities = [
@@ -14,6 +14,7 @@ export const communicationCapabilities = [
   "instruction-files",
   "task-diagnostics",
   "design-source-selection",
+  "task-delivery",
 ] as const;
 
 /** 第一方客户端需要原生会话与规则文件接口。 */

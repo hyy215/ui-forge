@@ -1,4 +1,4 @@
-/** 向页面提供经 Schema 校验的会话、规则与只读诊断操作，隔离宿主传输。 */
+/** 向页面提供经 Schema 校验的会话、规则及只读诊断和交付操作，隔离宿主传输。 */
 import {
   sessionMethods,
   instructionMethods,
@@ -10,6 +10,8 @@ import {
   instructionDocumentSchema,
   diagnosticMethods,
   taskDiagnosticsSchema,
+  deliveryMethods,
+  taskDeliverySchema,
   designMethods,
   designSourceSchema,
   designConnectionCheckSchema,
@@ -62,6 +64,19 @@ export function createSessionDataSource(client: CommunicationClient) {
         responseSchema: taskDiagnosticsSchema.refine((report) => report.taskId === taskId, {
           message: "诊断报告不属于当前任务。",
         }),
+        timeoutMs: 120_000,
+        ...(signal ? { signal } : {}),
+      }),
+    /** 仅核对当前任务的交付报告与证据，不恢复线程或重新执行检查。 */
+    readDelivery: (taskId: string, signal?: AbortSignal) =>
+      client.request({
+        method: deliveryMethods.read,
+        params: { taskId },
+        responseSchema: taskDeliverySchema.refine(
+          (delivery) =>
+            delivery.taskId === taskId && (!delivery.report || delivery.report.taskId === taskId),
+          { message: "交付报告不属于当前任务。" },
+        ),
         timeoutMs: 120_000,
         ...(signal ? { signal } : {}),
       }),

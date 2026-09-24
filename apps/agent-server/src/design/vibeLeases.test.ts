@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { VibeLeases, vibeInstanceKey } from "./vibeLeases.js";
+import { VibeLeases, vibeInstanceKey, type NativeExecutionSnapshot } from "./vibeLeases.js";
 
 describe("native Vibe resource guards", () => {
   it("treats loopback aliases and paths at one native status port as the same instance", () => {
@@ -39,5 +39,31 @@ describe("native Vibe resource guards", () => {
       }),
     ).rejects.toThrow("Unavailable");
     await expect(leases.run("20678", "next", async () => "ready")).resolves.toBe("ready");
+  });
+
+  it("does not restore an old owner from a late active native snapshot", async () => {
+    let resolveStaleRead!: (snapshot: NativeExecutionSnapshot) => void;
+    const staleRead = new Promise<NativeExecutionSnapshot>((resolve) => {
+      resolveStaleRead = resolve;
+    });
+    const read = vi
+      .fn<(taskId: string) => Promise<NativeExecutionSnapshot>>()
+      .mockResolvedValue({ status: { type: "active" }, turns: [] });
+    const leases = new VibeLeases(() => [{ taskId: "old", bindingId: "old-binding" }], read);
+    await leases.run("20678", "old-binding", async () => undefined);
+    read.mockImplementationOnce(() => staleRead);
+    const pending = leases.assertOwner("20678", "old-binding", "old");
+    const rejected = expect(pending).rejects.toThrow("使用权已失效");
+    expect(read).toHaveBeenCalledExactlyOnceWith("old");
+
+    read.mockResolvedValueOnce({ status: { type: "idle" }, turns: [{ status: "completed" }] });
+    await leases.run("20678", "new-binding", async () => undefined);
+    resolveStaleRead({ status: { type: "active" }, turns: [{ status: "inProgress" }] });
+    await rejected;
+
+    await expect(leases.assertOwner("20678", "new-binding", "new")).resolves.toBeUndefined();
+    expect(read).toHaveBeenCalledTimes(3);
+    await expect(leases.assertOwner("20678", "old-binding", "old")).rejects.toThrow("未持有");
+    expect(read).toHaveBeenCalledTimes(3);
   });
 });

@@ -9,6 +9,8 @@ import {
   sessionMethods,
   instructionMethods,
   diagnosticMethods,
+  deliveryMethods,
+  readTaskDeliverySchema,
   readTaskDiagnosticsSchema,
   designMethods,
   checkDesignConnectionSchema,
@@ -56,6 +58,8 @@ export class CommunicationRequestHandler {
         return this.sessions.read(sessionIdSchema.parse(params).taskId);
       case diagnosticMethods.read:
         return this.sessions.readDiagnostics(readTaskDiagnosticsSchema.parse(params).taskId);
+      case deliveryMethods.read:
+        return this.sessions.readDelivery(readTaskDeliverySchema.parse(params).taskId);
       case designMethods.check:
         return this.sessions.checkDesign(checkDesignConnectionSchema.parse(params).source);
       case sessionMethods.list: {

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from collections import deque
 import hashlib
+from io import BytesIO
 import json
 from pathlib import Path
 import sys
@@ -13,11 +14,18 @@ from typing import Any
 
 
 NAME = "ui-forge-pixel-compare"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
+
+
+class ComparisonArgumentParser(argparse.ArgumentParser):
+    """Keep invalid invocations on the same JSON error channel as runtime failures."""
+
+    def error(self, message: str) -> None:
+        raise ValueError(message)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    parser = ComparisonArgumentParser(
         description="Compare two images with per-channel tolerance and 8-neighbor regions."
     )
     parser.add_argument("--version", action="version", version=f"{NAME} {VERSION}")
@@ -31,12 +39,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def paths_alias(first: Path, second: Path) -> bool:
+    """Compare resolved names and existing file identities, including hard links."""
+    if str(first).casefold() == str(second).casefold():
+        return True
+    try:
+        return first.samefile(second)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
 
 
 def emit(payload: dict[str, Any], exit_code: int) -> int:
@@ -111,7 +121,10 @@ def connected_regions(mask: Any, width: int, height: int) -> list[dict[str, Any]
 
 
 def main() -> int:
-    args = parse_args()
+    try:
+        args = parse_args()
+    except ValueError as exc:
+        return emit(error_payload("invalid_argument", str(exc)), 2)
 
     if not 0 <= args.channel_tolerance <= 255:
         return emit(error_payload("invalid_argument", "channel tolerance must be between 0 and 255"), 2)
@@ -128,28 +141,35 @@ def main() -> int:
         return emit(
             error_payload(
                 "missing_dependency",
-                "Pillow is required; install it with `python3 -m pip install Pillow`.",
+                "Pillow is required; check the environment or request approval before installing it.",
             ),
             2,
         )
 
-    reference_path = args.reference.expanduser().resolve()
-    actual_path = args.actual.expanduser().resolve()
-    diff_path = args.diff.expanduser().resolve()
+    try:
+        reference_path = args.reference.expanduser().resolve()
+        actual_path = args.actual.expanduser().resolve()
+        diff_path = args.diff.expanduser().resolve()
+        if any(paths_alias(diff_path, path) for path in (reference_path, actual_path)):
+            return emit(error_payload("output_collision", "diff output must not overwrite an input image"), 2)
+    except (OSError, RuntimeError, ValueError) as exc:
+        return emit(error_payload("path_check_failed", str(exc)), 2)
 
     try:
-        with Image.open(reference_path) as source:
+        reference_bytes = reference_path.read_bytes()
+        actual_bytes = actual_path.read_bytes()
+        with Image.open(BytesIO(reference_bytes)) as source:
             reference = source.convert("RGBA")
-        with Image.open(actual_path) as source:
+        with Image.open(BytesIO(actual_bytes)) as source:
             actual = source.convert("RGBA")
-    except (FileNotFoundError, OSError) as exc:
+    except (OSError, ValueError, Image.DecompressionBombError) as exc:
         return emit(error_payload("image_read_failed", str(exc)), 2)
 
     base_payload: dict[str, Any] = {
         "comparator": {"name": NAME, "version": VERSION},
         "artifacts": {
-            "reference": {"path": str(reference_path), "sha256": sha256_file(reference_path)},
-            "actual": {"path": str(actual_path), "sha256": sha256_file(actual_path)},
+            "reference": {"path": str(reference_path), "sha256": hashlib.sha256(reference_bytes).hexdigest()},
+            "actual": {"path": str(actual_path), "sha256": hashlib.sha256(actual_bytes).hexdigest()},
             "diff": {"path": str(diff_path)},
         },
         "channelTolerance": args.channel_tolerance,
@@ -193,9 +213,12 @@ def main() -> int:
     highlight = Image.new("RGBA", actual.size, (255, 0, 128, 255))
     diff_image = Image.composite(highlight, grayscale, difference_mask)
     try:
+        encoded = BytesIO()
+        diff_image.save(encoded, format="PNG", compress_level=9, optimize=False)
+        diff_bytes = encoded.getvalue()
         diff_path.parent.mkdir(parents=True, exist_ok=True)
-        diff_image.save(diff_path, format="PNG", compress_level=9, optimize=False)
-    except OSError as exc:
+        diff_path.write_bytes(diff_bytes)
+    except (OSError, ValueError) as exc:
         return emit(error_payload("diff_write_failed", str(exc)), 2)
 
     failure_reasons: list[str] = []
@@ -211,7 +234,7 @@ def main() -> int:
         reported["ratio"] = region["area"] / total_pixels if total_pixels else 0.0
         reported_regions.append(reported)
 
-    base_payload["artifacts"]["diff"]["sha256"] = sha256_file(diff_path)
+    base_payload["artifacts"]["diff"]["sha256"] = hashlib.sha256(diff_bytes).hexdigest()
     base_payload.update(
         {
             "pass": passed,

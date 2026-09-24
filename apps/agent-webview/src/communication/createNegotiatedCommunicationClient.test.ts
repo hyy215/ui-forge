@@ -74,6 +74,49 @@ describe("negotiated communication client", () => {
     expect(methods).toEqual([communicationTransportMethods.negotiateProtocol]);
   });
 
+  it.each([
+    {
+      name: "incompatible protocol version",
+      result: {
+        ...successfulNegotiationResult(),
+        protocolVersion: currentCommunicationProtocolVersion + 1,
+      },
+    },
+    ...communicationCapabilities.map((missing) => ({
+      name: `missing ${missing}`,
+      result: {
+        ...successfulNegotiationResult(),
+        capabilities: communicationCapabilities.filter((capability) => capability !== missing),
+      },
+    })),
+  ])("blocks requests, streams and notifications for $name", async ({ result }) => {
+    const methods: string[] = [];
+    const notify = vi.fn();
+    const stream = vi.fn(async () => undefined);
+    const underlying: CommunicationClient = {
+      notify,
+      stream,
+      async request<TResult>(input: CommunicationRequest<TResult>): Promise<TResult> {
+        methods.push(input.method);
+        return input.responseSchema.parse(result);
+      },
+    };
+    const client = createNegotiatedCommunicationClient(underlying);
+    const request = client.request({ method: "business.write", responseSchema: z.unknown() });
+    const subscription = client.stream({
+      method: "business.subscribe",
+      eventSchema: z.unknown(),
+      onEvent: () => undefined,
+    });
+    client.notify({ method: "business.notify" });
+
+    const outcomes = await Promise.allSettled([request, subscription]);
+    expect(outcomes.map((outcome) => outcome.status)).toEqual(["rejected", "rejected"]);
+    expect(methods).toEqual([communicationTransportMethods.negotiateProtocol]);
+    expect(stream).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it("does not issue a business request when negotiation fails and retries next time", async () => {
     let attempts = 0;
     const requestedMethods: string[] = [];

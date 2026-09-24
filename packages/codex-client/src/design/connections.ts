@@ -63,7 +63,9 @@ export async function readVibeStatus(
     if (text.length > 64 * 1024) throw new Error("status response too large");
     return parseVibeStatus(JSON.parse(text));
   } catch {
-    throw new Error("Vibe active document/page is unavailable");
+    throw new Error(
+      "无法读取 Vibe 当前文件和页面，请在客户端打开目标画布，并检查画布状态地址（不是 MCP 地址）。",
+    );
   }
 }
 
@@ -86,7 +88,9 @@ export async function connectVibe(connection: VibeConnection): Promise<Client> {
     return client;
   } catch {
     await transport.close().catch(() => {});
-    throw new Error("Vibe MCP connection failed");
+    throw new Error(
+      "无法连接 Vibe MCP，请确认 MCP 服务已启动，并检查 MCP 地址（不是画布状态地址）。",
+    );
   }
 }
 
@@ -98,7 +102,9 @@ export async function checkVibeConnection(
   const status = await readVibeStatus(connection);
   const client = await connectVibe(connection);
   try {
-    const result = await client.listTools({}, requestOptions);
+    const result = await client.listTools({}, requestOptions).catch(() => {
+      throw new Error("无法获取 Vibe MCP 工具清单，请检查服务连接后重试。");
+    });
     const tool = result.tools.find((entry) => entry.name === "get_frontend_code");
     const properties = tool?.inputSchema.properties;
     if (
@@ -108,10 +114,10 @@ export async function checkVibeConnection(
         (key) => key in properties,
       )
     )
-      throw new Error("Vibe JSON read tool is unavailable");
+      throw new Error("Vibe MCP 未提供所需的 JSON 读取工具，请检查 Vibe 服务版本及工具配置。");
     const after = await readVibeStatus(connection);
     if (status.documentId !== after.documentId || status.pageId !== after.pageId)
-      throw new Error("Vibe active canvas changed during connection check");
+      throw new Error("连接检查期间 Vibe 画布发生变化，请保持目标文件和页面打开后重试。");
     const info = client.getServerVersion();
     return {
       ...status,
@@ -119,10 +125,6 @@ export async function checkVibeConnection(
       serverVersion: safeLabel(info?.version),
       tools: result.tools.map((entry) => safeLabel(entry.name)),
     };
-  } catch {
-    throw new Error(
-      "Vibe MCP check failed; verify the active document/page and JSON read capability",
-    );
   } finally {
     await client.close().catch(() => {});
   }
@@ -174,7 +176,7 @@ export async function checkMagicConnection(): Promise<DesignConnectionInfo> {
       tools: result.tools.map((entry) => safeLabel(entry.name)),
     };
   } catch {
-    throw new Error("Magic MCP check failed; verify the token, membership and network access");
+    throw new Error("Magic MCP 连接检查失败，请检查 MG_MCP_TOKEN、网络连接及账号的 MCP 服务权益。");
   } finally {
     await client.close().catch(() => {});
     await transport?.close().catch(() => {});

@@ -31,7 +31,24 @@ export function addDesignSourceOptions(command: Command): Command {
 
 /** 拒绝跨来源或跨接入选项，避免把链接静默降级为普通提示词。 */
 export function readDesignSourceOptions(value: unknown): DesignSource {
-  const options = optionsSchema.parse(value);
+  const parsedOptions = optionsSchema.safeParse(value);
+  if (!parsedOptions.success) {
+    const field = parsedOptions.error.issues[0]?.path[0];
+    switch (field) {
+      case "designSource":
+        throw new Error("--design-source 只能为 local 或 mastergo。");
+      case "mastergoConnection":
+        throw new Error("--mastergo-connection 只能为 magic 或 vibe。");
+      case "designUrl":
+        throw new Error("请输入完整的 MasterGo HTTPS 文件或图层链接。");
+      case "vibeEndpoint":
+      case "vibeStatusEndpoint":
+        throw new Error("Vibe 地址须为无凭据、无查询参数的本机 HTTP 地址。");
+      default:
+        throw new Error("设计来源参数无效；请检查 --design-source、--design-url 和接入选项。");
+    }
+  }
+  const options = parsedOptions.data;
   if (!options.designSource && options.designUrl)
     throw new Error(
       "--design-url 需要显式指定 --design-source mastergo 和 --mastergo-connection。",
@@ -47,14 +64,15 @@ export function readDesignSourceOptions(value: unknown): DesignSource {
       throw new Error("local 来源不能使用 MasterGo 链接或接入参数。");
     return { kind };
   }
-  if (!options.designUrl || !options.mastergoConnection)
-    throw new Error("mastergo 来源需要 --design-url 和显式 --mastergo-connection magic|vibe。");
+  if (!options.designUrl) throw new Error("mastergo 来源需要 --design-url。");
+  if (!options.mastergoConnection)
+    throw new Error("mastergo 来源需要显式指定 --mastergo-connection magic|vibe。");
   if (
     options.mastergoConnection === "magic" &&
     (options.vibeEndpoint !== undefined || options.vibeStatusEndpoint !== undefined)
   )
     throw new Error("Magic 接入不能使用 Vibe 地址参数。");
-  return designSourceSchema.parse({
+  const source = designSourceSchema.safeParse({
     kind,
     url: options.designUrl,
     connection:
@@ -66,4 +84,13 @@ export function readDesignSourceOptions(value: unknown): DesignSource {
             statusEndpoint: options.vibeStatusEndpoint ?? defaultVibeStatusEndpoint,
           },
   });
+  if (!source.success) {
+    const endpointIssue = source.error.issues.some((issue) => issue.path.includes("connection"));
+    throw new Error(
+      endpointIssue
+        ? "Vibe 地址须为无凭据、无查询参数的本机 HTTP 地址。"
+        : "请输入完整的 MasterGo HTTPS 文件或图层链接。",
+    );
+  }
+  return source.data;
 }

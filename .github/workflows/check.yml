@@ -20,6 +20,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      UI_FORGE_REGRESSION_DIR: test-results/regression-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Checkout repository
@@ -31,20 +33,80 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Prepare regression evidence
+        id: regression
+        run: npm run regression:prepare -- --output "$UI_FORGE_REGRESSION_DIR"
+
       - name: Install dependencies
+        id: dependencies
         run: npm ci
 
-      - name: Build packages, typecheck workspaces, and run tests
-        run: npm run check
+      - name: Use Python for image script tests
+        id: image-python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14.2"
+
+      - name: Install and inspect image test dependencies
+        id: images
+        env:
+          UI_FORGE_TEST_PYTHON: ${{ steps.image-python.outputs.python-path }}
+        run: |
+          "$UI_FORGE_TEST_PYTHON" -m pip install --disable-pip-version-check "Pillow==12.2.0"
+          "$UI_FORGE_TEST_PYTHON" -c "import sys, PIL; from PIL import Image; print('Python:', sys.version); print('Executable:', sys.executable); print('Pillow:', PIL.__version__)"
+
+      - name: Build packages and typecheck workspaces
+        id: typecheck
+        run: npm run typecheck
+
+      - name: Run unit and integration tests
+        id: unit
+        env:
+          UI_FORGE_REQUIRE_IMAGE_TESTS: "1"
+          UI_FORGE_TEST_PYTHON: ${{ steps.image-python.outputs.python-path }}
+        run: npm test -- --reporter=default --reporter=json --outputFile.json="$UI_FORGE_REGRESSION_DIR/vitest.json"
 
       - name: Build applications
+        id: build
         run: npm run build:apps
 
       - name: Install Playwright browser
+        id: browser
         run: npx playwright install --with-deps chromium
 
+      - name: Verify extension staging and production Webview
+        id: package
+        run: npm run package:vsix -- --prepare --smoke
+
       - name: Verify critical Webview interactions
-        run: npm run test:e2e
+        id: e2e
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ github.workspace }}/${{ env.UI_FORGE_REGRESSION_DIR }}/playwright.json
+        run: npm run test:e2e -- --reporter=list,html,json
+
+      - name: Summarize regression evidence
+        if: ${{ always() && steps.regression.outcome == 'success' }}
+        env:
+          UI_FORGE_TEST_PYTHON: ${{ steps.image-python.outputs.python-path }}
+          UI_FORGE_CHECK_DEPENDENCIES: ${{ steps.dependencies.outcome }}
+          UI_FORGE_CHECK_PYTHON: ${{ steps.image-python.outcome }}
+          UI_FORGE_CHECK_IMAGES: ${{ steps.images.outcome }}
+          UI_FORGE_CHECK_TYPECHECK: ${{ steps.typecheck.outcome }}
+          UI_FORGE_CHECK_UNIT: ${{ steps.unit.outcome }}
+          UI_FORGE_CHECK_BUILD: ${{ steps.build.outcome }}
+          UI_FORGE_CHECK_BROWSER: ${{ steps.browser.outcome }}
+          UI_FORGE_CHECK_PACKAGE: ${{ steps.package.outcome }}
+          UI_FORGE_CHECK_E2E: ${{ steps.e2e.outcome }}
+        run: npm run regression:summarize -- --output "$UI_FORGE_REGRESSION_DIR"
+
+      - name: Upload regression evidence
+        if: ${{ always() && steps.regression.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.UI_FORGE_REGRESSION_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload Playwright failure evidence
         if: failure()

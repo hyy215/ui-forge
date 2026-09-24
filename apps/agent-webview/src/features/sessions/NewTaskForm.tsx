@@ -1,4 +1,4 @@
-/** 新建任务的显式来源与接入选择；保留各来源草稿，检查连接不启动执行。 */
+/** 新建任务的显式来源与接入选择；需求和验收选项独立于来源，图片按来源保留。 */
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Checkbox, Input, Radio } from "antd";
 import {
@@ -25,16 +25,15 @@ export function NewTaskForm({
 }) {
   const [target, setTarget] = useState(workspacePath ?? "");
   const [sourceKind, setSourceKind] = useState<DesignSource["kind"]>("local");
+  const [prompt, setPrompt] = useState("");
+  const [strictPixelAcceptance, setStrictPixelAcceptance] = useState(false);
   const [drafts, setDrafts] = useState<
-    Record<
-      DesignSource["kind"],
-      { prompt: string; strictPixelAcceptance: boolean; images: CreateSessionInput["images"] }
-    >
+    Record<DesignSource["kind"], { images: CreateSessionInput["images"] }>
   >({
-    local: { prompt: "", strictPixelAcceptance: false, images: [] },
-    mastergo: { prompt: "", strictPixelAcceptance: false, images: [] },
+    local: { images: [] },
+    mastergo: { images: [] },
   });
-  const { prompt, strictPixelAcceptance, images } = drafts[sourceKind];
+  const { images } = drafts[sourceKind];
   const updateDraft = (update: Partial<(typeof drafts)["local"]>) =>
     setDrafts((current) => ({ ...current, [sourceKind]: { ...current[sourceKind], ...update } }));
   const [mastergo, setMastergo] = useState<MasterGoDraft>({
@@ -232,7 +231,7 @@ export function NewTaskForm({
           id="task-prompt"
           value={prompt}
           disabled={busy}
-          onChange={(event) => updateDraft({ prompt: event.target.value })}
+          onChange={(event) => setPrompt(event.target.value)}
           rows={4}
           placeholder="描述页面功能、交互细节，或希望调整的部分…"
         />
@@ -241,13 +240,21 @@ export function NewTaskForm({
             checked={strictPixelAcceptance}
             disabled={busy}
             aria-describedby="strict-pixel-hint"
-            onChange={(event) => updateDraft({ strictPixelAcceptance: event.target.checked })}
+            onChange={(event) => setStrictPixelAcceptance(event.target.checked)}
           >
             严格像素验收
           </Checkbox>
           <p id="strict-pixel-hint" className={styles.hint}>
             逐像素比较设计原图与页面截图，输出差异图和验收结果。
           </p>
+          {strictPixelAcceptance && images.length === 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              title="尚未附加原始参考图"
+              description="严格像素验收可能受阻；可以继续功能实现并稍后补图。"
+            />
+          )}
         </div>
         {error && <Alert title={error} type="error" showIcon />}
         <div className={styles.formFooter}>

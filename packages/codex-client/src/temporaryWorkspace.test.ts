@@ -1,5 +1,15 @@
 import { afterEach, expect, it } from "vitest";
-import { mkdtemp, mkdir, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -7,6 +17,8 @@ import {
   prepareTemporaryWorkspace,
   temporaryWorkspaceContext,
   temporaryWorkspaceEnvironment,
+  temporaryWorkspacePath,
+  temporaryWorkspacePathForCanonicalCwd,
 } from "./temporaryWorkspace.js";
 import { nativeSchemas, validateNative } from "./protocol.js";
 
@@ -33,6 +45,26 @@ it("reuses one project directory across restarts and isolates different target p
   expect(await prepareTemporaryWorkspace(other, runtime)).not.toBe(first);
   expect(dirname(first)).toBe(join(runtime, "tmp"));
   expect(await readdir(target)).toEqual([]);
+});
+
+it("locates historical artifacts from a saved canonical identity without requiring the workspace", async () => {
+  const { root, target, runtime } = await setup();
+  const alias = join(root, "alias");
+  await symlink(target, alias);
+  const expected = await temporaryWorkspacePath(alias, runtime);
+  expect(temporaryWorkspacePathForCanonicalCwd(target, runtime)).toBe(expected);
+  await rename(target, join(root, "renamed-target"));
+  expect(temporaryWorkspacePathForCanonicalCwd(target, runtime)).toBe(expected);
+  await expect(temporaryWorkspacePath(target, runtime)).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(temporaryWorkspacePath(alias, runtime)).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(readdir(runtime)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("rejects relative workspace identities instead of deriving an artifact directory", async () => {
+  const { runtime } = await setup();
+  expect(() => temporaryWorkspacePathForCanonicalCwd("relative-project", runtime)).toThrow(
+    "规范绝对路径",
+  );
 });
 
 it("routes actual child-process temporary output outside the target and validates native context envelopes", async () => {

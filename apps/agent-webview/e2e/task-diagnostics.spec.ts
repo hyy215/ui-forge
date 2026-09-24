@@ -53,7 +53,46 @@ test("diagnostics reads only on request, downloads validated JSON and preserves 
   const historyBefore = await page.getByLabel("会话消息", { exact: true }).innerText();
   const requestsBefore = await requests(page);
   expect(requestsBefore).not.toContain(diagnosticMethods.read);
-  await page.getByRole("button", { name: "查看任务诊断", exact: true }).click();
+  const entry = page.getByRole("button", { name: "查看任务诊断", exact: true });
+  await expect(entry).toContainText("任务诊断");
+  await expect(entry.getByText("任务诊断", { exact: true })).toBeVisible();
+  const header = page.locator("header").filter({ has: entry });
+  expect(await header.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(
+    await header.evaluate((element) => {
+      const headerBounds = element.getBoundingClientRect();
+      const buttons = Array.from(element.querySelectorAll("button")).filter((button) =>
+        ["查看交付结果", "查看任务诊断"].includes(button.getAttribute("aria-label") ?? ""),
+      );
+      const [delivery, diagnostics] = buttons.map((button) => button.getBoundingClientRect());
+      if (buttons.length !== 2 || !delivery || !diagnostics) return false;
+      return (
+        headerBounds.left >= 0 &&
+        headerBounds.right <= innerWidth &&
+        buttons.every((button) => {
+          const bounds = button.getBoundingClientRect();
+          return (
+            button.scrollWidth <= button.clientWidth &&
+            bounds.left >= headerBounds.left &&
+            bounds.right <= headerBounds.right &&
+            bounds.top >= headerBounds.top &&
+            bounds.bottom <= headerBounds.bottom
+          );
+        }) &&
+        (delivery.right <= diagnostics.left ||
+          diagnostics.right <= delivery.left ||
+          delivery.bottom <= diagnostics.top ||
+          diagnostics.bottom <= delivery.top)
+      );
+    }),
+  ).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true);
+  await header.screenshot({
+    path: `apps/agent-webview/test-results/diagnostics-entry-${test.info().project.name}.png`,
+  });
+  await entry.click();
   const dialog = page.getByRole("dialog", { name: "任务诊断" });
   await expect(
     dialog.getByLabel("Agent 摘要").getByText("gpt-6-astra", { exact: true }),

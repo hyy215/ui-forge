@@ -1,0 +1,114 @@
+/** 交付抽屉使用紧凑分区；长路径、指纹和报告文字在窄屏内换行。 */
+.body {
+  padding: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.report {
+  min-width: 0;
+  font-size: 12px;
+}
+.gaps {
+  min-width: 0;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.gapList {
+  min-width: 0;
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.gapList li + li {
+  margin-top: 4px;
+}
+.section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.section h2 {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.check {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.check:last-child {
+  border-bottom: 0;
+}
+.check h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.text {
+  white-space: pre-wrap;
+  margin: 8px 0;
+  line-height: 1.7;
+}
+.note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.files,
+.evidence {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.files li,
+.evidence li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  min-width: 0;
+}
+.files code,
+.evidence code,
+.evidence a {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  min-width: 0;
+}
+.fingerprints {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.fingerprints summary {
+  cursor: pointer;
+}
+.fingerprints p {
+  margin: 10px 0;
+}
+.fingerprints code {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+@media (max-width: 400px) {
+  .body {
+    padding: 12px;
+  }
+}

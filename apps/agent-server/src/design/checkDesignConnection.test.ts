@@ -108,4 +108,14 @@ describe("read-only design connection checks", () => {
     expect(checkVibeConnection).not.toHaveBeenCalled();
     expect(checkMagicConnection).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["https://mastergo.com/goto/shared?file=document&page_id=M", "需要包含 layer_id"],
+    ["https://mastergo.com/goto/shared?file=document&layer_id=invalid", "layer_id 格式无效"],
+    ["https://mastergo.com/goto/shared?layer_id=3:00289", "文件标识"],
+  ])("rejects incomplete Vibe targets before contacting a platform: %s", async (url, message) => {
+    await expect(checkDesignConnection({ ...vibe, url })).rejects.toThrow(message);
+    expect(checkVibeConnection).not.toHaveBeenCalled();
+    expect(checkMagicConnection).not.toHaveBeenCalled();
+  });
 });

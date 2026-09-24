@@ -11,7 +11,16 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:ui-forge.sidebar",
+    "onCommand:ui-forge.open",
+    "onCommand:ui-forge.createTask",
+    "onCommand:ui-forge.refreshHistory",
+    "onCommand:ui-forge.loadMoreTasks",
+    "onCommand:ui-forge.openHistoryTask",
+    "onCommand:ui-forge.continueTask",
+    "onCommand:ui-forge.openSettings"
+  ],
   "main": "./dist/extension.js",
   "dependencies": {
     "@ui-forge/shared-protocol": "0.1.0",

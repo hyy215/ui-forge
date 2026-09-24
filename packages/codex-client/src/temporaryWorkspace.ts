@@ -1,7 +1,7 @@
 /** 为 D2C 中间产物提供安装目录内的稳定位置，源码工作区保持独立。 */
 import { createHash } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import type { NativeMethods } from "./generated/native.js";
@@ -21,10 +21,16 @@ export async function temporaryWorkspacePath(
   cwd: string,
   runtimeDirectory: string,
 ): Promise<string> {
-  const key = createHash("sha256")
-    .update(await realpath(cwd))
-    .digest("hex")
-    .slice(0, 24);
+  return temporaryWorkspacePathForCanonicalCwd(await realpath(cwd), runtimeDirectory);
+}
+
+/** 由宿主已保存的规范绝对路径定位历史产物；不读取磁盘、不验证或授予工作区访问权。 */
+export function temporaryWorkspacePathForCanonicalCwd(
+  canonicalCwd: string,
+  runtimeDirectory: string,
+): string {
+  if (!isAbsolute(canonicalCwd)) throw new Error("工作区身份必须是规范绝对路径。");
+  const key = createHash("sha256").update(canonicalCwd).digest("hex").slice(0, 24);
   return resolve(runtimeDirectory, "tmp", key);
 }
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from io import BytesIO
 import json
 from pathlib import Path
 import re
@@ -13,12 +14,19 @@ from typing import Any
 
 
 NAME = "ui-forge-reference-slicer"
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
+class SlicerArgumentParser(argparse.ArgumentParser):
+    """Report invalid CLI input through the slicer's structured failure result."""
+
+    def error(self, message: str) -> None:
+        raise ValueError(message)
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    parser = SlicerArgumentParser(
         description="Crop region slices and emit a provenance index."
     )
     parser.add_argument("--version", action="version", version=f"{NAME} {VERSION}")
@@ -29,12 +37,30 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def paths_alias(first: Path, second: Path) -> bool:
+    """Compare resolved names and existing file identities, including hard links."""
+    if str(first).casefold() == str(second).casefold():
+        return True
+    try:
+        return first.samefile(second)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+
+
+def validate_outputs(inputs: list[Path], outputs: list[Path]) -> None:
+    """Check the complete output plan before creating directories or writing files."""
+    for index, output in enumerate(outputs):
+        for protected in inputs + outputs[:index]:
+            shared_parent = (
+                str(output).casefold() in {str(parent).casefold() for parent in protected.parents}
+                or str(protected).casefold() in {str(parent).casefold() for parent in output.parents}
+            )
+            if paths_alias(output, protected) or shared_parent:
+                raise ValueError("output paths must not collide with inputs or other outputs")
+        if output.exists() and not output.is_file():
+            raise ValueError("output path must be a file")
+        if any(parent.exists() and not parent.is_dir() for parent in output.parents):
+            raise ValueError("output parent must be a directory")
 
 
 def fail(message: str) -> int:
@@ -61,25 +87,29 @@ def integer_field(region: dict[str, Any], field: str) -> int:
 
 
 def main() -> int:
-    args = parse_args()
+    try:
+        args = parse_args()
+    except ValueError as exc:
+        return fail(str(exc))
     try:
         from PIL import Image
     except ImportError:
-        return fail("Pillow is required; install it with `python3 -m pip install Pillow`.")
-
-    reference_path = args.reference.expanduser().resolve()
-    manifest_path = args.manifest.expanduser().resolve()
-    output_dir = args.output_dir.expanduser().resolve()
-    index_path = args.index.expanduser().resolve()
+        return fail("Pillow is required; check the environment or request approval before installing it.")
 
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        reference_path = args.reference.expanduser().resolve()
+        manifest_path = args.manifest.expanduser().resolve()
+        output_dir = args.output_dir.expanduser().resolve()
+        index_path = args.index.expanduser().resolve()
+        manifest_bytes = manifest_path.read_bytes()
+        reference_bytes = reference_path.read_bytes()
+        manifest = json.loads(manifest_bytes.decode("utf-8"))
         regions = manifest["regions"]
         if not isinstance(regions, list) or not regions:
             raise ValueError("manifest.regions must be a non-empty array")
-        with Image.open(reference_path) as source:
+        with Image.open(BytesIO(reference_bytes)) as source:
             reference = source.convert("RGBA")
-    except (FileNotFoundError, OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, RuntimeError, KeyError, TypeError, ValueError, Image.DecompressionBombError) as exc:
         return fail(str(exc))
 
     seen_ids: set[str] = set()
@@ -91,9 +121,9 @@ def main() -> int:
             region_id = raw.get("id")
             if not isinstance(region_id, str) or not SAFE_ID.fullmatch(region_id):
                 raise ValueError(f"invalid region id: {region_id!r}")
-            if region_id in seen_ids:
+            if region_id.casefold() in seen_ids:
                 raise ValueError(f"duplicate region id: {region_id}")
-            seen_ids.add(region_id)
+            seen_ids.add(region_id.casefold())
             x = integer_field(raw, "x")
             y = integer_field(raw, "y")
             width = integer_field(raw, "width")
@@ -117,47 +147,62 @@ def main() -> int:
     except ValueError as exc:
         return fail(str(exc))
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    ordered_regions = sorted(normalized, key=lambda item: item["id"])
+    try:
+        output_paths = [(output_dir / f"{region['id']}.png").resolve() for region in ordered_regions]
+        validate_outputs([reference_path, manifest_path], [*output_paths, index_path])
+    except (OSError, RuntimeError, ValueError) as exc:
+        return fail(str(exc))
+
     slices: list[dict[str, Any]] = []
-    for region in sorted(normalized, key=lambda item: item["id"]):
-        output_path = output_dir / f"{region['id']}.png"
-        crop = reference.crop(
-            (
-                region["x"],
-                region["y"],
-                region["x"] + region["width"],
-                region["y"] + region["height"],
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for region, output_path in zip(ordered_regions, output_paths):
+            crop = reference.crop(
+                (
+                    region["x"],
+                    region["y"],
+                    region["x"] + region["width"],
+                    region["y"] + region["height"],
+                )
             )
-        )
-        crop.save(output_path, format="PNG", compress_level=9, optimize=False)
-        slices.append(
-            {
-                **region,
-                "path": str(output_path),
-                "sha256": sha256_file(output_path),
-                "coordinateTransform": {
-                    "sliceToReference": {"translateX": region["x"], "translateY": region["y"]}
-                },
-            }
-        )
+            encoded = BytesIO()
+            crop.save(encoded, format="PNG", compress_level=9, optimize=False)
+            crop_bytes = encoded.getvalue()
+            output_path.write_bytes(crop_bytes)
+            slices.append(
+                {
+                    **region,
+                    "path": str(output_path),
+                    "sha256": hashlib.sha256(crop_bytes).hexdigest(),
+                    "coordinateTransform": {
+                        "sliceToReference": {"translateX": region["x"], "translateY": region["y"]}
+                    },
+                }
+            )
+    except (OSError, ValueError) as exc:
+        return fail(str(exc))
 
     payload = {
         "slicer": {"name": NAME, "version": VERSION},
         "ok": True,
         "reference": {
             "path": str(reference_path),
-            "sha256": sha256_file(reference_path),
+            "sha256": hashlib.sha256(reference_bytes).hexdigest(),
             "width": reference.width,
             "height": reference.height,
         },
-        "manifest": {"path": str(manifest_path), "sha256": sha256_file(manifest_path)},
+        "manifest": {"path": str(manifest_path), "sha256": hashlib.sha256(manifest_bytes).hexdigest()},
         "slices": slices,
     }
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    index_path.write_text(
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        index_path.write_text(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except (OSError, ValueError) as exc:
+        return fail(str(exc))
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2))
     return 0
 

@@ -106,14 +106,18 @@ export function TaskDiagnosticsPanel({
     <>
       <Tooltip title="查看任务诊断">
         <Button
-          type="text"
+          size="small"
+          color="primary"
+          variant="outlined"
           icon={<FileSearchOutlined />}
           aria-label="查看任务诊断"
           onClick={() => {
             setOpen(true);
             void refresh();
           }}
-        />
+        >
+          任务诊断
+        </Button>
       </Tooltip>
       <Drawer
         title="任务诊断"
