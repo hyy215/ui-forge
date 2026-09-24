@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi, type Mock } from "vitest";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
+  communicationInboundMessageSchema,
+  communicationRequestMessageSchema,
   createCommunicationNotificationMessage,
   createCommunicationStreamRequestMessage,
   createCommunicationRequestMessage,
@@ -9,6 +12,8 @@ import {
   communicationTransportMethods,
   sessionMethods,
   sessionFileMethods,
+  diagnosticMethods,
+  deliveryMethods,
 } from "@ui-forge/shared-protocol";
 
 interface TestPanel {
@@ -31,12 +36,15 @@ const host = vi.hoisted(() => ({
   openFile: vi.fn(async () => undefined),
   readHtml: vi.fn(async () => '<html><head><meta charset="UTF-8" /></head></html>'),
   access: vi.fn(),
+  realpath: vi.fn<(path: string) => Promise<string>>(),
+  workspace: { trusted: true, projectPath: undefined as string | undefined },
 }));
 
 vi.mock("node:fs/promises", async (original) => ({
   ...(await original<typeof import("node:fs/promises")>()),
   readFile: host.readHtml,
   access: host.access,
+  realpath: host.realpath,
 }));
 vi.mock("vscode", () => ({
   Uri: {
@@ -55,7 +63,14 @@ vi.mock("vscode", () => ({
   },
   commands: { executeCommand: host.openFile },
   ViewColumn: { One: 1 },
-  workspace: { workspaceFolders: [], isTrusted: true },
+  workspace: {
+    get workspaceFolders() {
+      return host.workspace.projectPath ? [{ uri: { fsPath: host.workspace.projectPath } }] : [];
+    },
+    get isTrusted() {
+      return host.workspace.trusted;
+    },
+  },
   window: { createWebviewPanel: host.create },
 }));
 
@@ -63,12 +78,71 @@ import { UiForgePanelManager } from "./UiForgePanelManager.js";
 import * as vscode from "vscode";
 
 let manager: UiForgePanelManager;
-beforeEach(() => {
+
+const taskOperations = [
+  { method: sessionMethods.send, params: { taskId: "task", text: "change" } },
+  { method: sessionMethods.stop, params: { taskId: "task", turnId: "turn" } },
+  {
+    method: sessionMethods.respond,
+    params: { taskId: "task", token: "approval-token", result: { decision: "decline" } },
+  },
+] as const;
+
+const workspaceChanges = [
+  {
+    change: "switches directory",
+    apply: () => {
+      host.workspace.projectPath = "/";
+    },
+  },
+  {
+    change: "removes the workspace",
+    apply: () => {
+      host.workspace.projectPath = undefined;
+    },
+  },
+  {
+    change: "revokes trust",
+    apply: () => {
+      host.workspace.trusted = false;
+    },
+  },
+] as const;
+
+function taskSnapshot(taskId = "task") {
+  return {
+    thread: {
+      id: taskId,
+      cwd: tmpdir(),
+      name: null,
+      preview: "task",
+      createdAt: 1,
+      updatedAt: 1,
+      status: { type: "idle" },
+      turns: [],
+    },
+    pendingRequests: [],
+  };
+}
+
+function deferredRead() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
+beforeEach(async () => {
+  const fs = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
   host.panels.length = 0;
   host.create.mockClear();
   host.readHtml.mockClear();
   host.access.mockReset().mockResolvedValue(undefined);
   host.openFile.mockReset();
+  host.realpath.mockReset().mockImplementation((path) => fs.realpath(path));
+  host.workspace.trusted = true;
+  host.workspace.projectPath = undefined;
   host.create.mockImplementation(() => {
     let disposed: (() => void) | undefined;
     let received: ((input: unknown) => void) | undefined;
@@ -97,6 +171,215 @@ beforeEach(() => {
     "http://127.0.0.1:5321/api/communication",
   );
 });
+
+it.each(
+  taskOperations.flatMap((operation) =>
+    workspaceChanges.map((change) => ({ ...operation, ...change })),
+  ),
+)(
+  "does not forward $method when the host $change during task authorization",
+  async ({ method, params, apply }) => {
+    host.workspace.projectPath = tmpdir();
+    const pendingRead = deferredRead();
+    const methods: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: unknown, init: RequestInit) => {
+        const message = communicationRequestMessageSchema.parse(JSON.parse(String(init.body)));
+        methods.push(message.method);
+        if (message.method === sessionMethods.read) await pendingRead.promise;
+        return Response.json(
+          createSuccessfulCommunicationResponseMessage(
+            message.requestId,
+            message.method === sessionMethods.read ? taskSnapshot() : { accepted: true },
+          ),
+        );
+      }),
+    );
+    await manager.open();
+    const panel = host.panels[0]!;
+    panel.receive(createCommunicationRequestMessage("operation", method, params));
+    await vi.waitFor(() => expect(methods).toEqual([sessionMethods.read]));
+    apply();
+    pendingRead.release();
+    await vi.waitFor(() =>
+      expect(panel.webview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "operation",
+          success: false,
+          error: expect.objectContaining({
+            message: expect.stringContaining("工作区或信任状态已变化"),
+          }),
+        }),
+      ),
+    );
+    expect(methods).toEqual([sessionMethods.read]);
+  },
+);
+
+it.each(taskOperations)(
+  "forwards $method once after stable workspace authorization",
+  async ({ method, params }) => {
+    host.workspace.projectPath = tmpdir();
+    const pendingRead = deferredRead();
+    const methods: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: unknown, init: RequestInit) => {
+        const message = communicationRequestMessageSchema.parse(JSON.parse(String(init.body)));
+        methods.push(message.method);
+        if (message.method === sessionMethods.read) await pendingRead.promise;
+        return Response.json(
+          createSuccessfulCommunicationResponseMessage(
+            message.requestId,
+            message.method === sessionMethods.read ? taskSnapshot() : { accepted: true },
+          ),
+        );
+      }),
+    );
+    await manager.open();
+    const panel = host.panels[0]!;
+    panel.receive(createCommunicationRequestMessage("operation", method, params));
+    await vi.waitFor(() => expect(methods).toEqual([sessionMethods.read]));
+    pendingRead.release();
+    await vi.waitFor(() =>
+      expect(panel.webview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: "operation", success: true }),
+      ),
+    );
+    expect(methods).toEqual([sessionMethods.read, method]);
+  },
+);
+
+it.each(taskOperations)(
+  "does not forward $method for a different task returned in the same workspace",
+  async ({ method, params }) => {
+    host.workspace.projectPath = tmpdir();
+    const methods: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: unknown, init: RequestInit) => {
+        const message = communicationRequestMessageSchema.parse(JSON.parse(String(init.body)));
+        methods.push(message.method);
+        return Response.json(
+          createSuccessfulCommunicationResponseMessage(
+            message.requestId,
+            taskSnapshot("other-task"),
+          ),
+        );
+      }),
+    );
+    await manager.open();
+    const panel = host.panels[0]!;
+    panel.receive(createCommunicationRequestMessage("operation", method, params));
+    await vi.waitFor(() =>
+      expect(panel.webview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "operation",
+          success: false,
+          error: expect.objectContaining({ message: expect.stringContaining("任务身份不一致") }),
+        }),
+      ),
+    );
+    expect(methods).toEqual([sessionMethods.read]);
+  },
+);
+
+it.each(workspaceChanges)(
+  "does not create a task when the host $change while resolving the workspace",
+  async ({ apply }) => {
+    host.workspace.projectPath = tmpdir();
+    const pendingPath = deferredRead();
+    host.realpath.mockImplementationOnce(async (path) => {
+      await pendingPath.promise;
+      return path;
+    });
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    await manager.open();
+    const panel = host.panels[0]!;
+    panel.receive(
+      createCommunicationRequestMessage("create", sessionMethods.create, {
+        projectPath: "/ignored-page-path",
+        prompt: "task",
+      }),
+    );
+    await vi.waitFor(() => expect(host.realpath).toHaveBeenCalledExactlyOnceWith(tmpdir()));
+    apply();
+    pendingPath.release();
+    await vi.waitFor(() =>
+      expect(panel.webview.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: "create",
+          success: false,
+          error: expect.objectContaining({
+            message: expect.stringContaining("工作区或信任状态已变化"),
+          }),
+        }),
+      ),
+    );
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);
+
+it("forwards a stable create once using the resolved host directory", async () => {
+  host.workspace.projectPath = tmpdir();
+  const canonicalPath = "/canonical-target";
+  host.realpath.mockResolvedValueOnce(canonicalPath);
+  const messages: unknown[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url: unknown, init: RequestInit) => {
+      const message = communicationRequestMessageSchema.parse(JSON.parse(String(init.body)));
+      messages.push(message);
+      return Response.json(
+        createSuccessfulCommunicationResponseMessage(message.requestId, { taskId: "task" }),
+      );
+    }),
+  );
+  await manager.open();
+  const panel = host.panels[0]!;
+  panel.receive(
+    createCommunicationRequestMessage("create", sessionMethods.create, {
+      projectPath: "/ignored-page-path",
+      prompt: "task",
+    }),
+  );
+  await vi.waitFor(() =>
+    expect(panel.webview.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: "create", success: true }),
+    ),
+  );
+  expect(messages).toEqual([
+    expect.objectContaining({
+      method: sessionMethods.create,
+      params: expect.objectContaining({ projectPath: canonicalPath }),
+    }),
+  ]);
+});
+
+it.each([diagnosticMethods.read, deliveryMethods.read])(
+  "forwards read-only %s without trust or a task history read",
+  async (method) => {
+    host.workspace.trusted = false;
+    const methods: string[] = [];
+    const response = createSuccessfulCommunicationResponseMessage("read-only", { taskId: "task" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: unknown, init: RequestInit) => {
+        const message = communicationRequestMessageSchema.parse(JSON.parse(String(init.body)));
+        methods.push(message.method);
+        return Response.json(response);
+      }),
+    );
+    await manager.open();
+    const panel = host.panels[0]!;
+    panel.receive(createCommunicationRequestMessage("read-only", method, { taskId: "task" }));
+    await vi.waitFor(() => expect(panel.webview.postMessage).toHaveBeenCalledWith(response));
+    expect(methods).toEqual([method]);
+    expect(host.realpath).not.toHaveBeenCalled();
+  },
+);
 
 it("opens resolved images and source line locations with VS Code's file editor", async () => {
   await manager.open();
@@ -238,11 +521,15 @@ it("opens a separate settings editor and retains both pages when revealing them 
 
 it("isolates streams with identical request ids when opening, cancelling and closing settings", async () => {
   const signals: AbortSignal[] = [];
+  const methods: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(
       (_url: unknown, init: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
+          methods.push(
+            communicationInboundMessageSchema.parse(JSON.parse(String(init.body))).method,
+          );
           const signal = init.signal!;
           signals.push(signal);
           signal.addEventListener(
@@ -277,6 +564,72 @@ it("isolates streams with identical request ids when opening, cancelling and clo
   expect(signals[0]?.aborted).toBe(false);
   manager.dispose();
   expect(signals[0]?.aborted).toBe(true);
+  expect(methods).toEqual(Array.from({ length: 3 }, () => sessionMethods.subscribe));
+});
+
+it("only cancels the old subscription when navigating to another task", async () => {
+  const methods: string[] = [];
+  let subscriptionSignal: AbortSignal | null | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((_url: unknown, init: RequestInit) => {
+      methods.push(communicationInboundMessageSchema.parse(JSON.parse(String(init.body))).method);
+      subscriptionSignal = init.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("Aborted", "AbortError")),
+          { once: true },
+        );
+      });
+    }),
+  );
+  await manager.openHistoryTask("task-1");
+  const panel = host.panels[0]!;
+  panel.receive(
+    createCommunicationStreamRequestMessage("subscription", sessionMethods.subscribe, {
+      taskId: "task-1",
+    }),
+  );
+  expect(subscriptionSignal?.aborted).toBe(false);
+  await manager.openHistoryTask("task-2");
+  expect(subscriptionSignal?.aborted).toBe(true);
+  expect(methods).toEqual([sessionMethods.subscribe]);
+  expect(panel.webview.html).toContain("task-2");
+});
+
+it("authorizes each new request against the current workspace rather than the one that opened the panel", async () => {
+  host.workspace.projectPath = tmpdir();
+  await manager.open();
+  host.workspace.projectPath = "/";
+  const methods: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url: unknown, init: RequestInit) => {
+      const message = communicationRequestMessageSchema.parse(JSON.parse(String(init.body)));
+      methods.push(message.method);
+      return Response.json(
+        createSuccessfulCommunicationResponseMessage(message.requestId, taskSnapshot()),
+      );
+    }),
+  );
+  const panel = host.panels[0]!;
+  panel.receive(
+    createCommunicationRequestMessage("send", sessionMethods.send, {
+      taskId: "task",
+      text: "change",
+    }),
+  );
+  await vi.waitFor(() =>
+    expect(panel.webview.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "send",
+        success: false,
+        error: expect.objectContaining({ message: expect.stringContaining("不一致") }),
+      }),
+    ),
+  );
+  expect(methods).toEqual([sessionMethods.read]);
 });
 
 it("navigates tasks without touching the open settings page and can reopen a closed settings tab", async () => {

@@ -85,6 +85,14 @@ export function MasterGoFields({
           title="连接检查成功"
           description={
             <div className={styles.checkResult}>
+              {result.source.kind === "mastergo" && (
+                <span>
+                  {result.source.connection.kind === "magic"
+                    ? "已完成 MCP 握手和工具清单检查；尚未验证目标设计读取权限。"
+                    : "已核对文件、页面和 JSON 读取工具；尚未读取目标节点。"}
+                </span>
+              )}
+              <span>连接检查不代表任务或验收通过。</span>
               <span>
                 {result.tools.length} 个工具
                 {result.serverVersion ? ` · 服务版本 ${result.serverVersion}` : ""}

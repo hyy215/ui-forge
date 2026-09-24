@@ -1,0 +1,141 @@
+[
+  {
+    "id": "design-input",
+    "title": "设计输入与接入选择",
+    "description": "文件级自动化回归：输入校验、local/Magic/Vibe 显式选择、只读连接预检范围，以及页面切换来源后保留需求和严格验收选项。使用测试替身，不证明真实设计平台可用、节点可读或模型任务成功。",
+    "vitest": [
+      "packages/shared-protocol/src/design/designSource.test.ts",
+      "packages/codex-client/src/design/boundaries.test.ts",
+      "packages/codex-client/src/design/connections.test.ts",
+      "apps/agent-server/src/design/checkDesignConnection.test.ts",
+      "apps/agent-cli/src/options.test.ts",
+      "apps/agent-cli/src/designSourceOptions.test.ts",
+      "apps/agent-cli/src/commands/designCheck.test.ts",
+      "apps/agent-webview/src/features/sessions/designInput.test.ts"
+    ],
+    "playwright": [
+      "apps/agent-webview/e2e/design-source.spec.ts",
+      "apps/agent-webview/e2e/native-sessions.spec.ts"
+    ]
+  },
+  {
+    "id": "approvals",
+    "title": "审批与宿主授权",
+    "description": "文件级自动化回归：审批同意、拒绝和取消的原生转发，重复或跨任务回复拒绝，子线程审批归属，以及宿主任务目录、信任和异步授权检查。使用原生连接及 VS Code 替身，不等于真实沙箱或安装后权限验证。",
+    "vitest": [
+      "packages/codex-client/src/codexClient.test.ts",
+      "packages/client-core/src/sessionPresentation.test.ts",
+      "apps/agent-server/src/sessions/sessionService.test.ts",
+      "apps/agent-webview/src/features/sessions/requestPresentation.test.ts",
+      "apps/agent-cli/src/taskSession.test.ts",
+      "apps/vscode-extension/src/hostRequestPolicy.test.ts",
+      "apps/vscode-extension/src/UiForgePanelManager.test.ts"
+    ],
+    "playwright": [
+      "apps/agent-webview/e2e/native-sessions.spec.ts",
+      "apps/agent-webview/e2e/long-task.spec.ts"
+    ]
+  },
+  {
+    "id": "recovery",
+    "title": "断线与跨入口恢复",
+    "description": "文件级自动化回归：历史和待处理请求恢复、快照与增量边界、并发重连、继续请求时序及通信协议协商。CLI 与页面集成使用本地 HTTP 和原生连接替身；不调用真实模型，也不以重连成功推断后台执行或验收成功。",
+    "vitest": [
+      "apps/agent-server/src/sessions/sessionService.test.ts",
+      "apps/agent-server/src/sessions/sessionEventHub.test.ts",
+      "apps/agent-server/src/sessions/sessionEventHubBoundary.test.ts",
+      "apps/agent-server/src/sessions/sessionResumeConcurrency.test.ts",
+      "apps/agent-server/src/sessions/sessionTurnOrder.test.ts",
+      "packages/client-core/src/sessionPresentation.test.ts",
+      "packages/client-core/src/sessionPresentationTurnOrder.test.ts",
+      "packages/client-core/src/readCommunicationStream.test.ts",
+      "packages/shared-protocol/src/communication/protocolNegotiation.test.ts",
+      "apps/agent-webview/src/communication/createNegotiatedCommunicationClient.test.ts",
+      "apps/agent-cli/src/client.test.ts"
+    ],
+    "playwright": [
+      "apps/agent-webview/e2e/native-sessions.spec.ts",
+      "apps/agent-webview/e2e/failure-experience.spec.ts",
+      "apps/agent-webview/e2e/long-task.spec.ts"
+    ]
+  },
+  {
+    "id": "failure-retry",
+    "title": "失败分类与显式继续",
+    "description": "文件级自动化回归：结构化失败分类、容量失败保留已有记录、区分原生重试与实际失败，以及仅在用户明确请求后继续。错误和原生事件由测试构造，不验证上游服务容量恢复或真实任务成功率。",
+    "vitest": [
+      "packages/client-core/src/sessionFailure.test.ts",
+      "packages/client-core/src/sessionRetryPresentation.test.ts",
+      "packages/client-core/src/recordedWork.test.ts",
+      "packages/codex-client/src/codexClient.test.ts",
+      "apps/agent-server/src/sessions/sessionService.test.ts",
+      "apps/agent-server/src/sessions/sessionEventHub.test.ts",
+      "apps/agent-webview/src/features/sessions/currentNativeRetry.test.ts",
+      "apps/agent-cli/src/taskSession.test.ts"
+    ],
+    "playwright": [
+      "apps/agent-webview/e2e/failure-experience.spec.ts",
+      "apps/agent-webview/e2e/native-sessions.spec.ts"
+    ]
+  },
+  {
+    "id": "stop-observation",
+    "title": "停止与长任务观测",
+    "description": "文件级自动化回归：本轮停止提交与最终状态区分、未确认和迟到回执、草稿保留、原生耗时和主线程累计 Token 展示。使用模拟事件和时钟，不测真实长任务性能、费用、剩余配额或模型硬预算。",
+    "vitest": [
+      "packages/client-core/src/taskObservation.test.ts",
+      "packages/codex-client/src/codexClient.test.ts",
+      "apps/agent-server/src/sessions/sessionService.test.ts",
+      "apps/agent-cli/src/taskSession.test.ts"
+    ],
+    "playwright": [
+      "apps/agent-webview/e2e/long-task.spec.ts",
+      "apps/agent-webview/e2e/failure-experience.spec.ts",
+      "apps/agent-webview/e2e/native-sessions.spec.ts"
+    ]
+  },
+  {
+    "id": "vibe-isolation",
+    "title": "Vibe 绑定与读取隔离",
+    "description": "文件级自动化回归：固定文档、页面和节点，同实例活动任务互斥、租约失效与迟到读取，以及只读工具参数和 HTTP 来源限制。使用本地 MCP 服务及上游替身，不连接真实 MasterGo，也不验证账号权益或模型对不可信内容的所有行为。",
+    "vitest": [
+      "packages/codex-client/src/design/boundaries.test.ts",
+      "packages/codex-client/src/design/connections.test.ts",
+      "packages/codex-client/src/design/vibeReadOnlyBridge.test.ts",
+      "apps/agent-server/src/design/vibeLeases.test.ts",
+      "apps/agent-server/src/sessions/sessionService.test.ts"
+    ],
+    "playwright": []
+  },
+  {
+    "id": "delivery",
+    "title": "交付报告与证据核对",
+    "description": "文件级自动化回归：报告协议、只读查询、声明与证据分离、源码指纹及文件读取边界、材料缺口和工作区不可用时的历史报告。使用合成报告、临时文件及原生历史替身，不证明生成项目通过业务、交互或视觉验收。",
+    "vitest": [
+      "packages/shared-protocol/src/delivery/taskDelivery.test.ts",
+      "packages/codex-client/src/deliveryContext.test.ts",
+      "packages/codex-client/src/temporaryWorkspace.test.ts",
+      "packages/client-core/src/deliveryGaps.test.ts",
+      "apps/agent-server/src/delivery/deliveryFiles.test.ts",
+      "apps/agent-server/src/delivery/deliveryService.test.ts",
+      "apps/agent-server/src/sessions/sessionDelivery.test.ts",
+      "apps/agent-server/src/sessions/sessionService.test.ts",
+      "apps/agent-cli/src/commands/delivery.test.ts"
+    ],
+    "playwright": ["apps/agent-webview/e2e/task-delivery.spec.ts"]
+  },
+  {
+    "id": "diagnostics",
+    "title": "任务诊断与脱敏导出",
+    "description": "文件级自动化回归：只读历史查询、创建时规则指纹、元数据持久化、白名单导出、未知观测值和页面导出失败处理。使用合成历史及通信替身，不作为真实模型性能、费用或任务成功率统计。",
+    "vitest": [
+      "packages/shared-protocol/src/diagnostics/taskDiagnostics.test.ts",
+      "apps/agent-server/src/diagnostics/diagnosticMetadataStore.test.ts",
+      "apps/agent-server/src/diagnostics/taskDiagnostics.test.ts",
+      "apps/agent-server/src/diagnostics/sessionDiagnostics.test.ts",
+      "apps/agent-server/src/sessions/sessionService.test.ts",
+      "apps/agent-webview/src/features/sessions/diagnosticsPresentation.test.ts"
+    ],
+    "playwright": ["apps/agent-webview/e2e/task-diagnostics.spec.ts"]
+  }
+]

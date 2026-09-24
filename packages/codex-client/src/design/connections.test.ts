@@ -113,15 +113,30 @@ describe("design connection checks", () => {
         },
       ],
     });
-    await expect(checkVibeConnection(connection)).rejects.toThrow("Vibe MCP check failed");
+    await expect(checkVibeConnection(connection)).rejects.toThrow("画布发生变化");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json(status)),
     );
     listTools.mockResolvedValue({ tools: [] });
-    await expect(checkVibeConnection(connection)).rejects.toThrow("Vibe MCP check failed");
+    await expect(checkVibeConnection(connection)).rejects.toThrow("未提供所需的 JSON 读取工具");
     listTools.mockRejectedValue(new Error("token=secret"));
-    await expect(checkVibeConnection(connection)).rejects.toThrow("Vibe MCP check failed");
+    await expect(checkVibeConnection(connection)).rejects.toThrow(
+      "无法获取 Vibe MCP 工具清单，请检查服务连接后重试。",
+    );
+    expect(close).toHaveBeenCalledTimes(3);
+  });
+  it("identifies MCP failures without exposing upstream data and closes the transport", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json(status)),
+    );
+    connect.mockRejectedValue(new Error("token=secret"));
+    await expect(checkVibeConnection(connection)).rejects.toThrow(
+      "无法连接 Vibe MCP，请确认 MCP 服务已启动，并检查 MCP 地址（不是画布状态地址）。",
+    );
+    expect(listTools).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
   });
   it("pins fetch destination and forbids credentials and redirect following", async () => {
     const fetchMock = vi.fn(async () => new Response("ok"));
@@ -144,14 +159,27 @@ describe("design connection checks", () => {
       vi.fn(async () => new Response("private token", { status: 403 })),
     );
     await expect(readVibeStatus(connection)).rejects.toThrow(
-      "Vibe active document/page is unavailable",
+      "无法读取 Vibe 当前文件和页面，请在客户端打开目标画布，并检查画布状态地址（不是 MCP 地址）。",
     );
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json({ documentId: "file1", token: "secret" })),
     );
     await expect(readVibeStatus(connection)).rejects.toThrow(
-      "Vibe active document/page is unavailable",
+      "无法读取 Vibe 当前文件和页面，请在客户端打开目标画布，并检查画布状态地址（不是 MCP 地址）。",
     );
+  });
+  it("fails at the status check before opening MCP when the status service is unavailable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("private transport details");
+      }),
+    );
+    await expect(checkVibeConnection(connection)).rejects.toThrow(
+      "无法读取 Vibe 当前文件和页面，请在客户端打开目标画布，并检查画布状态地址（不是 MCP 地址）。",
+    );
+    expect(connect).not.toHaveBeenCalled();
+    expect(listTools).not.toHaveBeenCalled();
   });
 });

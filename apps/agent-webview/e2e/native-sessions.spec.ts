@@ -175,7 +175,14 @@ test("capacity failure keeps progress and continues only after an explicit reque
   await expect(resume).toBeVisible();
   await expect(page.getByText("本轮失败", { exact: true })).toBeVisible();
   await expect(page.getByText("模型暂时繁忙", { exact: true })).toBeVisible();
-  await expect(page.getByText("Selected model is at capacity.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("1 条命令成功退出，1 条已完成文件变更", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText("记录不代表当前文件状态或验收通过", { exact: false })).toBeVisible();
+  const originalError = page.getByText("Selected model is at capacity.", { exact: false });
+  await expect(originalError).not.toBeVisible();
+  await page.locator("summary").filter({ hasText: "原始错误详情" }).click();
+  await expect(originalError).toBeVisible();
   await page.getByRole("link", { name: "ui-forge", exact: true }).click();
   await page.getByRole("link", { name: /实现客户列表/ }).click();
   await expect(page).toHaveURL(taskUrl);
@@ -194,13 +201,20 @@ test("capacity failure keeps progress and continues only after an explicit reque
     fullPage: true,
   });
   await resume.click();
+  await expect(
+    page.getByText("继续请求未确认，请先核对当前状态，勿重复提交。", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("发送暂时失败，请重试。", { exact: true })).toBeVisible();
+  await expect(page.getByRole("form", { name: "发送消息" }).getByRole("alert")).toHaveCount(0);
   await expect(resume).toBeEnabled();
   await expect(draft).toHaveValue("保留这条尚未发送的补充要求");
   await expect(page.getByRole("img", { name: "capacity-draft.png" })).toBeVisible();
   await resume.click();
   await expect(page.locator("article").filter({ hasText: "先检查原会话记录" })).toHaveCount(1);
   await expect(resume).toHaveCount(0);
+  await expect(
+    page.getByText("继续请求未确认，请先核对当前状态，勿重复提交。", { exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByText("将按最新要求继续修改。", { exact: true })).toBeVisible();
   await expect(draft).toHaveValue("保留这条尚未发送的补充要求");
   await expect(page.getByRole("img", { name: "capacity-draft.png" })).toBeVisible();
@@ -210,7 +224,12 @@ test("capacity failure keeps progress and continues only after an explicit reque
     .toBe(true);
 });
 
-for (const scenario of ["usage-limit", "context-limit"]) {
+for (const scenario of [
+  "usage-limit",
+  "context-limit",
+  "network-failure",
+  "failed-without-error",
+]) {
   test(`does not offer capacity continuation for ${scenario}`, async ({ page }) => {
     await page.goto(`/?scenario=${scenario}#/tasks`);
     await page.getByLabel("目标工作区", { exact: true }).fill("/tmp/demo-project");
@@ -219,6 +238,14 @@ for (const scenario of ["usage-limit", "context-limit"]) {
     await expect(page.getByText("本轮失败", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "继续当前任务", exact: true })).toHaveCount(0);
     await expect(page.getByText("模型暂时繁忙", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("下一步：", { exact: true })).toBeVisible();
+    await expect(page.getByText("本轮已记录工作：", { exact: true })).toBeVisible();
+    if (scenario === "network-failure")
+      await expect(page.getByText("上游服务连接失败", { exact: true })).toBeVisible();
+    if (scenario === "failed-without-error")
+      await expect(
+        page.getByText("本轮执行失败，尚不能确定具体原因。", { exact: true }),
+      ).toBeVisible();
   });
 }
 

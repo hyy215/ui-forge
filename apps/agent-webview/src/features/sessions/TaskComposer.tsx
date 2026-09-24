@@ -1,6 +1,7 @@
 /** 后续消息输入框，支持文字、选图、粘贴和拖放，提交失败时保留草稿。 */
 import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Input, Space } from "antd";
+import { StopOutlined } from "@ant-design/icons";
 import type { SendSessionInput } from "@ui-forge/shared-protocol";
 import { readImage } from "./imageInput";
 import styles from "./Sessions.module.css";
@@ -12,14 +13,32 @@ interface TaskComposerProps {
   error: string;
   onSend: (text: string, images: SendSessionInput["images"]) => Promise<unknown>;
   onStop?: (() => Promise<unknown>) | undefined;
+  stopTurnId?: string | undefined;
+}
+
+interface StopFeedback {
+  turnId: string;
+  phase: "requesting" | "accepted" | "uncertain";
+  details?: string;
 }
 
 /** 发送真实输入，成功后清空，异步读取或提交期间阻止重复发送。 */
-export function TaskComposer({ connected, busy, error, onSend, onStop }: TaskComposerProps) {
+export function TaskComposer({
+  connected,
+  busy,
+  error,
+  onSend,
+  onStop,
+  stopTurnId,
+}: TaskComposerProps) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<SendSessionInput["images"]>([]);
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState("");
+  const [stopFeedback, setStopFeedback] = useState<StopFeedback | null>(null);
+  const stopRequest = useRef<object | null>(null);
+  const currentStopTurn = useRef(stopTurnId);
+  currentStopTurn.current = stopTurnId;
   const reading = useRef(false);
   const sending = useRef(false);
   const mounted = useRef(true);
@@ -29,7 +48,42 @@ export function TaskComposer({ connected, busy, error, onSend, onStop }: TaskCom
       mounted.current = false;
     };
   }, []);
+  useEffect(() => {
+    setStopFeedback(null);
+    stopRequest.current = null;
+  }, [stopTurnId]);
+  const feedback = stopFeedback?.turnId === stopTurnId ? stopFeedback : null;
+  const stopAccepted = feedback?.phase === "accepted";
   const disabled = busy || !connected;
+  const stop = async () => {
+    if (
+      disabled ||
+      sending.current ||
+      !onStop ||
+      !stopTurnId ||
+      stopRequest.current ||
+      stopAccepted
+    )
+      return;
+    const request = {};
+    const requestedTurn = stopTurnId;
+    stopRequest.current = request;
+    setStopFeedback({ turnId: requestedTurn, phase: "requesting" });
+    try {
+      await onStop();
+      if (mounted.current && currentStopTurn.current === requestedTurn)
+        setStopFeedback({ turnId: requestedTurn, phase: "accepted" });
+    } catch (failure) {
+      if (mounted.current && currentStopTurn.current === requestedTurn)
+        setStopFeedback({
+          turnId: requestedTurn,
+          phase: "uncertain",
+          details: failure instanceof Error ? failure.message.slice(0, 2000) : "停止请求失败。",
+        });
+    } finally {
+      if (stopRequest.current === request) stopRequest.current = null;
+    }
+  };
   const addImages = async (files: File[]) => {
     if (disabled || reading.current || sending.current || !files.length) return;
     reading.current = true;
@@ -50,7 +104,14 @@ export function TaskComposer({ connected, busy, error, onSend, onStop }: TaskCom
     }
   };
   const send = async () => {
-    if (disabled || reading.current || sending.current || (!text.trim() && !images.length)) return;
+    if (
+      disabled ||
+      reading.current ||
+      sending.current ||
+      stopRequest.current ||
+      (!text.trim() && !images.length)
+    )
+      return;
     sending.current = true;
     try {
       await onSend(text, images);
@@ -153,16 +214,28 @@ export function TaskComposer({ connected, busy, error, onSend, onStop }: TaskCom
       <div className={styles.composerFooter}>
         <span>关闭页面后，任务继续运行</span>
         <Space>
-          {onStop && (
+          {onStop && stopTurnId && (
             <Button
               danger
-              loading={busy}
-              disabled={!connected}
+              aria-label={
+                stopAccepted
+                  ? "停止请求已提交"
+                  : feedback?.phase === "uncertain"
+                    ? "再次请求停止"
+                    : "停止本轮"
+              }
+              icon={<StopOutlined aria-hidden="true" />}
+              loading={feedback?.phase === "requesting"}
+              disabled={disabled || stopAccepted}
               onClick={() => {
-                void onStop().catch(() => undefined);
+                void stop();
               }}
             >
-              停止本轮
+              {stopAccepted
+                ? "停止请求已提交"
+                : feedback?.phase === "uncertain"
+                  ? "再次请求停止"
+                  : "停止本轮"}
             </Button>
           )}
           <Button
@@ -175,6 +248,23 @@ export function TaskComposer({ connected, busy, error, onSend, onStop }: TaskCom
           </Button>
         </Space>
       </div>
+      {onStop && feedback && (
+        <div className={styles.stopFeedback} role="status" aria-live="polite">
+          {feedback.phase === "requesting" ? (
+            <p>正在发送停止请求，尚未确认本轮停止。</p>
+          ) : feedback.phase === "accepted" ? (
+            <p>停止请求已提交，等待 Codex 确认。本轮仍以原生状态为准。</p>
+          ) : (
+            <>
+              <p>停止请求未确认，请先核对当前状态，勿重复提交。</p>
+              <details className={styles.failureTechnical}>
+                <summary>停止请求详情</summary>
+                <pre>{feedback.details}</pre>
+              </details>
+            </>
+          )}
+        </div>
+      )}
     </form>
   );
 }

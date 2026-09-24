@@ -156,7 +156,26 @@ export function applySessionEvent(
   const turnId = stringValue(params.turnId);
   if (method === "item/started" || method === "item/completed") {
     const item = nativeItemSchema.safeParse(params.item);
-    return item.success && turnId ? updateItem(state, turnId, item.data) : state;
+    if (!item.success || !turnId) return state;
+    const previous = snapshot.thread.turns
+      .find((turn) => turn.id === turnId)
+      ?.items.find((entry) => entry.id === item.data.id);
+    // 终态 item 的重复通知不代表当前重试已经取得新进展。
+    const hasProgress =
+      !previous ||
+      previous.type !== item.data.type ||
+      previous.status !== item.data.status ||
+      (typeof item.data.text === "string" &&
+        item.data.text.length > 0 &&
+        previous.text !== item.data.text) ||
+      (typeof item.data.aggregatedOutput === "string" &&
+        item.data.aggregatedOutput.length > 0 &&
+        previous.aggregatedOutput !== item.data.aggregatedOutput);
+    return updateItem(
+      hasProgress ? clearNativeRetry(state, params.threadId, turnId) : state,
+      turnId,
+      item.data,
+    );
   }
   const itemId = stringValue(params.itemId);
   const delta = stringValue(params.delta);
@@ -165,14 +184,14 @@ export function applySessionEvent(
       .find((turn) => turn.id === turnId)
       ?.items.find((item) => item.id === itemId);
     if (method === "item/agentMessage/delta" || method === "item/plan/delta")
-      return updateItem(state, turnId, {
+      return updateItem(delta ? clearNativeRetry(state, params.threadId, turnId) : state, turnId, {
         ...previous,
         id: itemId,
         type: previous?.type ?? (method.includes("agentMessage") ? "agentMessage" : "plan"),
         text: stringValue(previous?.text) + delta,
       });
     if (method === "item/commandExecution/outputDelta")
-      return updateItem(state, turnId, {
+      return updateItem(delta ? clearNativeRetry(state, params.threadId, turnId) : state, turnId, {
         ...previous,
         id: itemId,
         type: "commandExecution",
@@ -190,7 +209,11 @@ export function applySessionEvent(
         while (summary.length <= index) summary.push("");
         summary[index] = (summary[index] ?? "") + delta;
       }
-      return updateItem(state, turnId, { ...previous, id: itemId, type: "reasoning", summary });
+      return updateItem(
+        delta && index < 1000 ? clearNativeRetry(state, params.threadId, turnId) : state,
+        turnId,
+        { ...previous, id: itemId, type: "reasoning", summary },
+      );
     }
   }
   if (
@@ -201,6 +224,29 @@ export function applySessionEvent(
   )
     return state;
   return addActivity(state, method, params);
+}
+
+/** 真实主线程活动恢复后移除过期重试提示；不改变轮次、审批或原始历史。 */
+function clearNativeRetry(
+  state: SessionPresentation,
+  threadId: unknown,
+  turnId: string,
+): SessionPresentation {
+  if (
+    threadId !== state.snapshot?.thread.id ||
+    !state.snapshot?.thread.turns.some((turn) => turn.id === turnId && turn.status === "inProgress")
+  )
+    return state;
+  const activities = state.activities.filter(
+    (activity) =>
+      !(
+        activity.method === "error" &&
+        activity.params?.threadId === threadId &&
+        activity.params?.turnId === turnId &&
+        activity.params?.willRetry === true
+      ),
+  );
+  return activities.length === state.activities.length ? state : { ...state, activities };
 }
 
 /** 替换同一轮次的补丁/计划与同一子任务 item 的更新，避免重复堆积整份 JSON。 */

@@ -7,6 +7,7 @@ import {
   prepareTemporaryWorkspace,
   resolveCodexExecutable,
   temporaryWorkspaceContext,
+  deliveryContext,
   type CodexEvent,
   type NativeMethods,
 } from "@ui-forge/codex-client";
@@ -20,6 +21,7 @@ import {
   type SessionEvent,
   type SessionSnapshot,
   type TaskDiagnostics,
+  type TaskDelivery,
   type DiagnosticAgentSummary,
   type DiagnosticRuntime,
   type DesignBinding,
@@ -31,6 +33,7 @@ import {
 } from "../design/sessionDesignBindings.js";
 import { DiagnosticMetadataStore } from "../diagnostics/diagnosticMetadataStore.js";
 import { projectTaskDiagnostics } from "../diagnostics/taskDiagnostics.js";
+import { DeliveryService } from "../delivery/deliveryService.js";
 import {
   CodexConnections,
   type CodexConnectionFactory,
@@ -147,6 +150,7 @@ export class SessionService {
   private readonly events: SessionEventHub;
   private readonly diagnostics: DiagnosticMetadataStore;
   private readonly designs: SessionDesignBindings;
+  private readonly delivery: DeliveryService;
   private readonly operations = new Map<string, Promise<unknown>>();
   /** 将原生线程及其子线程映射到 ui-forge 根任务，供并发诊断使用。 */
   private readonly diagnosticRoots = new Map<string, string>();
@@ -167,6 +171,9 @@ export class SessionService {
       this.index,
       (taskId) => this.readNative(taskId),
       options,
+    );
+    this.delivery = new DeliveryService(this.index, options.directory, (taskId) =>
+      this.readNative(taskId),
     );
   }
   /** 在取得服务锁后加载索引。 */
@@ -253,7 +260,10 @@ export class SessionService {
       const started = await connection.client.request("turn/start", {
         threadId: thread.id,
         input: prepared.input,
-        additionalContext: temporaryWorkspaceContext(temporary),
+        additionalContext: {
+          ...temporaryWorkspaceContext(temporary),
+          ...deliveryContext(temporary, thread.id),
+        },
       });
       // 仅补入尚未观察到的轮次，不能用启动响应覆盖较新的原生通知。
       this.events.publishTurnStart(thread.id, started.turn);
@@ -286,6 +296,10 @@ export class SessionService {
     await this.diagnostics.recordConcurrency(taskId, current);
     const metadata = await this.diagnostics.read(taskId);
     return projectTaskDiagnostics(thread, metadata, children.threads, children.warnings);
+  }
+  /** 核对交付声明与现有文件，只有引用原生工具时读取历史，不恢复或启动任务。 */
+  readDelivery(taskId: string): Promise<TaskDelivery> {
+    return this.delivery.read(taskId);
   }
   /** 原生恢复仅装载历史，不重新执行之前的用户输入。 */
   async read(taskId: string): Promise<SessionSnapshot> {
@@ -326,7 +340,10 @@ export class SessionService {
           ...(text.trim() ? [{ type: "text" as const, text, text_elements: [] }] : []),
           ...paths.map((path) => ({ type: "localImage" as const, path })),
         ];
-        const additionalContext = temporaryWorkspaceContext(temporary);
+        const additionalContext = {
+          ...temporaryWorkspaceContext(temporary),
+          ...deliveryContext(temporary, taskId),
+        };
         if (active)
           await connection.client.request("turn/steer", {
             threadId: taskId,

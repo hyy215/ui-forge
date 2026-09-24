@@ -20,15 +20,22 @@ export function registerDesignCheckCommand(program: Command): void {
       designConnectionCheckSchema,
     );
     const target = report.target;
-    const readable = [
+    const readable =
       source.kind === "local"
-        ? "来源：图片/文字；无需平台接入。"
-        : `来源：MasterGo；接入：${source.connection.kind === "magic" ? "Magic" : "Vibe"}；连接检查成功。`,
-      ...(target
-        ? [`文件：${target.documentId}；页面：${target.pageId ?? "未记录"}；节点：${target.nodeId}`]
-        : []),
-      `工具：${report.tools.length}；服务版本：${report.serverVersion ?? "未记录"}`,
-    ].join("\n");
+        ? "来源：图片/文字；无需平台接入。\n未执行 MCP 连接检查或交付验收。"
+        : [
+            `来源：MasterGo；接入：${source.connection.kind === "magic" ? "Magic" : "Vibe"}；只读预检通过。`,
+            source.connection.kind === "magic"
+              ? "已检查：MCP 握手与工具清单。"
+              : "已检查：MCP 握手、工具清单、当前文件/页面及 JSON 读取工具。",
+            ...(target
+              ? [
+                  `目标标识：文件 ${target.documentId}；页面 ${target.pageId ?? "未记录"}；节点 ${target.nodeId}`,
+                ]
+              : []),
+            `工具：${report.tools.length}；服务版本：${report.serverVersion ?? "未记录"}`,
+            "未检查：目标节点尚未读取，设计读取权限未证实；未执行交付验收。",
+          ].join("\n");
     process.stdout.write(`${readJsonOption(command) ? JSON.stringify(report) : readable}\n`);
   });
 }

@@ -27,6 +27,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test --config apps/agent-webview/playwright.config.ts",
     "test:watch": "vitest",
+    "regression:prepare": "node scripts/regression/run.mjs prepare",
+    "regression:summarize": "node scripts/regression/run.mjs summarize",
+    "benchmark:history": "node apps/agent-webview/scripts/benchmark-history.mjs",
     "ui-forge": "node apps/agent-cli/dist/main.js"
   },
   "devDependencies": {

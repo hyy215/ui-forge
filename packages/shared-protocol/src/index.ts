@@ -6,3 +6,4 @@ export * from "./instructions/index.js";
 export * from "./files/index.js";
 export * from "./diagnostics/index.js";
 export * from "./design/index.js";
+export * from "./delivery/index.js";

@@ -4,6 +4,7 @@ import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { verifyPackage } from "./verify-package.mjs";
 
 const extensionRoot = fileURLToPath(new URL("../", import.meta.url));
 const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -73,7 +74,19 @@ await writeFile(
     2,
   ) + "\n",
 );
+const verified = await verifyPackage(staging);
 console.log(`VSIX 暂存目录：${staging}`);
+console.log(
+  `发布清单、CJS 入口与 JS/CSS 依赖校验通过：${verified.files.length} 个文件，版本 ${verified.version}`,
+);
+if (!process.argv.includes("--smoke"))
+  console.log("尚未检查生产 HTML 加载；追加 --smoke 运行生产页面冒烟。");
+if (process.argv.includes("--smoke"))
+  run(
+    process.execPath,
+    [join(extensionRoot, "scripts", "smoke-webview.mjs"), staging],
+    repositoryRoot,
+  );
 if (!prepareOnly) {
   const outputDirectory = join(repositoryRoot, "dist");
   await mkdir(outputDirectory, { recursive: true });

@@ -6,7 +6,10 @@ import {
   sessionMethods,
   diagnosticMethods,
   designMethods,
+  deliveryMethods,
+  taskDeliverySchema,
   taskDiagnosticsSchema,
+  type TaskDelivery,
   type TaskDiagnostics,
   type SessionSnapshot,
 } from "@ui-forge/shared-protocol";
@@ -190,19 +193,26 @@ describe("command parsing and output", () => {
     },
   );
 
-  it.each(["doctor", "serve", "run", "list", "status", "resume", "diagnostics", "design-check"])(
-    "shows help for %s before checking required inputs",
-    async (command) => {
-      await runCli([command, "--help"]);
-      expect(stdout.join("")).toContain(`Usage: ui-forge ${command}`);
-      expect(stdout.join("")).toContain("--json");
-      expect(stderr).toEqual([]);
-      expect(process.exitCode ?? 0).toBe(0);
-      expect(runtime.connect).not.toHaveBeenCalled();
-      expect(runtime.version).not.toHaveBeenCalled();
-      expect(runtime.listen).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    "doctor",
+    "serve",
+    "run",
+    "list",
+    "status",
+    "resume",
+    "diagnostics",
+    "delivery",
+    "design-check",
+  ])("shows help for %s before checking required inputs", async (command) => {
+    await runCli([command, "--help"]);
+    expect(stdout.join("")).toContain(`Usage: ui-forge ${command}`);
+    expect(stdout.join("")).toContain("--json");
+    expect(stderr).toEqual([]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(runtime.connect).not.toHaveBeenCalled();
+    expect(runtime.version).not.toHaveBeenCalled();
+    expect(runtime.listen).not.toHaveBeenCalled();
+  });
 
   it("supports help run and documents only the selected command's options", async () => {
     await runCli(["help", "run"]);
@@ -229,6 +239,10 @@ describe("command parsing and output", () => {
     ["diagnostics", " "],
     ["diagnostics", "one", "two"],
     ["diagnostics", "task-1", "--target", "/tmp/app"],
+    ["delivery"],
+    ["delivery", " "],
+    ["delivery", "one", "two"],
+    ["delivery", "task-1", "--target", "/tmp/app"],
     ["resume"],
     ["status", " "],
     ["resume", "one", "two"],
@@ -273,6 +287,20 @@ describe("command parsing and output", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it.each([false, true])(
+    "filters terminal controls only in human error output (json=%s)",
+    async (json) => {
+      const message = "\u001b[31m服务不可达\u001b[0m\r\b\u001b]52;c;c2VjcmV0\u0007";
+      runtime.connect.mockRejectedValue(new Error(message));
+      await runCli(["status", "task-1", ...(json ? ["--json"] : [])]);
+      expect(stderr).toEqual([
+        json ? `${JSON.stringify({ type: "error", message })}\n` : "服务不可达\n",
+      ]);
+      expect(stdout).toEqual([]);
+      expect(process.exitCode).toBe(1);
+    },
+  );
+
   it("does not interpret JSON-looking requirement text after -- as an output flag", async () => {
     runtime.connect.mockRejectedValue(new Error("服务不可达"));
     await runCli(["run", "--target", "/tmp/app", "--", "--json"]);
@@ -294,6 +322,48 @@ describe("command parsing and output", () => {
 });
 
 describe("command execution", () => {
+  it.each([
+    ["delivery", "task-1", "--json"],
+    ["--json", "delivery", "task-1"],
+  ])("reads delivery without executing or watching a task: %j", async (...argv) => {
+    const delivery: TaskDelivery = {
+      version: 1,
+      taskId: "task-1",
+      checkedAt: "2026-09-23T01:00:00.000Z",
+      availability: "missing",
+      issue: null,
+      report: null,
+      reportSha256: null,
+      source: { state: "unverifiable", manifestFingerprint: null, files: [] },
+      evidence: [],
+      history: "not-requested",
+    };
+    Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: false });
+    runtime.request.mockResolvedValue(delivery);
+    await runCli(argv);
+    expect(runtime.request).toHaveBeenCalledExactlyOnceWith(
+      deliveryMethods.read,
+      { taskId: "task-1" },
+      taskDeliverySchema,
+    );
+    expect(JSON.parse(stdout.join(""))).toEqual(delivery);
+    expect(runtime.watch).not.toHaveBeenCalled();
+    expect(runtime.account).not.toHaveBeenCalled();
+    expect(stderr).toEqual([]);
+    expect(process.exitCode ?? 0).toBe(0);
+  });
+
+  it("reports delivery read errors without retrying or resuming", async () => {
+    runtime.request.mockRejectedValueOnce(new Error("交付记录无法读取"));
+    await runCli(["delivery", "task-1", "--json"]);
+    expect(stdout).toEqual([]);
+    expect(stderr).toEqual(['{"type":"error","message":"交付记录无法读取"}\n']);
+    expect(runtime.request).toHaveBeenCalledTimes(1);
+    expect(runtime.watch).not.toHaveBeenCalled();
+    expect(runtime.account).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
   it.each([
     ["diagnostics", "task-1", "--json"],
     ["--json", "diagnostics", "task-1"],

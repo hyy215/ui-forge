@@ -1,10 +1,12 @@
 /** 呈现原生轮次的计划和补丁更新；未知事件集中在折叠的技术详情中。 */
 import { z } from "zod";
-import { nativeItemSchema } from "@ui-forge/shared-protocol";
+import { Alert } from "antd";
+import { nativeItemSchema, type NativeThread } from "@ui-forge/shared-protocol";
 import { DiffView } from "./DiffView";
 import { NativeItemView } from "./NativeItemView";
 import { NativeValueView } from "./NativeValueView";
 import { stringValue, type SessionPresentation } from "@ui-forge/client-core";
+import { currentNativeRetry } from "./currentNativeRetry";
 import styles from "./Sessions.module.css";
 
 // 这些通知用于同步状态或流式内部细节，单独展示只会让启动阶段看起来像异常。
@@ -25,8 +27,10 @@ const hiddenActivityMethods = new Set([
 /** 展示归并后的活动内容；完整诊断数据不占据默认对话区域。 */
 export function SessionActivityView({
   activities,
+  thread,
 }: {
   activities: SessionPresentation["activities"];
+  thread: NativeThread | undefined;
 }) {
   const known = activities.filter((activity) =>
     [
@@ -42,6 +46,14 @@ export function SessionActivityView({
   );
   return (
     <>
+      {currentNativeRetry(thread, activities) && (
+        <Alert
+          type="info"
+          showIcon
+          title="Codex 正在重试"
+          description="原生服务仍在处理当前轮次，暂无需手动继续。"
+        />
+      )}
       {known.map((activity, index) => {
         const params = z.record(z.string(), z.unknown()).catch({}).parse(activity.params);
         if (activity.method === "turn/diff/updated")

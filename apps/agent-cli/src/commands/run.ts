@@ -13,6 +13,7 @@ import { LocalClient } from "../client.js";
 import { readJsonOption, requireTaskInputMode } from "../options.js";
 import { watchTask } from "../taskSession.js";
 import { addDesignSourceOptions, readDesignSourceOptions } from "../designSourceOptions.js";
+import { terminalText } from "../terminalText.js";
 
 const runOptionsSchema = z.object({
   target: z
@@ -79,7 +80,8 @@ export function registerRunCommand(program: Command): void {
       },
       createdSessionSchema,
     );
-    if (result.warning) process.stderr.write(`${result.warning}\n`);
+    if (result.warning)
+      process.stderr.write(`${json ? result.warning : terminalText(result.warning)}\n`);
     const snapshot = await client.request(
       sessionMethods.read,
       { taskId: result.taskId },

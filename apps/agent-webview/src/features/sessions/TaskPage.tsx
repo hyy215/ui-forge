@@ -1,5 +1,5 @@
 /** Codex 原生会话页面：展示消息与审批，支持补充输入、停止本轮和重新连接。 */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Tag } from "antd";
 import type { SessionDataSource } from "../../data-sources/sessionDataSource";
@@ -9,9 +9,11 @@ import { NativeItemView } from "./NativeItemView";
 import { PendingRequestPanel } from "./PendingRequestPanel";
 import { NewTaskForm } from "./NewTaskForm";
 import { TaskComposer } from "./TaskComposer";
+import { TaskRuntimeStatus } from "./TaskRuntimeStatus";
 import { SessionActivityView } from "./SessionActivityView";
 import { SessionFailureNotice } from "./SessionFailureNotice";
 import { TaskDiagnosticsPanel } from "./TaskDiagnosticsPanel";
+import { TaskDeliveryPanel } from "./TaskDeliveryPanel";
 import { TaskDesignBinding } from "./TaskDesignBinding";
 import { requestItem } from "@ui-forge/client-core";
 import { useTaskSession } from "./useTaskSession";
@@ -31,8 +33,10 @@ export function TaskPage({
 }) {
   const [search, setSearch] = useSearchParams();
   const taskId = search.get("taskId");
+  const fileContext = useMemo(() => (taskId ? { taskId, source: files } : null), [taskId, files]);
   const [warning, setWarning] = useState("");
-  const { state, error, busy, run, reconnect } = useTaskSession(source, taskId);
+  const [errorOrigin, setErrorOrigin] = useState<"composer" | "continue" | "stop">("composer");
+  const { state, observation, error, busy, run, reconnect } = useTaskSession(source, taskId);
   const timeline = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
   const [showLatest, setShowLatest] = useState(false);
@@ -60,19 +64,27 @@ export function TaskPage({
     );
   const lastTurn = snapshot?.thread.turns.at(-1);
   const pendingCount = snapshot?.pendingRequests.length ?? 0;
-  const status = pendingCount
-    ? "等待确认"
-    : activeTurn
-      ? "运行中"
-      : lastTurn?.status === "failed"
-        ? "本轮失败"
-        : lastTurn?.status === "interrupted"
-          ? "本轮已停止"
-          : lastTurn?.status === "completed"
-            ? "本轮已结束"
-            : "等待输入";
+  const nativeWaiting =
+    activeTurn &&
+    snapshot?.thread.status.type === "active" &&
+    Array.isArray(snapshot.thread.status.activeFlags) &&
+    snapshot.thread.status.activeFlags.some(
+      (flag) => flag === "waitingOnApproval" || flag === "waitingOnUserInput",
+    );
+  const status =
+    pendingCount || nativeWaiting
+      ? "等待确认"
+      : activeTurn
+        ? "运行中"
+        : lastTurn?.status === "failed"
+          ? "本轮失败"
+          : lastTurn?.status === "interrupted"
+            ? "本轮已停止"
+            : lastTurn?.status === "completed"
+              ? "本轮已结束"
+              : "等待输入";
   return (
-    <SessionFileContext value={{ taskId, source: files }}>
+    <SessionFileContext value={fileContext}>
       <main className={styles.session}>
         <header className={styles.sessionHeader}>
           <div>
@@ -83,11 +95,12 @@ export function TaskPage({
             </p>
           </div>
           <div className={styles.sessionActions}>
+            <TaskDeliveryPanel key={`delivery-${taskId}`} taskId={taskId} source={source} />
             <TaskDiagnosticsPanel key={taskId} taskId={taskId} source={source} host={host} />
             <Tag
               color={
                 state.connection === "connected"
-                  ? pendingCount
+                  ? pendingCount || nativeWaiting
                     ? "warning"
                     : activeTurn
                       ? "processing"
@@ -104,9 +117,32 @@ export function TaskPage({
           </div>
         </header>
         {snapshot && <TaskDesignBinding binding={snapshot.designBinding} />}
+        {snapshot && (
+          <TaskRuntimeStatus
+            thread={snapshot.thread}
+            connected={state.connection === "connected"}
+            observation={observation}
+            pendingRequests={snapshot.pendingRequests}
+          />
+        )}
         {(state.notice || warning) && (
           <Alert
-            title={state.notice || warning}
+            title={
+              state.connection === "closed"
+                ? "连接异常，后台任务状态尚未确认"
+                : state.notice || warning
+            }
+            description={
+              state.connection === "closed" ? (
+                <>
+                  <p>这仅表示客户端连接异常，不代表后台任务停止或失败。</p>
+                  <details className={styles.failureTechnical}>
+                    <summary>连接详情</summary>
+                    <pre>{state.notice.slice(0, 4000)}</pre>
+                  </details>
+                </>
+              ) : undefined
+            }
             type="warning"
             showIcon
             action={
@@ -134,9 +170,9 @@ export function TaskPage({
               {turn.items.map((item) => (
                 <NativeItemView key={item.id} item={item} />
               ))}
-              {turn.error && (
+              {turn.status === "failed" && (
                 <SessionFailureNotice
-                  error={turn.error}
+                  turn={turn}
                   busy={busy}
                   connected={state.connection === "connected"}
                   onContinue={
@@ -144,14 +180,28 @@ export function TaskPage({
                     turn.status === "failed" &&
                     !activeTurn &&
                     pendingCount === 0
-                      ? () => run(() => source.continue(taskId))
+                      ? () => {
+                          setErrorOrigin("continue");
+                          return run(() => source.continue(taskId));
+                        }
                       : undefined
                   }
                 />
               )}
+              {turn.status === "interrupted" && (
+                <Alert
+                  type="info"
+                  showIcon
+                  title="本轮已停止，已有记录仍保留。"
+                  description="停止不代表验收失败；已有文件和验证记录需要按当前工作区核对。"
+                />
+              )}
             </section>
           ))}
-          <SessionActivityView activities={state.activities} />
+          <SessionActivityView
+            activities={state.activities}
+            thread={state.connection === "connected" ? snapshot?.thread : undefined}
+          />
           {snapshot?.pendingRequests.map((pending) => (
             <PendingRequestPanel
               key={pending.token}
@@ -184,9 +234,20 @@ export function TaskPage({
           key={taskId}
           connected={state.connection === "connected"}
           busy={busy}
-          error={error}
-          onSend={(text, images) => run(() => source.send(taskId, text, images))}
-          onStop={activeTurn ? () => run(() => source.stop(taskId, activeTurn.id)) : undefined}
+          error={errorOrigin === "composer" ? error : ""}
+          stopTurnId={activeTurn?.id}
+          onSend={(text, images) => {
+            setErrorOrigin("composer");
+            return run(() => source.send(taskId, text, images));
+          }}
+          onStop={
+            activeTurn
+              ? () => {
+                  setErrorOrigin("stop");
+                  return run(() => source.stop(taskId, activeTurn.id));
+                }
+              : undefined
+          }
         />
       </main>
     </SessionFileContext>

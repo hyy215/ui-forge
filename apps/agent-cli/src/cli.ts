@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 import { Command, CommanderError } from "commander";
 import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerDiagnosticsCommand } from "./commands/diagnostics.js";
+import { registerDeliveryCommand } from "./commands/delivery.js";
 import { registerDesignCheckCommand } from "./commands/designCheck.js";
 import { registerListCommand } from "./commands/list.js";
 import { registerResumeCommand } from "./commands/resume.js";
 import { registerRunCommand } from "./commands/run.js";
 import { registerServeCommand } from "./commands/serve.js";
 import { registerStatusCommand } from "./commands/status.js";
+import { terminalText } from "./terminalText.js";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -40,6 +42,7 @@ function createProgram(): Command {
   registerListCommand(program);
   registerStatusCommand(program);
   registerDiagnosticsCommand(program);
+  registerDeliveryCommand(program);
   registerDesignCheckCommand(program);
   registerResumeCommand(program);
   return program;
@@ -55,7 +58,9 @@ export async function runCli(argv: string[]): Promise<void> {
     const message = error instanceof Error ? error.message : "ui-forge 执行失败。";
     const separator = argv.indexOf("--");
     const json = argv.slice(0, separator < 0 ? argv.length : separator).includes("--json");
-    process.stderr.write(`${json ? JSON.stringify({ type: "error", message }) : message}\n`);
+    process.stderr.write(
+      `${json ? JSON.stringify({ type: "error", message }) : terminalText(message)}\n`,
+    );
     process.exitCode = 1;
   }
 }

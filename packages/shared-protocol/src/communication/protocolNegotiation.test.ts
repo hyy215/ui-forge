@@ -19,6 +19,7 @@ describe("communication protocol negotiation", () => {
         "instruction-files",
         "task-diagnostics",
         "design-source-selection",
+        "task-delivery",
       ],
     });
   });

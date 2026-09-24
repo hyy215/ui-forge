@@ -17,7 +17,17 @@ import {
   type CommunicationInboundMessage,
 } from "@ui-forge/shared-protocol";
 import { readCommunicationStream } from "@ui-forge/client-core";
-import { authorizeHostRequest } from "./hostRequestPolicy.js";
+import {
+  authorizeHostRequest,
+  requiresWorkspaceTrust,
+  type HostWorkspace,
+} from "./hostRequestPolicy.js";
+
+/** 复制当前授权上下文，避免异步校验复用已变化的工作区对象。 */
+function currentWorkspace(): HostWorkspace {
+  const projectPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  return { trusted: vscode.workspace.isTrusted, ...(projectPath ? { projectPath } : {}) };
+}
 
 /** 每个页面独立持有订阅，避免不同 Webview 使用相同请求标识时相互取消。 */
 interface PanelState {
@@ -153,17 +163,18 @@ export class UiForgePanelManager {
     const controller = new AbortController();
     let seq = 0;
     try {
-      const projectPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const workspace = currentWorkspace();
       if (original.method === sessionFileMethods.open)
         sessionFileInputSchema.parse(original.params);
       const message =
         original.kind === "request"
-          ? await authorizeHostRequest(
-              original,
-              { trusted: vscode.workspace.isTrusted, ...(projectPath ? { projectPath } : {}) },
-              (taskId) => this.readTask(taskId),
-            )
+          ? await authorizeHostRequest(original, workspace, (taskId) => this.readTask(taskId))
           : original;
+      if (message.kind === "request" && requiresWorkspaceTrust(message.method)) {
+        const current = currentWorkspace();
+        if (current.trusted !== workspace.trusted || current.projectPath !== workspace.projectPath)
+          throw new Error("工作区或信任状态已变化，请确认当前工作区后重新操作。");
+      }
       if (message.kind === "stream-request") {
         streams.get(message.requestId)?.abort();
         streams.set(message.requestId, controller);

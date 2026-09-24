@@ -5,6 +5,7 @@ import {
   instructionMethods,
   sessionIdSchema,
   sendSessionInputSchema,
+  stopSessionSchema,
   respondSessionSchema,
   readInstructionSchema,
   saveInstructionSchema,
@@ -16,10 +17,13 @@ import {
   sessionFileInputSchema,
   diagnosticMethods,
   readTaskDiagnosticsSchema,
+  deliveryMethods,
+  readTaskDeliverySchema,
   designMethods,
   checkDesignConnectionSchema,
 } from "@ui-forge/shared-protocol";
 import { createTaskDiagnosticsFixture } from "./taskDiagnosticsFixture";
+import { createTaskDeliveryFixture } from "./taskDeliveryFixture";
 import type { CommunicationClient } from "../src/communication/clientContract";
 import { z } from "zod";
 
@@ -40,6 +44,10 @@ export function createFixtureClient(): CommunicationClient {
   let designCheckFailures = new URLSearchParams(location.search).has("designCheckError") ? 1 : 0;
   let createFailures = new URLSearchParams(location.search).has("createError") ? 1 : 0;
   let diagnosticsReads = 0;
+  let deliveryReads = 0;
+  const deliveryFailureReads = new Set(
+    (new URLSearchParams(location.search).get("deliveryFailAt") ?? "").split(",").map(Number),
+  );
   const diagnosticsFailureReads = new Set(
     (new URLSearchParams(location.search).get("diagnosticsFailAt") ?? "").split(",").map(Number),
   );
@@ -82,11 +90,15 @@ export function createFixtureClient(): CommunicationClient {
             ? { source, tools: [] }
             : {
                 source,
-                target: {
-                  documentId: "file",
-                  pageId: "1:0",
-                  nodeId: "2:3",
-                },
+                ...(source.connection.kind === "vibe"
+                  ? {
+                      target: {
+                        documentId: "file",
+                        pageId: "1:0",
+                        nodeId: "2:3",
+                      },
+                    }
+                  : {}),
                 tools: ["get_selection", "get_design_context"],
                 serverVersion: "fixture-1.0",
               };
@@ -102,6 +114,14 @@ export function createFixtureClient(): CommunicationClient {
           taskId,
           new URLSearchParams(location.search).get("diagnostics") === "unknown",
         );
+      } else if (method === deliveryMethods.read) {
+        const { taskId } = readTaskDeliverySchema.parse(params);
+        if (!snapshots.has(taskId)) throw new Error("任务不存在");
+        const read = ++deliveryReads;
+        const delay = Number(new URLSearchParams(location.search).get("deliveryDelay") ?? 0);
+        if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+        if (deliveryFailureReads.has(read)) throw new Error("private delivery transport details");
+        result = createTaskDeliveryFixture(taskId, scenario ?? "delivery-missing");
       } else if (method === sessionFileMethods.open) {
         const input = sessionFileInputSchema.parse(params);
         if (!snapshots.has(input.taskId)) throw new Error("任务不存在");
@@ -281,6 +301,19 @@ export function createFixtureClient(): CommunicationClient {
             },
           ];
         }
+        if (scenario?.startsWith("delivery")) {
+          const snapshot = snapshots.get(taskId)!;
+          const turn = snapshot.thread.turns[0]!;
+          turn.status = "completed";
+          snapshot.thread.status = { type: "idle" };
+          snapshot.pendingRequests = [];
+          const command = turn.items.find((item) => item.id === "cmd-1");
+          if (command?.type === "commandExecution") {
+            command.status = "completed";
+            command.exitCode = 0;
+            command.aggregatedOutput = "Fixture command completed.\n";
+          }
+        }
         if (scenario === "files") {
           const root =
             new URLSearchParams(location.search).get("artifactPath") ??
@@ -295,27 +328,57 @@ export function createFixtureClient(): CommunicationClient {
             ].join("\n\n"),
           });
         }
-        if (scenario === "capacity" || scenario === "usage-limit" || scenario === "context-limit") {
+        if (
+          [
+            "capacity",
+            "usage-limit",
+            "context-limit",
+            "network-failure",
+            "failed-without-error",
+          ].includes(scenario ?? "")
+        ) {
           const snapshot = snapshots.get(taskId)!;
           const turn = snapshot.thread.turns[0]!;
           turn.status = "failed";
-          turn.error = {
-            message:
-              scenario === "capacity"
-                ? "Selected model is at capacity. Please try a different model."
-                : scenario === "usage-limit"
-                  ? "Usage limit exceeded."
-                  : "Context window exceeded.",
-            codexErrorInfo:
-              scenario === "capacity"
-                ? "serverOverloaded"
-                : scenario === "usage-limit"
-                  ? "usageLimitExceeded"
-                  : "contextWindowExceeded",
-            additionalDetails: null,
-          };
+          turn.error =
+            scenario === "failed-without-error"
+              ? null
+              : {
+                  message:
+                    scenario === "capacity"
+                      ? "Selected model is at capacity. Please try a different model."
+                      : scenario === "usage-limit"
+                        ? "Usage limit exceeded."
+                        : scenario === "network-failure"
+                          ? "Connection to model service failed."
+                          : "Context window exceeded.",
+                  codexErrorInfo:
+                    scenario === "capacity"
+                      ? "serverOverloaded"
+                      : scenario === "usage-limit"
+                        ? "usageLimitExceeded"
+                        : scenario === "network-failure"
+                          ? { httpConnectionFailed: { httpStatusCode: 503 } }
+                          : "contextWindowExceeded",
+                  additionalDetails: null,
+                };
           snapshot.thread.status = { type: "idle" };
           snapshot.pendingRequests = [];
+          const command = turn.items.find((item) => item.id === "cmd-1");
+          if (command?.type === "commandExecution") {
+            command.status = "completed";
+            command.exitCode = 0;
+            command.aggregatedOutput = "Checks completed before the failure.\n";
+          }
+        }
+        if (["native-retry", "child-retry", "connection-lost"].includes(scenario ?? "")) {
+          snapshots.get(taskId)!.pendingRequests = [];
+        }
+        if (scenario?.startsWith("long-task")) {
+          const snapshot = snapshots.get(taskId)!;
+          snapshot.pendingRequests = [];
+          snapshot.thread.turns[0]!.startedAt =
+            scenario === "long-task-unknown" ? null : Math.floor(Date.now() / 1000) - 125;
         }
         result = { taskId };
       } else if (method === sessionMethods.read)
@@ -461,16 +524,28 @@ export function createFixtureClient(): CommunicationClient {
         setTimeout(() => complete(input.taskId, "将按最新要求继续修改。"), 220);
         result = { accepted: true };
       } else if (method === sessionMethods.stop) {
-        const value =
-          params && typeof params === "object" && "taskId" in params ? params.taskId : undefined;
-        if (typeof value !== "string") throw new Error("任务不存在");
+        const { taskId: value, turnId } = stopSessionSchema.parse(params);
         const snapshot = snapshots.get(value);
-        const turn = snapshot?.thread.turns.at(-1);
-        if (!snapshot || !turn) throw new Error("任务不存在");
-        turn.status = "interrupted";
-        snapshot.pendingRequests = [];
-        snapshot.thread.status = { type: "idle" };
-        emit(value, { type: "snapshot", snapshot: structuredClone(snapshot) });
+        const turn = snapshot?.thread.turns.find((entry) => entry.id === turnId);
+        if (!snapshot || !turn || turn.status !== "inProgress") throw new Error("停止请求已失效");
+        if (scenario?.startsWith("long-task")) {
+          await new Promise<void>((resolve, reject) => {
+            const respond = (event: Event) => {
+              if (!(event instanceof CustomEvent) || !["accept", "reject"].includes(event.detail))
+                return;
+              window.removeEventListener("ui-forge:fixture-stop", respond);
+              if (event.detail === "reject")
+                reject(new Error("Fixture stop response unavailable."));
+              else resolve();
+            };
+            window.addEventListener("ui-forge:fixture-stop", respond);
+          });
+        } else {
+          turn.status = "interrupted";
+          snapshot.pendingRequests = [];
+          snapshot.thread.status = { type: "idle" };
+          emit(value, { type: "snapshot", snapshot: structuredClone(snapshot) });
+        }
         result = { accepted: true };
       } else throw new Error(`未实现的样本方法：${method}`);
       return responseSchema.parse(structuredClone(result));
@@ -485,8 +560,182 @@ export function createFixtureClient(): CommunicationClient {
       const group = listeners.get(taskId) ?? new Set();
       group.add(listener);
       listeners.set(taskId, group);
+      const control = (event: Event) => {
+        if (scenario !== "native-retry" || !(event instanceof CustomEvent)) return;
+        const turn = snapshot.thread.turns.at(-1);
+        if (!turn || turn.status !== "inProgress") return;
+        if (event.detail === "progress") {
+          const item: NativeItem = {
+            id: "retry-progress",
+            type: "agentMessage",
+            text: "原生执行已恢复。",
+          };
+          turn.items.push(item);
+          emit(taskId, {
+            type: "notification",
+            notification: {
+              method: "item/started",
+              params: { threadId: taskId, turnId: turn.id, item },
+            },
+          });
+        }
+        if (event.detail === "complete") complete(taskId, "原生重试后的本轮已结束。");
+        if (event.detail === "disconnect")
+          emit(taskId, { type: "close", message: "Fixture stream unavailable." });
+      };
+      window.addEventListener("ui-forge:fixture-retry", control);
+      const runtimeControl = (event: Event) => {
+        if (!scenario?.startsWith("long-task") || !(event instanceof CustomEvent)) return;
+        const turn = snapshot.thread.turns.at(-1);
+        if (!turn) return;
+        const action: unknown = event.detail;
+        const pendingMethods: Record<string, string> = {
+          "pending-clock": "currentTime/read",
+          "pending-tool": "item/tool/call",
+          "pending-command-approval": "item/commandExecution/requestApproval",
+          "pending-file-approval": "item/fileChange/requestApproval",
+          "pending-permission-approval": "item/permissions/requestApproval",
+          "pending-legacy-command": "execCommandApproval",
+          "pending-legacy-patch": "applyPatchApproval",
+          "pending-user-input": "item/tool/requestUserInput",
+        };
+        const pendingMethod = typeof action === "string" ? pendingMethods[action] : undefined;
+        if (pendingMethod) {
+          snapshot.thread.status = { type: "active", activeFlags: [] };
+          snapshot.pendingRequests = [
+            {
+              token: `runtime-request-${sequence++}`,
+              request: {
+                id: sequence++,
+                method: pendingMethod,
+                params: {
+                  threadId: taskId,
+                  turnId: turn.id,
+                  itemId: "cmd-1",
+                  command: "npm run typecheck",
+                  cwd: snapshot.thread.cwd,
+                  questions: [
+                    { id: "runtime-question", header: "确认", question: "是否保留当前分页？" },
+                  ],
+                },
+              },
+            },
+          ];
+          emit(taskId, { type: "snapshot", snapshot: structuredClone(snapshot) });
+        }
+        if (action === "main-token" || action === "child-token") {
+          const total = action === "main-token" ? 1200 : 999999;
+          const usage = {
+            totalTokens: total,
+            inputTokens: total - 100,
+            outputTokens: 100,
+            cachedInputTokens: 0,
+            cacheWriteInputTokens: 0,
+            reasoningOutputTokens: 0,
+          };
+          emit(taskId, {
+            type: "notification",
+            notification: {
+              method: "thread/tokenUsage/updated",
+              params: {
+                threadId: action === "main-token" ? taskId : `${taskId}-child`,
+                turnId: turn.id,
+                tokenUsage: { total: usage, last: usage, modelContextWindow: 200000 },
+              },
+            },
+          });
+        }
+        if (action === "main-activity" || action === "child-activity") {
+          emit(taskId, {
+            type: "notification",
+            notification: {
+              method: "item/agentMessage/delta",
+              params: {
+                threadId: action === "main-activity" ? taskId : `${taskId}-child`,
+                turnId: turn.id,
+                itemId: "agent-1",
+                delta: "正在检查已有内容。",
+              },
+            },
+          });
+        }
+        if (action === "disconnect")
+          emit(taskId, { type: "close", message: "Fixture stream unavailable." });
+        if (action === "reconnect")
+          emit(taskId, { type: "snapshot", snapshot: structuredClone(snapshot) });
+        if (action === "waiting-approval" || action === "waiting-input") {
+          snapshot.thread.status = {
+            type: "active",
+            activeFlags: [
+              action === "waiting-approval" ? "waitingOnApproval" : "waitingOnUserInput",
+            ],
+          };
+          emit(taskId, {
+            type: "notification",
+            notification: {
+              method: "thread/status/changed",
+              params: { threadId: taskId, status: snapshot.thread.status },
+            },
+          });
+        }
+        if (action === "interrupt" || action === "next-turn") {
+          turn.status = "interrupted";
+          turn.completedAt = Math.floor(Date.now() / 1000);
+          turn.durationMs =
+            typeof turn.startedAt === "number"
+              ? Math.max(0, Date.now() - turn.startedAt * 1000)
+              : null;
+          snapshot.thread.status = { type: "idle" };
+          snapshot.pendingRequests = [];
+          emit(taskId, {
+            type: "notification",
+            notification: { method: "turn/completed", params: { threadId: taskId, turn } },
+          });
+          if (action === "next-turn") {
+            const next: NativeTurn = {
+              id: `turn-${sequence++}`,
+              status: "inProgress",
+              error: null,
+              items: [],
+              startedAt: Math.floor(Date.now() / 1000),
+            };
+            snapshot.thread.turns.push(next);
+            snapshot.thread.status = { type: "active" };
+            emit(taskId, {
+              type: "notification",
+              notification: { method: "turn/started", params: { threadId: taskId, turn: next } },
+            });
+          }
+        }
+      };
+      window.addEventListener("ui-forge:fixture-runtime", runtimeControl);
       try {
         await onEvent(eventSchema.parse({ type: "snapshot", snapshot: structuredClone(snapshot) }));
+        if (scenario === "native-retry" || scenario === "child-retry") {
+          await onEvent(
+            eventSchema.parse({
+              type: "notification",
+              notification: {
+                method: "error",
+                params: {
+                  threadId: scenario === "child-retry" ? `${taskId}-child` : taskId,
+                  turnId: snapshot.thread.turns.at(-1)!.id,
+                  error: {
+                    message: "Native retry in progress.",
+                    codexErrorInfo: "serverOverloaded",
+                    additionalDetails: null,
+                  },
+                  willRetry: true,
+                },
+              },
+            }),
+          );
+        }
+        if (scenario === "connection-lost") {
+          await onEvent(
+            eventSchema.parse({ type: "close", message: "Fixture stream unavailable." }),
+          );
+        }
         if (scenario === "mcp")
           for (const version of [1, 2, 3])
             await onEvent(
@@ -511,6 +760,8 @@ export function createFixtureClient(): CommunicationClient {
         });
       } finally {
         group.delete(listener);
+        window.removeEventListener("ui-forge:fixture-retry", control);
+        window.removeEventListener("ui-forge:fixture-runtime", runtimeControl);
       }
     },
   };
