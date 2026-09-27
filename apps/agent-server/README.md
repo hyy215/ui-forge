@@ -29,6 +29,7 @@
 - 新建使用 `prepareD2C` 加载当前规则并准备输入，然后依次调用 `thread/start` 和 `turn/start`。
 - 恢复使用 `prepareD2CRuntime` 准备工具配置，再调用 `thread/resume`。保留原会话规则，也不会重放输入。当前规则文件不可读时仍可准备恢复，但工具配置必须有效。
 - 补充输入先读取原生状态；正在执行时调用 `turn/steer`，空闲时调用 `turn/start`。发送和停止操作按任务串行。
+- 读取任务快照会按需装载或恢复 Codex 通信连接，但不会自动启动新的 turn；诊断与交付查询走各自的只读路径。
 - 停止只中断指定 turn；取消订阅只断开当前客户端。关闭服务才统一释放连接。
 - `sessions.json` 只保存任务 ID、项目路径、标题、更新时间和固定设计绑定。完整历史保存在 Codex，内存中的展示缓存供订阅快照使用。
 
@@ -54,7 +55,7 @@ Magic 使用官方远程 MCP 和 `MG_MCP_TOKEN`，需要相应设计访问权限
 
 只有不能从历史重建的数据独立保存到运行目录的 `diagnostics/`：新任务实际注入规则的 SHA-256、Codex 可执行文件/CODEX_HOME/service tier、并发配置与观测峰值，以及最后收到的本线程原生累计 Token 和线程运行摘要。文件名由任务身份哈希生成，原子串行写入；重复 Token 通知覆盖而非累加，不汇总子线程用量。报告仅导出线程 ID、父线程关系、模型、推理强度、状态和固定错误类别，不保存提示词、命令正文、工具输出、审批 token 或原始异常正文。服务关闭时等待待写入项完成。旧任务缺失信息保持未知；读写失败在报告中标记诊断不完整，不改变任务或审批状态。已有损坏文件不自动覆盖。
 
-公共通信协议 23 包含 `task-diagnostics`、`design-source-selection` 与 `task-delivery` 能力，Server、CLI 和 Webview/Extension 应同步更新。
+公共通信协议 [23](../../packages/shared-protocol/src/communication/protocolNegotiation.ts) 包含 `task-diagnostics`、`design-source-selection` 与 `task-delivery` 能力；它不同于 Codex 原生协议版本，Server、CLI 和 Webview/Extension 应同步更新。
 
 ## 交付记录
 
