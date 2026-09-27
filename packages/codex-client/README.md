@@ -2,7 +2,7 @@
 
 为 ui-forge 提供 Codex 接入：加载 MCP、D2C skill 和规则，准备输入，转发原生请求、事件与审批。设计理解、编码、审查、验证和子 Agent 调度由 Codex 完成。
 
-Agent Server 通过本包为页面和 CLI 提供执行能力。需要 Node.js 22+、已登录的 Codex CLI；当前协议对应 **Codex 0.153.4**。环境准备见[根 README](../../README.md#准备后端)。
+Agent Server 通过本包为页面和 CLI 提供执行能力。需要 Node.js 22.12+、已登录的 Codex CLI；当前生成的 Codex 原生协议对应 **Codex 0.153.4**。这不是 ui-forge Client/Server 的公共通信协议 23。环境准备见[根 README](../../README.md#快速开始)。
 
 ## 最小接入
 
@@ -45,7 +45,7 @@ await client.request("turn/start", { threadId: thread.id, input: prepared.input 
 - **交互**：订阅 `request` 事件展示审批或提问，用 `respond(token, result)` 回传决议，`pendingRequests()` 获取待回复项。未知服务端请求明确拒绝。
 - **停止与关闭**：`turn/interrupt` 停止指定轮次；取消订阅不停止任务。`close()`、宿主退出或 `signal` 取消会结束 Codex 进程。服务关闭时需同步清理连接。
 - **超时**：`CodexTimeoutError` 表示等待超时，不会取消或重试任务。可通过 `requestId` 关联 `lateResponse`；没有迟到结果时，用原生线程查询确认执行状态。
-- **临时产物**：默认使用安装根 `.ui-forge/runtime/tmp/<项目标识>/`。自定义 `temporaryDirectory` 须为已存在的绝对路径，可用 `prepareTemporaryWorkspace` 提前创建。
+- **临时产物**：默认使用安装根 `.ui-forge/runtime/tmp/<项目哈希>/`。自定义 `temporaryDirectory` 须为已存在的绝对路径，可用 `prepareTemporaryWorkspace` 提前创建。
 - **交付声明**：`deliveryContext(temporaryDirectory, taskId)` 提供任务隔离的报告位置、格式与证据边界，供宿主合并到每轮 `additionalContext`。它不写入文件、不运行验收、不扩大权限；`deliveryReportPath` 为宿主读取使用同一路径。新报告的文件证据必须包含实际 SHA-256；读取旧任务留下的裸路径证据时只标记为不可核验。报告声明与实际证据核对分开，接口不生成整体通过结论。
 
 完整 API 见 [CodexClient](src/codexClient.ts) 和 [D2C 输入](src/d2c.ts)。
@@ -77,7 +77,14 @@ Vibe 默认 MCP 地址为 `http://127.0.0.1:20678/mcp`，状态地址为 `http:/
 
 ## 配置与检查
 
-本包的 [.codex/config.toml](.codex/config.toml) 配置 MasterGo、Playwright 和 Agent 角色，[D2C skill](.agents/skills/ui-forge-d2c/SKILL.md) 提供执行规则。包所在项目须被 Codex 信任，配置不可用时明确报错；目标项目无需复制这些文件。
+本包的 [.codex/config.toml](.codex/config.toml) 配置 MasterGo、Playwright 和 Agent 角色，[D2C skill](.agents/skills/ui-forge-d2c/SKILL.md) 提供执行规则。包所在项目须被 Codex 信任，配置不可用时明确报错；目标项目无需复制这些文件。若当前 `CODEX_HOME/config.toml` 尚未信任 ui-forge 仓库，加入或修改：
+
+```toml
+[projects."/absolute/path/to/ui-forge"]
+trust_level = "trusted"
+```
+
+信任的是 ui-forge 仓库的包项目，不是把包内 `.codex` 文件复制到目标项目。
 
 `prepareD2C` 的新任务默认模型为 `gpt-6-astra`，可通过 `model` 覆盖；Agent Server 的 `UI_FORGE_CODEX_MODEL` 同样覆盖这一默认值，恢复旧任务不会重新选择模型。`prepareD2C` 还支持覆盖 `search` 和两份规则路径（`designInstructions`、`projectInstructions`），相对路径以目标项目为基准。`CodexClient` 用 `executable` 指定程序，用 `configOverrides` 传入 Codex `-c` 的点分键与标量值，不修改全局配置。Server 的限制见[工具策略](../../apps/agent-server/README.md#工具策略)。
 
@@ -89,8 +96,8 @@ npm run check -w @ui-forge/codex-client -- --target /absolute/target-project
 npm run dry-run -w @ui-forge/codex-client -- --target /absolute/target-project -i design.png "实现页面"
 ```
 
-检查和预览只准备临时目录、启动通信进程，不创建任务、连接 MCP 或调用模型。`check` 报告配置与版本，`dry-run` 省略规则正文和 MCP 配置值。
+检查和预览只准备临时目录、启动通信进程，不创建任务、连接 MCP 或调用模型。`check` 还会报告项目信任状态、D2C skill、Codex 登录与版本、Python/Pillow 等配置；`dry-run` 省略规则正文和 MCP 配置值。
 
-平台连接检查使用 CLI `design-check`，不要与上述包配置 `check` 混淆；用法见[根 README](../../README.md#使用-cli)。第一方协议 23 的来源选择和交付查询由 Server/CLI/Extension 共同消费，本包仍只适配原生 Codex 与 MCP 协议。
+平台连接检查使用 CLI `design-check`，不要与上述包配置 `check` 混淆；用法见[根 README](../../README.md#选择入口)。第一方通信协议 23 的来源选择和交付查询由 Server/CLI/Extension 共同消费，本包仍只适配 Codex 原生协议与 MCP 协议。
 
 真实验证与协议升级见[开发说明](../../DEVELOPMENT.md#codex-接入验证与协议升级)。
